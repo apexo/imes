@@ -20,6 +20,7 @@ import PIL
 import PIL.Image
 import PIL.JpegImagePlugin
 import PIL.BmpImagePlugin
+import PIL.PngImagePlugin
 import base64
 import struct
 import glob
@@ -31,6 +32,7 @@ COVER_ART_SIZES = (512, 256, 128, 64)
 MIME_MAP = {
 	PIL.JpegImagePlugin.JpegImageFile: ("image/jpeg", ".jpeg"),
 	PIL.BmpImagePlugin.BmpImageFile: ("image/bmp", ".bmp"),
+	PIL.PngImagePlugin.PngImageFile: ("image/png", ".png"),
 }
 
 CTYPE_MAP = {
