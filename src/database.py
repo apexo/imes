@@ -183,6 +183,9 @@ class Database(object):
 		formats["base"] = {"w": img.size[0], "h": img.size[1], "m": mime, "f": "base" + ext}
 		attach.append(("base" + ext, data, mime))
 
+		if img.mode == "P":
+			img = img.convert("RGB")
+
 		doc = {"formats": formats, "inprogress": True, "version": version}
 		self.pictures[k] = doc
 
