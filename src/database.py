@@ -556,21 +556,23 @@ class Database(object):
 			return
 
 		#print "processing file", path
+		m = None
 		try:
 			m = mutagen.File(path)
 		except mutagen.mp3.HeaderNotFoundError:
-			print "???", path
-			m = None
+			print "invalid mp3 file:", path
+		except mutagen.mp4.MP4StreamInfoError:
+			print "invalid mp4 file:", path
 		except IOError as e:
-			if e.errno != errno.ENOENT:
-				raise
-			print "???", path
-			m = None
+			if e.errno == errno.ENOENT:
+				pass
+			else:
+				print "unknown error %s while parsing %s" % (e, path)
 		except UnboundLocalError:
-			print "???", path
-			m = None
+			print "mutagen error", path
+		except Exception as e:
+			print "weird error %s while parsing %s" % (e, path)
 		if m is None:
-			#print "nada"
 			return
 
 		try:
