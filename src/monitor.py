@@ -195,6 +195,8 @@ class Monitor(object):
 		self.addRoot(root)
 
 	def _attrib(self, wd, mask, name):
+		if name is None:
+			return
 		isDir = mask & inotifyx.IN_ISDIR
 		if isDir:
 			self._watchPath(self.wds[wd], name)
@@ -207,7 +209,7 @@ class Monitor(object):
 
 	def _delete(self, wd, mask, name):
 		isDir = bool(mask & inotifyx.IN_ISDIR)
-		if isDir:
+		if isDir and name in (self.wds[wd].children or {}):
 			self.wds[wd].children[name].unwatch(self)
 		self.remove(os.path.join(self.wds[wd].path, name), isDir)
 
