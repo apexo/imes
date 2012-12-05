@@ -390,14 +390,15 @@ class Database(object):
 	}
 
 	def _mayignore(self, kind):
-		if kind in ("TXXX:Rip date", "TXXX:Ripping tool", "TXXX:Release type", "TXXX:Supplier", "TXXX:Source", "TSSE", "USLT", "TDRC", "TPE2", "TXXX:ASIN", "TXXX:SCRIPT", "TXXX:BARCODE", "TXXX:MusicBrainz Album Type", "TENC",
-			"TXXX:CATALOGNUMBER", "TPUB", "TCMP", "TSRC", "TLAN", "TXXX:MusicBrainz Album Status", "TXXX:MusicBrainz Album Release Country", "TCOP", "TSO2", "TRSO", "TRSN", "TPE4", "TXXX:EMAIL", "TOPE", "WORS", "TPE3",
-			"TXXX:YM", "TXXX:URLCOPYRIGHT", "TXXX:MOOD", "TCOM", "TIT1", "TXXX:TAG_MP3_BY_YUDHA ", "TOWN", "MCDI", "TIT3", "TIPL",
-			"releasecountry", "asin", "metadata_block_picture", "releasestatus", "script", "releasetype", "label", "language", "author", "barcode", "TXXX:DISCID", "TXXX:Log", "tmpo", "\xa9too", "cpil", "pgap", "\xa9wrt",
-			"covr", "comment", "producer", "catalognumber", "format", "WCOP", "TBPM", "TXXX:PERFORMER", "license", "composer", "TOAL", "TXXX:Encoded by", "PCNT", "isrc", "TXXX:PZTagEditor Info", "itunes_cddb_1",
-			"TXXX:audiofileurl", "TXXX:authorurl", "TXXX:WM/MediaPrimaryClassID", "TXXX:lyrics", "TXXX:audiosourceurl", "performer", "conductor", "mixer", "arranger", "copyright", "TXXX:GRACENOTEEXTDATA", "TXXX:GRACENOTEFILEID", "discid", "tool version", "tool name", "bpm", "intensity", "discsubtitle"):
+		if kind in ("TSSE", "USLT", "TDRC", "TPE2", "TENC",
+			"TPUB", "TCMP", "TSRC", "TLAN", "TCOP", "TSO2", "TRSO", "TRSN", "TPE4", "TOPE", "WORS", "TPE3",
+			"TCOM", "TIT1", "TOWN", "MCDI", "TIT3", "TIPL",
+			"releasecountry", "asin", "metadata_block_picture", "releasestatus", "script", "releasetype", "label", "language", "author", "barcode", "tmpo", "\xa9too", "cpil", "pgap", "\xa9wrt",
+			"covr", "comment", "producer", "catalognumber", "format", "WCOP", "TBPM", "license", "TOAL", "PCNT", "isrc", "itunes_cddb_1",
+			"performer", "conductor", "mixer", "arranger", "copyright", "discid", "tool version", "tool name", "bpm", "intensity", "discsubtitle"):
 			return True
-		if kind.startswith("PRIV:") or kind.startswith("WXXX:") or kind.startswith("POPM:") or kind.startswith("COMM:") or kind.startswith("APIC:") or kind.startswith("UFID:") or kind.startswith("GEOB:") or kind.startswith("----:") or kind.startswith("USLT:"):
+		prefix, sep, key = kind.partition(":")
+		if sep and kind in ["PRIV", "WXXX", "POPM", "COMM", "APIC", "UFID", "GEOB", "----", "USLT", "WCOM", "TXXX"]:
 			return True
 
 		return False
