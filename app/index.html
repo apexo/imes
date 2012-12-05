@@ -22,6 +22,13 @@
 			padding-left: 8px;
 			background-image: -webkit-linear-gradient(top, #bbe, #ddf);
 		}
+		.album-label, .album-track, .single-track {
+			cursor: pointer;
+		}
+		.album-label:hover, .album-track:hover, .single-track:hover {
+			background-image: none;
+			background-color: #8080ff;
+		}
 		.album-cover {
 			float:left;
 		}
@@ -317,6 +324,10 @@ function doSearch(terms) {
 	view.fetch(resume, page);
 }
 
+function enqueueTracks(ids) {
+	console.log("TODO", "enqueue", ids);
+}
+
 function onLoad() {
 	setTimeout(function() {
 		new ViewportLayout(document.body, new VBoxLayout(document.body));
@@ -330,6 +341,27 @@ function onLoad() {
 				middle.onscroll();
 			}
 		};
+		document.querySelector("#search-result").addEventListener("click", function(event) {
+			var target = event.target;
+			var cl = target.classList;
+			if (cl.contains("album-track")) {
+				enqueueTracks([target.dataset.id]);
+			} else if (cl.contains("album-label")) {
+				var ids = [];
+				var tracks = target.parentElement.querySelectorAll(".album-track");
+				for (var i = 0; i < tracks.length; i++) {
+					var t = tracks[i];
+					ids.push(t.dataset.id);
+				}
+				enqueueTracks(ids);
+			} else if (cl.contains("single-track")) {
+				enqueueTracks([target.dataset.id]);
+			} else {
+				return;
+			}
+			event.stopPropagation();
+			event.preventDefault();
+		}, false);
 
 		setTimeout(function() {
 			doSearch("");
