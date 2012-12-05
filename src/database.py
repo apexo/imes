@@ -171,7 +171,10 @@ class Database(object):
 			del self.pictures[k]
 
 		print "processing image", k
-		img = PIL.Image.open(StringIO.StringIO(data))
+		try:
+			img = PIL.Image.open(StringIO.StringIO(data))
+		except IOError:
+			return None, None
 		mime, ext = MIME_MAP[img.__class__]
 		attach = []
 		formats = {}
@@ -401,6 +404,9 @@ class Database(object):
 
 		for p in m.pictures:
 			key, formats = self.updatePicture(p.data)
+			if key is None:
+				print "broken picture in", path
+				continue
 			pictures.append({"type": p.type, "desc": p.desc, "key": key, "formats": formats})
 
 		doc["pictures"] = pictures
@@ -432,6 +438,9 @@ class Database(object):
 		for k, p in m.iteritems():
 			if k.startswith("APIC:"):
 				key, formats = self.updatePicture(p.data)
+				if key is None:
+					print "broken picture in", path
+					continue
 				pictures.append({"type": p.type, "desc": p.desc, "key": key, "formats": formats})
 
 		doc["pictures"] = pictures
@@ -461,6 +470,9 @@ class Database(object):
 			data = raw[i:i+l]
 
 			key, formats = self.updatePicture(data)
+			if key is None:
+				print "broken picture in", path
+				continue
 			pictures.append({"type": type, "desc": desc, "key": key, "formats": formats})
 
 		doc["pictures"] = pictures
