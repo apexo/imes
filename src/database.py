@@ -344,6 +344,7 @@ class Database(object):
 		'totaldiscs': single_int('totaldiscs'),
 		'disctotal': single_int('totaldiscs'),
 		'media': single_value('media'),
+		'composer': generic('composer'),
 	}
 
 	OGG_MAP = FLAC_MAP
@@ -362,11 +363,12 @@ class Database(object):
 		"TPE1": id3v2_values('artist'),
 		"TSOP": id3v2_values('artistsort'),
 		"TALB": id3v2_values('album'),
-		"TSOA": id3v2_values('album'),
+		"TSOA": id3v2_values('albumsort'),
 		"TIT2": id3v2_values('title'),
 		"TRCK": id3v2_numpair('tracknumber', 'totaltracks'),
 		"TPOS": id3v2_numpair('discnumber', 'totaldiscs'),
 		"TCON": id3v2_values('genre'),
+		"TCOM": id3v2_values('composer'),
 		'TXXX:replaygain_album_peak': id3v2_single_value('replaygain_album_peak'),
 		'TXXX:replaygain_track_peak': id3v2_single_value('replaygain_track_peak'),
 		'TXXX:replaygain_track_gain': id3v2_single_value('replaygain_track_gain'),
