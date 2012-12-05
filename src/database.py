@@ -411,7 +411,7 @@ class Database(object):
 			self._process(doc, m, self.APEV2_MAP, "APEv2", path)
 			doc["tags"].append("apev2")
 		except IOError as e:
-			if e.errno != ENOENT:
+			if e.errno != errno.ENOENT:
 				raise
 		except mutagen.apev2.APENoHeaderError:
 			return
@@ -503,7 +503,7 @@ class Database(object):
 		try:
 			m = mutagen.File(path)
 		except IOError as e:
-			if e.errno != ENOENT:
+			if e.errno != errno.ENOENT:
 				raise
 			print "???", path
 			m = None
