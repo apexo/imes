@@ -95,6 +95,7 @@
 	<script type="text/javascript">
 
 var currentSearchToken = 0;
+var remote = null;
 
 function formatAlbumTrack(i, tracklist) {
 	var label = "", tracknumber;
@@ -167,7 +168,9 @@ function doSearch(terms) {
 	var mySearchToken = currentSearchToken;
 
 	var target = document.querySelector("#search-result");
-	var remote = new Remote(target);
+	if (remote === null) {
+		remote = new Remote(target);
+	}
 	var view = remote.getView(terms);
 	var page = 10;
 	var pending = {};
