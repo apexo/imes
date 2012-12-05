@@ -9,6 +9,7 @@ import mutagen.flac
 import mutagen.mp3
 import mutagen.mp4
 import mutagen.oggvorbis
+import mutagen.apev2
 import couchdb
 import copy
 import os
@@ -401,6 +402,18 @@ class Database(object):
 		# TODO: APev2 (???)
 		return doc
 
+	def _apev2(self, doc, path):
+		try:
+			m = mutagen.apev2.Open(path)
+			assert m is not None
+			self._process(doc, m, self.APEV2_MAP, "APEv2", path)
+			doc["tags"].append("apev2")
+		except IOError as e:
+			if e.errno != ENOENT:
+				raise
+		except mutagen.apev2.APENoHeaderError:
+			return
+
 	def updateMP3(self, path, m, info):
 		doc = {}
 		self._process(doc, m, self.ID3V2_MAP, "ID3", path)
@@ -416,7 +429,7 @@ class Database(object):
 				pictures.append({"type": p.type, "desc": p.desc, "key": key, "formats": formats})
 
 		doc["pictures"] = pictures
-		# TODO: APEv2
+		self._apev2(doc, path)
 		return doc
 
 	def updateOggVorbis(self, path, m, info):
