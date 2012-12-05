@@ -35,7 +35,7 @@ CTYPE_MAP = {
 	".html": "text/html; charset=UTF-8",
 }
 
-CRE_REPLACE = re.compile("^.*%%%([A-Z_])%%%\n$")
+CRE_REPLACE = re.compile("^.*%%%([A-Z_]+)%%%$")
 
 def _id(d):
 	return base64.urlsafe_b64encode(d)[:(len(d)*8+5) // 6]
@@ -54,8 +54,8 @@ class Database(object):
 		self.app = self._create(prefix + "app")
 
 		self._replace = {
-			"%%%DB_URL%%%": url,
-			"%%%DB_PREFIX%%%": prefix,
+			"DB_URL": url,
+			"DB_PREFIX": prefix,
 		}
 
 	def _update_views(self):
@@ -70,9 +70,9 @@ class Database(object):
 		result = StringIO.StringIO()
 		for line in f:
 			m = CRE_REPLACE.match(line)
-			if m:
-				n = m.group(1)
-				line = "var %s = %s;" % (n, couchdb.json.encode(self._replace[n]))
+			n = m.group(1) if m else None
+			if n in self._replace:
+				line = "var %s = %s;\n" % (n, couchdb.json.encode(self._replace[n]).encode("UTF-8"))
 			result.write(line)
 		return result.getvalue()
 
