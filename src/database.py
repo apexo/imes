@@ -10,6 +10,7 @@ import mutagen.mp3
 import mutagen.mp4
 import mutagen.oggvorbis
 import mutagen.apev2
+import mutagen.asf
 import couchdb
 import copy
 import os
@@ -54,6 +55,7 @@ class Database(object):
 			mutagen.mp3.MP3: self.updateMP3,
 			mutagen.oggvorbis.OggVorbis: self.updateOggVorbis,
 			mutagen.mp4.MP4: self.updateMP4,
+			mutagen.asf.ASF: self.updateASF,
 		}
 		self.db = couchdb.Server(url)
 		self.files = self._create(prefix + "file")
@@ -287,6 +289,18 @@ class Database(object):
 		f.__name__ = 'set_ape_text_' + dstkey
 		return f
 
+	def asf_single_value(dstkey):
+		def f(dst, value):
+			dst[dstkey] = value[0].value
+		f.__name__ = 'set_asf_single_value_' + dstkey
+		return f
+
+	def asf_values(dstkey):
+		def f(dst, value):
+			dst[dstkey] = [item.value for item in value]
+		f.__name__ = 'set_asf_value_' + dstkey
+		return f
+
 	MP4_MAP = {
 		'\xa9alb': generic('album'),
 		'\xa9nam': generic('title'),
@@ -361,6 +375,15 @@ class Database(object):
 		'REPLAYGAIN_ALBUM_PEAK': ape_text('replaygain_album_peak'),
 		'REPLAYGAIN_TRACK_GAIN': ape_text('replaygain_track_gain'),
 		'REPLAYGAIN_TRACK_PEAK': ape_text('replaygain_track_peak'),
+	}
+
+	ASF_MAP = {
+		u'WM/TrackNumber': asf_single_value('tracknumber'), #u'WM/TrackNumber': [ASFUnicodeAttribute(u'9')]
+		u'WM/AlbumTitle': asf_values('album'), #u'WM/AlbumTitle': [ASFUnicodeAttribute(u'Unbekanntes Album (16.05.2006 20:46:16)')]
+		u'WM/AlbumArtist': asf_values('albumartist'), #u'WM/AlbumArtist': [ASFUnicodeAttribute(u'Trentemoeller')]
+		u'WM/Genre': asf_values('genre'), #u'WM/Genre': [ASFUnicodeAttribute(u'Elektro')]
+		'Author': generic('artist'), #'Author': [u'Trentemoeller']
+		'Title': generic('title'), #'Title': [u'Titel 9']
 	}
 
 	def _mayignore(self, kind):
@@ -486,6 +509,17 @@ class Database(object):
 		doc["container"] = "mpeg"
 		doc["codec"] = "mp4"
 		doc["tags"] = ["id4"]
+		# TODO: covr
+		# TODO: APEv2 (???)
+		return doc
+
+	def updateASF(self, path, m, info):
+		doc = {}
+		self._process(doc, m, self.ASF_MAP, "ASF", path)
+		doc["info"] = dict(m.info.__dict__)
+		doc["container"] = "asf"
+		doc["codec"] = "asf"
+		doc["tags"] = ["asf"]
 		# TODO: covr
 		# TODO: APEv2 (???)
 		return doc
