@@ -500,6 +500,11 @@ class Database(object):
 		#print "processing file", path
 		try:
 			m = mutagen.File(path)
+		except IOError as e:
+			if e.errno != ENOENT:
+				raise
+			print "???", path
+			m = None
 		except mutagen.mp3.HeaderNotFoundError:
 			print "???", path
 			m = None
