@@ -269,6 +269,7 @@ function doSearch(terms) {
 			i += 1;
 			offset2 += 1;
 		}
+		maybeResume();
 	}
 
 	function getInfo(d, id, i) {
@@ -324,6 +325,13 @@ function doSearch(terms) {
 	view.fetch(resume, page);
 }
 
+function maybeResume() {
+	var middle = document.querySelector("#middle");
+	if (middle.onscroll) {
+		middle.onscroll();
+	}
+}
+
 function enqueueTracks(ids) {
 	console.log("TODO", "enqueue", ids);
 }
@@ -336,10 +344,7 @@ function onLoad() {
 		layoutManager.layout();
 		window.onresize = function() {
 			layoutManager.layout();
-			var middle = document.querySelector("#middle");
-			if (middle.onscroll) {
-				middle.onscroll();
-			}
+			maybeResume();
 		};
 		document.querySelector("#search-result").addEventListener("click", function(event) {
 			var target = event.target;
