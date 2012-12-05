@@ -96,24 +96,42 @@
 
 var currentSearchToken = 0;
 
-function formatAlbumTrack(i) {
-	var result = "";
+function formatAlbumTrack(i, tracklist) {
+	var label = "", tracknumber;
 	if (i.tracknumber !== undefined) {
-		result += i.tracknumber + ". ";
+		label += i.tracknumber + ". ";
+		tracknumber = parseInt(i.tracknumber);
+		if (isNaN(tracknumber)) {
+			tracknumber = 0;
+		}
 	} else {
-		result += "??. ";
+		label += "??. ";
+		tracknumber = 0;
 	}
 
 	if (i.artist && i.artist.length) {
-		result += i.artist[0] + " - ";
+		label += i.artist[0] + " - ";
 	}
 
 	if (i.title && i.title.length) {
-		result += i.title[0];
+		label += i.title[0];
 	} else {
-		result += i._id.substring(i._id.lastIndexOf("/"));
+		label += i._id.substring(i._id.lastIndexOf("/"));
 	}
-	return result;
+
+	var track = document.createElement("div");
+	track.classList.add("album-track");
+	track.dataset.id = i._id;
+	track.dataset.tracknumber = tracknumber;
+	track.appendChild(document.createTextNode(label));
+
+	var insertAfter = tracklist.lastElementChild;
+	while (insertAfter && parseInt(insertAfter.dataset.tracknumber) > tracknumber) {
+		insertAfter = insertAfter.previousElementSibling;
+	}
+	tracklist.insertBefore(track, insertAfter ? insertAfter.nextElementSibling : tracklist.firstElementChild);
+
+	return track;
 }
 
 function formatAlbumName(i) {
@@ -230,23 +248,16 @@ function doSearch(terms) {
 			t.parentElement.insertBefore(lastAlbumContainer, t);
 		}
 
+		var tracklist = lastAlbumContainer.querySelector(".album-tracklist");
+
 		if (lastI) {
 			lastT.parentElement.removeChild(lastT);
-
-			var track = document.createElement("div");
-			track.classList.add("album-track");
-			track.appendChild(document.createTextNode(formatAlbumTrack(lastI)));
-			lastAlbumContainer.querySelector("div.album-tracklist").appendChild(track);
-
+			formatAlbumTrack(lastI, tracklist);
 			lastI = lastT = null;
 		}
 
 		t.parentElement.removeChild(t);
-
-		var track = document.createElement("div");
-		track.classList.add("album-track");
-		track.appendChild(document.createTextNode(formatAlbumTrack(i)));
-		lastAlbumContainer.querySelector("div.album-tracklist").appendChild(track);
+		formatAlbumTrack(i, tracklist);
 
 		var target = info.target;
 		//console.log(info.data);
