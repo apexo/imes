@@ -400,7 +400,7 @@ class Database(object):
 			"performer", "conductor", "mixer", "arranger", "copyright", "discid", "tool version", "tool name", "bpm", "intensity", "discsubtitle"):
 			return True
 		prefix, sep, key = kind.partition(":")
-		if sep and kind in ["PRIV", "WXXX", "POPM", "COMM", "APIC", "UFID", "GEOB", "----", "USLT", "WCOM", "TXXX"]:
+		if sep and prefix in ["PRIV", "WXXX", "POPM", "COMM", "APIC", "UFID", "GEOB", "----", "USLT", "WCOM", "TXXX"]:
 			return True
 
 		return False
