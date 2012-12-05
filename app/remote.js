@@ -63,7 +63,7 @@ function ViewProxy(url, startkey, endkey) {
 					skip += 1;
 				} else {
 					currentkey = row.key;
-					skip = 0;
+					skip = 1;
 				}
 				ids[i] = row.id;
 			}
