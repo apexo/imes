@@ -21,7 +21,6 @@ import PIL.Image
 import PIL.JpegImagePlugin
 import PIL.BmpImagePlugin
 import PIL.PngImagePlugin
-import base64
 import struct
 import glob
 import os
@@ -43,7 +42,10 @@ CTYPE_MAP = {
 CRE_REPLACE = re.compile("^.*%%%([A-Z_]+)%%%$")
 
 def _id(d):
-	return base64.urlsafe_b64encode(d)[:(len(d)*8+5) // 6]
+	# base64 uses + and /, which are very safe to include in URL path
+	# base64url uses - and _ instead
+	# since we cannot use _ at the beginning of document id, we use . instead
+	return d.encode("base64")[:(len(d)*8+5) // 6].replace("+", "-").replace("/", ".")
 
 class Database(object):
 	def __init__(self, url, prefix):
