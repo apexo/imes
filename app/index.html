@@ -18,13 +18,13 @@
 		.album-label, .single-track {
 			padding:2px;
 			background-color:#ddf;
-			/*text-align:right;*/
 			line-height:150%;
 			padding-left: 8px;
 			background-image: -webkit-linear-gradient(top, #bbe, #ddf);
 		}
-		.album-cover {float:left;}
-		/*.album-tracklist {display:inline-block; width:100%} */
+		.album-cover {
+			float:left;
+		}
 		.album-tracklist {
 			padding-left:160px
 		}
@@ -37,17 +37,12 @@
 		.album {
 			margin:2px;
 			background-color: #ddf;
-			/*border:1px dashed black;*/
-			/*position: relative;*/
-			/*width: 100%;*/
-			/*-webkit-align-self: stretch;*/
 		}
 		.filter {
 			padding:2px;
 			padding-left: 8px;
 			line-height:150%;
 			background-image: -webkit-linear-gradient(top, #bbe, #ddf);
-			/*position:relative;*/
 		}
 		#nav {
 			padding:0px 8px 0px 2px;
@@ -72,7 +67,6 @@
 			display:inline-block;
 			padding:2px;
 			vertical-align:middle;
-			/*height:20px;*/
 			padding-right:6px;
 		}
 		#controls img {
@@ -311,9 +305,7 @@ function doSearch(terms) {
 			return;
 		}
 
-		console.log("onscroll", state);
 		if (state === "paused") {
-			console.log(placeHolder.offsetTop, scrollParent.offsetHeight, scrollParent.scrollTop, placeHolder.offsetTop - scrollParent.scrollTop);
 			if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.offsetHeight) {
 				state = "loading";
 				view.fetch(resume, page);
@@ -345,10 +337,6 @@ function onLoad() {
 	}, 0);
 }
 
-function updateInput(elt) {
-	doSearch(elt.value);
-}
-
 	</script>
 </head>
 <body onload="onLoad()">
@@ -360,7 +348,7 @@ function updateInput(elt) {
 	<div id="top">
 		<div class="filter">
 			<label for="search-terms" accesskey="F">Filter</label>
-			<input class="search" id="search-terms" name="search-terms" data-weight="1" onInput="updateInput(this)"></input>
+			<input class="search" id="search-terms" name="search-terms" data-weight="1" onInput="doSearch(this.value)"></input>
 			<div id="controls">
 				<img height="20" width="20" />
 				<img height="20" width="20" />
