@@ -254,9 +254,15 @@ class Database(object):
 	def id3v2_numpair(dst1, dst2):
 		def f(dst, value):
 			a, slash, b = value.text[0].partition("/")
-			dst[dst1] = int(a)
+			try:
+				dst[dst1] = int(a)
+			except ValueError:
+				print "invalid", dst1, "value:", value
 			if slash:
-				dst[dst2] = int(b)
+				try:
+					dst[dst2] = int(b)
+				except ValueError:
+					print "invalid", dst2, "value:", value
 		f.__name__ = 'set_id3v2_numpair_%s_and_%s' % (dst1, dst2)
 		return f
 
