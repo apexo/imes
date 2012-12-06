@@ -242,12 +242,12 @@ class Database(object):
 			try:
 				dst[dst1] = int(a)
 			except ValueError:
-				print "invalid", dst1, "value:" value
+				print "invalid", dst1, "value:", value
 			if slash:
 				try:
 					dst[dst2] = int(b)
 				except ValueError:
-					print "invalid", dst2, "value:" value
+					print "invalid", dst2, "value:", value
 		f.__name__ = 'set_int_pair_%s_and_%s' % (dst1, dst2)
 		return f
 
