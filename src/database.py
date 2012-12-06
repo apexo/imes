@@ -175,31 +175,31 @@ class Database(object):
 		print "processing image", k
 		try:
 			img = PIL.Image.open(StringIO.StringIO(data))
+			mime, ext = MIME_MAP[img.__class__]
+			attach = []
+			formats = {}
+			formats["base"] = {"w": img.size[0], "h": img.size[1], "m": mime, "f": "base" + ext}
+			attach.append(("base" + ext, data, mime))
+
+			if img.mode == "P":
+				img = img.convert("RGB")
+
+			doc = {"formats": formats, "inprogress": True, "version": version}
+			self.pictures[k] = doc
+
+			for s in COVER_ART_SIZES:
+				key, mw, mh = str(s), s, s
+				if img.size[0] < mw and img.size[1] < mh:
+					continue
+				i2 = self._autoscale(img, mw, mh)
+				formats[key] = {"w": i2.size[0], "h": i2.size[1], "m": "image/jpeg", "f": key + ".jpeg"}
+				sio = StringIO.StringIO()
+				i2.save(sio, "JPEG")
+				del i2
+				attach.append((key + ".jpeg", sio.getvalue(), "image/jpeg"))
+				del sio
 		except IOError:
 			return None, None
-		mime, ext = MIME_MAP[img.__class__]
-		attach = []
-		formats = {}
-		formats["base"] = {"w": img.size[0], "h": img.size[1], "m": mime, "f": "base" + ext}
-		attach.append(("base" + ext, data, mime))
-
-		if img.mode == "P":
-			img = img.convert("RGB")
-
-		doc = {"formats": formats, "inprogress": True, "version": version}
-		self.pictures[k] = doc
-
-		for s in COVER_ART_SIZES:
-			key, mw, mh = str(s), s, s
-			if img.size[0] < mw and img.size[1] < mh:
-				continue
-			i2 = self._autoscale(img, mw, mh)
-			formats[key] = {"w": i2.size[0], "h": i2.size[1], "m": "image/jpeg", "f": key + ".jpeg"}
-			sio = StringIO.StringIO()
-			i2.save(sio, "JPEG")
-			del i2
-			attach.append((key + ".jpeg", sio.getvalue(), "image/jpeg"))
-			del sio
 
 		for name, data, mime in attach:
 			self.pictures.put_attachment(doc, data, name, mime)
