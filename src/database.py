@@ -22,6 +22,7 @@ import PIL.Image
 import PIL.JpegImagePlugin
 import PIL.BmpImagePlugin
 import PIL.PngImagePlugin
+import PIL.GifImagePlugin
 import struct
 import glob
 import os
@@ -33,6 +34,7 @@ MIME_MAP = {
 	PIL.JpegImagePlugin.JpegImageFile: ("image/jpeg", ".jpeg"),
 	PIL.BmpImagePlugin.BmpImageFile: ("image/bmp", ".bmp"),
 	PIL.PngImagePlugin.PngImageFile: ("image/png", ".png"),
+	PIL.GifImagePlugin.GifImageFile: ("image/gif", ".gif"),
 }
 
 CTYPE_MAP = {
