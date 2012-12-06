@@ -188,70 +188,34 @@ function ViewportLayout(element, childLayout) {
 	}
 }
 
-function parseBorder(p, n) {
-	var px = CSSPrimitiveValue.CSS_PX;
-	if (n == 1) {
-		var v = p[0].getFloatValue(px);
-		return {
-			top: v,
-			right: v,
-			bottom: v,
-			left: v,
-			topBottom: v+v,
-			leftRight: v+v
-		};
-	} else if (n == 2) {
-		var v = p[0].getFloatValue(px);
-		var w = p[1].getFloatValue(px);
-		return {
-			top: v,
-			right: w,
-			bottom: v,
-			left: w,
-			topBottom: v+v,
-			leftRight: w+w,
-		};
-	} else if (n == 3) {
-		var v = p[0].getFloatValue(px);
-		var w = p[1].getFloatValue(px);
-		var x = p[2].getFloatValue(px);
-		return {
-			top: v,
-			right: w,
-			bottom: x,
-			left: w,
-			topBottom: v+x,
-			leftRight: w+w
-		};
-	} else {
-		var v = p[0].getFloatValue(px);
-		var w = p[1].getFloatValue(px);
-		var x = p[2].getFloatValue(px);
-		var y = p[3].getFloatValue(px);
-		return {
-			top: v,
-			right: w,
-			bottom: x,
-			left: y,
-			topBottom: v+x,
-			leftRight: w+y
-		}
-	}
-}
-
 function computedPadding(element) {
-	var p = window.getComputedStyle(element).getPropertyCSSValue("padding");
-	return parseBorder(p, p.length);
+	var px = CSSPrimitiveValue.CSS_PX;
+	var s = window.getComputedStyle(element);
+	var top = s.getPropertyCSSValue("padding-top").getFloatValue(px);
+	var right = s.getPropertyCSSValue("padding-right").getFloatValue(px);
+	var bottom = s.getPropertyCSSValue("padding-bottom").getFloatValue(px);
+	var left = s.getPropertyCSSValue("padding-left").getFloatValue(px);
+	return {top: top, right: right, bottom: bottom, left: left, topBottom: top+bottom, leftRight: left+right};
 }
 
 function computedMargin(element) {
-	var p = window.getComputedStyle(element).getPropertyCSSValue("margin");
-	return parseBorder(p, p.length);
+	var px = CSSPrimitiveValue.CSS_PX;
+	var s = window.getComputedStyle(element);
+	var top = s.getPropertyCSSValue("margin-top").getFloatValue(px);
+	var right = s.getPropertyCSSValue("margin-right").getFloatValue(px);
+	var bottom = s.getPropertyCSSValue("margin-bottom").getFloatValue(px);
+	var left = s.getPropertyCSSValue("margin-left").getFloatValue(px);
+	return {top: top, right: right, bottom: bottom, left: left, topBottom: top+bottom, leftRight: left+right};
 }
 
 function computedBorder(element) {
-	var p = window.getComputedStyle(element).getPropertyCSSValue("border-width");
-	return parseBorder(p, p.length);
+	var px = CSSPrimitiveValue.CSS_PX;
+	var s = window.getComputedStyle(element);
+	var top = s.getPropertyCSSValue("border-top-width").getFloatValue(px);
+	var right = s.getPropertyCSSValue("border-right-width").getFloatValue(px);
+	var bottom = s.getPropertyCSSValue("border-bottom-width").getFloatValue(px);
+	var left = s.getPropertyCSSValue("border-left-width").getFloatValue(px);
+	return {top: top, right: right, bottom: bottom, left: left, topBottom: top+bottom, leftRight: left+right};
 }
 
 function _add(a, b) {
@@ -282,7 +246,7 @@ function getBox(element) {
 
 	var dw, dh, internal, external;
 
-	if (boxSizing === "content-box") {
+	if (!boxSizing || boxSizing === "content-box") {
 		dw = -padding.leftRight;
 		dh = -padding.topBottom;
 		internal = noBorder;
@@ -321,7 +285,7 @@ function getBox(element) {
 function getSize(element) {
 	var boxSizing = window.getComputedStyle(element).boxSizing;
 	var bb = element.getBoundingClientRect();
-	if (boxSizing === "content-box") {
+	if (!boxSizing || boxSizing === "content-box") {
 		var padding = computedPadding(element);
 		return {
 			width: bb.width - padding.leftRight,
