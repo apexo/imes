@@ -244,9 +244,7 @@ function doSearch(terms) {
 		target.appendChild(cover);
 	}
 
-	function doProcess(info) {
-		var i = info.data;
-		var t = info.target;
+	function doProcess(i) {
 		var album = i.album && i.album.length ? i.album[0] : "";
 		var artist = i.artist && i.artist.length ? i.artist[0] : "";
 		var title = i.title && i.title.length ? i.title[0] : "";
@@ -257,7 +255,8 @@ function doSearch(terms) {
 		var cachedAlbum = key ? albumCache[key] : null;
 
 		if (!cachedAlbum) {
-			t.innerHTML = "";
+			var t = document.createElement("div");
+			t.classList.add("single-track");
 			if (album) {
 				t.appendChild(document.createTextNode("["));
 				albumLink(i, t);
@@ -279,7 +278,6 @@ function doSearch(terms) {
 		}
 
 		if (cachedAlbum.ids.hasOwnProperty(i._id)) {
-			t.parentElement.removeChild(t);
 			return;
 		}
 		cachedAlbum.ids[i._id] = true;
@@ -299,24 +297,23 @@ function doSearch(terms) {
 			tracklist.classList.add("album-tracklist");
 			c.appendChild(tracklist);
 
-			cachedAlbum.t.parentElement.removeChild(cachedAlbum.t);
 			formatAlbumTrack(cachedAlbum.i, tracklist);
 			delete cachedAlbum.t;
 			delete cachedAlbum.i;
 		} else {
-			cachedAlbum.container.parentElement.removeChild(cachedAlbum.container);
+			target.removeChild(cachedAlbum.container);
 		}
 
 		formatAlbumTrack(i, cachedAlbum.tracklist);
-		t.parentElement.replaceChild(cachedAlbum.container, t);
+		target.insertBefore(cachedAlbum.container, placeHolder);
 	}
 
-	function getInfo(d, id) {
+	function getInfo(id) {
 		get_file_info(id, function(data) {
 			if (currentSearchToken !== mySearchToken) {
 				return;
 			}
-			doProcess({target: d, data: data});
+			doProcess(data);
 			maybeResume();
 		});
 	}
@@ -331,15 +328,12 @@ function doSearch(terms) {
 		for (var i = 0; i < ids.length; i++) {
 			if (ids[i] === null) {
 				target.removeChild(placeHolder);
+				placeHolder = null;
 				scrollParent.onscroll = null;
 				state = "done";
 				return;
 			}
-			var d = document.createElement("div");
-			d.classList.add("single-track");
-			d.appendChild(document.createTextNode(ids[i]));
-			target.insertBefore(d, placeHolder);
-			getInfo(d, ids[i]);
+			getInfo(ids[i]);
 		}
 		offset += ids.length;
 		if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.offsetHeight) {
