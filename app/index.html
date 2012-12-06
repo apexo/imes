@@ -204,9 +204,7 @@ function doSearch(terms) {
 	}
 	var view = remote.getView(terms);
 	var page = 10;
-	var pending = {};
 	var offset = 0;
-	var offset2 = 0;
 	var placeHolder = document.createElement("div");
 	var albumCache = {};
 	ac = albumCache;
@@ -307,33 +305,15 @@ function doSearch(terms) {
 
 		formatAlbumTrack(i, cachedAlbum.tracklist);
 		t.parentElement.replaceChild(cachedAlbum.container, t);
-		console.log(cachedAlbum);
 	}
 
-	function process(d, i, data) {
-		if (currentSearchToken !== mySearchToken) {
-			return;
-		}
-		if (offset2 !== i) {
-			pending[i] = {target: d, data: data};
-			return;
-		}
-		doProcess({target: d, data: data});
-		offset2 += 1;
-		i += 1;
-		while (pending.hasOwnProperty(i)) {
-			doProcess(pending[i]);
-			delete pending[i];
-			i += 1;
-			offset2 += 1;
-		}
-		maybeResume();
-	}
-
-	function getInfo(d, id, i) {
-		var j = i + offset;
+	function getInfo(d, id) {
 		get_file_info(id, function(data) {
-			process(d, j, data);
+			if (currentSearchToken !== mySearchToken) {
+				return;
+			}
+			doProcess({target: d, data: data});
+			maybeResume();
 		});
 	}
 
@@ -355,7 +335,7 @@ function doSearch(terms) {
 			d.classList.add("single-track");
 			d.appendChild(document.createTextNode(ids[i]));
 			target.insertBefore(d, placeHolder);
-			getInfo(d, ids[i], i);
+			getInfo(d, ids[i]);
 		}
 		offset += ids.length;
 		if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.offsetHeight) {
