@@ -146,31 +146,46 @@ function ViewIterator(proxy, filter) {
 function Remote() {
 	var viewPrefix = "file/_design/db/_view/";
 
+	function lc(v) {
+		return v.toLowerCase();
+	}
+	function eq(v) {
+		return v;
+	}
+	var prefixes = {
+		"artist": {view: "artist", transform: lc, range: "ZZZZZ", mod: 3},
+		"album": {view: "album", transform: lc, range: "ZZZZZ", mod: 2},
+		"title": {view: "title", transform: lc, range: "ZZZZZ", mod: 1},
+		"artist2": {view: "artist2", transform: eq, range: "", mod: 13},
+		"album2": {view: "album2", transform: eq, range: "", mod: 12},
+		"title2": {view: "title2", transform: eq, range: "", mod: 11},
+		"all": {view: "search", transform: lc, range: "ZZZZZ", mod: 0},
+		"*": {view: "search", transform: lc, range: "ZZZZZ", mod: 0}
+	}
+
 	function normalizeTerm(term) {
-		var kv = term.split(":", 2)
-		var k = kv.length === 1 || kv[0] === "*" ? "all" : kv[0];
-		var v = kv[kv.length - 1];
+		var sep = term.indexOf(":");
+		var k, v;
+		if (sep >= 0) {
+			k = term.substring(0, sep);
+			v = term.substring(sep+1);
+		} else {
+			k = "*";
+			v = term;
+		}
+
+		if (!prefixes.hasOwnProperty(k)) {
+			k = "all";
+			v = term;
+		}
+		v = decodeURI(v);
 		if (!v.length) {
 			return [-1, "search", ""];
 		}
+		var p = prefixes[k];
+		return [v.length + p.mod, p.view, p.transform(v), p.range];
 
 		k = k.toLowerCase();
-		v = decodeURI(v);
-		if (k === "artist") {
-			return [v.length + 3, "artist", v.toLowerCase(), "ZZZZZ"];
-		} else if (k === "album") {
-			return [v.length + 2, "album", v.toLowerCase(), "ZZZZZ"];
-		} else if (k === "title") {
-			return [v.length + 1, "title", v.toLowerCase(), "ZZZZZ"];
-		} else if (k === "artist2") {
-			return [v.length + 13, "artist2", v, ""];
-		} else if (k === "album2") {
-			return [v.length + 12, "album2", v, ""];
-		} else if (k === "title2") {
-			return [v.length + 11, "title2", v, ""];
-		} else {
-			return [v.length + 0, "search", v.toLowerCase(), "ZZZZZ"];
-		}
 	}
 
 	this.getView = function(terms) {
