@@ -184,8 +184,6 @@ function Remote() {
 		}
 		var p = prefixes[k];
 		return [v.length + p.mod, p.view, p.transform(v), p.range];
-
-		k = k.toLowerCase();
 	}
 
 	this.getView = function(terms) {
