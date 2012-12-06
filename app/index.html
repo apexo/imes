@@ -97,34 +97,66 @@
 var currentSearchToken = 0;
 var remote = null;
 
+function makeLink(data, target, cls, sep, instead) {
+	var n = 0;
+	if (data) {
+		for (var j = 0; j < data.length; j++) {
+			if (data[j]) {
+				if (n) {
+					target.appendChild(document.createTextNode(sep));
+				}
+				n += 1;
+				var a = document.createElement("a");
+				a.href = "";
+				a.classList.add(cls);
+				a.appendChild(document.createTextNode(data[j]));
+				target.appendChild(a);
+			}
+		}
+	}
+	if (!n) {
+		target.appendChild(document.createTextNode(instead));
+	}
+}
+
+function artistLink(i, target) {
+	makeLink(i.artist, target, "artist-link", ", ", "Unknown Artist");
+}
+
+function albumLink(i, target) {
+	makeLink(i.album, target, "album-link", ", ", "Unknown Album");
+}
+
+function titleLink(i, target) {
+	var instead = i._id.substring(i._id.lastIndexOf("/"));
+	makeLink(i.title, target, "title-link", ", ", "Unknown Title [" + instead + "]");
+}
+
 function formatAlbumTrack(i, tracklist) {
-	var label = "", tracknumber;
+	var t, tracknumber;
 	if (i.tracknumber !== undefined) {
-		label += i.tracknumber + ". ";
 		tracknumber = parseInt(i.tracknumber);
 		if (isNaN(tracknumber)) {
 			tracknumber = 0;
+			t += i.tracknumber + ". ";
+		} else if (tracknumber < 10) {
+			t = "0" + tracknumber + ". ";
+		} else {
+			t = tracknumber + ". ";
 		}
 	} else {
-		label += "??. ";
+		t = "??. ";
 		tracknumber = 0;
-	}
-
-	if (i.artist && i.artist.length) {
-		label += i.artist[0] + " - ";
-	}
-
-	if (i.title && i.title.length) {
-		label += i.title[0];
-	} else {
-		label += i._id.substring(i._id.lastIndexOf("/"));
 	}
 
 	var track = document.createElement("div");
 	track.classList.add("album-track");
 	track.dataset.id = i._id;
 	track.dataset.tracknumber = tracknumber;
-	track.appendChild(document.createTextNode(label));
+	track.appendChild(document.createTextNode(t));
+	artistLink(i, track);
+	track.appendChild(document.createTextNode(" - "));
+	titleLink(i, track);
 
 	var insertAfter = tracklist.lastElementChild;
 	while (insertAfter && parseInt(insertAfter.dataset.tracknumber) > tracknumber) {
@@ -135,12 +167,11 @@ function formatAlbumTrack(i, tracklist) {
 	return track;
 }
 
-function formatAlbumName(i) {
-	var result = i.album && i.album.length ? i.album[0] : "Unknown Album";
+function formatAlbumName(i, target) {
+	albumLink(i, target);
 	if (i.discnumber && (i.discnumber > 1 || i.totaldiscs && i.totaldiscs > 1)) {
-		result += " [Disc " + i.discnumber + "]";
+		target.appendChild(document.createTextNode(" [Disc " + i.discnumber + "]"));
 	}
-	return result;
 }
 
 function scaledSize(img, max_width, max_height) {
@@ -176,8 +207,9 @@ function doSearch(terms) {
 	var pending = {};
 	var offset = 0;
 	var offset2 = 0;
-	var lastPath = null, lastAlbumName = null, lastAlbumContainer = null, lastI = null, lastT = null;
 	var placeHolder = document.createElement("div");
+	var albumCache = {};
+	ac = albumCache;
 	placeHolder.style.height = Math.floor(target.parentElement.offsetHeight / 2);
 	placeHolder.style.visibility = "hidden";
 
@@ -219,51 +251,63 @@ function doSearch(terms) {
 		var path = i._id.substring(0, i._id.lastIndexOf("/"));
 		var disc = i.discnumber;
 
-		if (!album || path !== lastPath || album !== lastAlbumName || disc !== lastDisc) {
-			lastAlbumContainer = null;
-			lastAlbumName = album;
-			lastI = i;
-			lastT = t;
-			lastPath = path;
-			lastDisc = disc;
+		var key = album ? path + '\x00' + album + '\x00' + (disc || 0) : null;
+		var cachedAlbum = key ? albumCache[key] : null;
 
+		if (!cachedAlbum) {
+			t.innerHTML = "";
 			if (album) {
-				t.firstChild.textContent = "[" + album + "] " + artist + " - " + title;
-			} else {
-				t.firstChild.textContent= artist + " - " + title;
+				t.appendChild(document.createTextNode("["));
+				albumLink(i, t);
+				t.appendChild(document.createTextNode("] "));
 			}
-			//console.log(info.data);
+			artistLink(i, t);
+			t.appendChild(document.createTextNode(" - "));
+			titleLink(i, t);
+
+			if (key) {
+				albumCache[key] = {
+					t: t,
+					i: i,
+					ids: {}
+				}
+				albumCache[key].ids[i._id] = true;
+			}
 			return;
 		}
 
-		if (!lastAlbumContainer) {
-			lastAlbumContainer = document.createElement("div");
-			lastAlbumContainer.classList.add("album");
+		if (cachedAlbum.ids.hasOwnProperty(i._id)) {
+			t.parentElement.removeChild(t);
+			return;
+		}
+		cachedAlbum.ids[i._id] = true;
+
+		if (!cachedAlbum.container) {
+			var c = document.createElement("div");
+			cachedAlbum.container = c;
+
+			c.classList.add("album");
 			var label = document.createElement("div");
 			label.classList.add("album-label");
-			label.appendChild(document.createTextNode(formatAlbumName(i)));
-			lastAlbumContainer.appendChild(label);
-			addCover(lastAlbumContainer, i);
+			formatAlbumName(i, label);
+			c.appendChild(label);
+			addCover(c, i);
 			var tracklist = document.createElement("div");
+			cachedAlbum.tracklist = tracklist;
 			tracklist.classList.add("album-tracklist");
-			lastAlbumContainer.appendChild(tracklist);
+			c.appendChild(tracklist);
 
-			t.parentElement.insertBefore(lastAlbumContainer, t);
+			cachedAlbum.t.parentElement.removeChild(cachedAlbum.t);
+			formatAlbumTrack(cachedAlbum.i, tracklist);
+			delete cachedAlbum.t;
+			delete cachedAlbum.i;
+		} else {
+			cachedAlbum.container.parentElement.removeChild(cachedAlbum.container);
 		}
 
-		var tracklist = lastAlbumContainer.querySelector(".album-tracklist");
-
-		if (lastI) {
-			lastT.parentElement.removeChild(lastT);
-			formatAlbumTrack(lastI, tracklist);
-			lastI = lastT = null;
-		}
-
-		t.parentElement.removeChild(t);
-		formatAlbumTrack(i, tracklist);
-
-		var target = info.target;
-		//console.log(info.data);
+		formatAlbumTrack(i, cachedAlbum.tracklist);
+		t.parentElement.replaceChild(cachedAlbum.container, t);
+		console.log(cachedAlbum);
 	}
 
 	function process(d, i, data) {
@@ -350,6 +394,11 @@ function enqueueTracks(ids) {
 	console.log("TODO", "enqueue", ids);
 }
 
+function setSearchTerms(terms) {
+	document.querySelector("#search-terms").value = terms;
+	doSearch(terms);
+}
+
 function onLoad() {
 	setTimeout(function() {
 		new ViewportLayout(document.body, new VBoxLayout(document.body));
@@ -375,6 +424,12 @@ function onLoad() {
 				enqueueTracks(ids);
 			} else if (cl.contains("single-track")) {
 				enqueueTracks([target.dataset.id]);
+			} else if (cl.contains("album-link")) {
+				setSearchTerms("album2:" + encodeURI(target.firstChild.textContent));
+			} else if (cl.contains("artist-link")) {
+				setSearchTerms("artist2:" + encodeURI(target.firstChild.textContent));
+			} else if (cl.contains("title-link")) {
+				setSearchTerms("title2:" + encodeURI(target.firstChild.textContent));
 			} else {
 				return;
 			}

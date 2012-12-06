@@ -155,14 +155,21 @@ function Remote() {
 		}
 
 		k = k.toLowerCase();
+		v = decodeURI(v);
 		if (k === "artist") {
-			return [v.length + 3, "artist", v];
+			return [v.length + 3, "artist", v, "ZZZZZ"];
 		} else if (k === "album") {
-			return [v.length + 2, "album", v];
+			return [v.length + 2, "album", v, "ZZZZZ"];
 		} else if (k === "title") {
-			return [v.length + 1, "title", v];
+			return [v.length + 1, "title", v, "ZZZZZ"];
+		} else if (k === "artist2") {
+			return [v.length + 13, "artist2", v, ""];
+		} else if (k === "album2") {
+			return [v.length + 12, "album2", v, ""];
+		} else if (k === "title2") {
+			return [v.length + 11, "title2", v, ""];
 		} else {
-			return [v.length + 0, "search", v];
+			return [v.length + 0, "search", v, "ZZZZZ"];
 		}
 	}
 
@@ -180,7 +187,7 @@ function Remote() {
 		}
 		temp.sort();
 		for (var i = 0; i < temp.length; i++) {
-			temp[i] = new ViewProxy(DB_URL + DB_PREFIX + viewPrefix + temp[i][1], temp[i][2], temp[i][2] + "ZZZZZ");
+			temp[i] = new ViewProxy(DB_URL + DB_PREFIX + viewPrefix + temp[i][1], temp[i][2], temp[i][2] + temp[i][3]);
 		}
 		
 		var filter = null;
