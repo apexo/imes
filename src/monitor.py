@@ -231,6 +231,8 @@ class Monitor(object):
 				print "[monitor] ENOENT:", os.path.join(parent.path, item)
 			elif e.errno == errno.EACCES:
 				print "[monitor] EACCES: ", os.path.join(parent.path, item)
+			elif e.errno == errno.ENOTDIR:
+				print "[monitor] ENOTDIR: ", os.path.join(parent.path, item)
 			else:
 				raise
 
