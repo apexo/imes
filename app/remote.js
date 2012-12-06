@@ -157,11 +157,11 @@ function Remote() {
 		k = k.toLowerCase();
 		v = decodeURI(v);
 		if (k === "artist") {
-			return [v.length + 3, "artist", v, "ZZZZZ"];
+			return [v.length + 3, "artist", v.toLowerCase(), "ZZZZZ"];
 		} else if (k === "album") {
-			return [v.length + 2, "album", v, "ZZZZZ"];
+			return [v.length + 2, "album", v.toLowerCase(), "ZZZZZ"];
 		} else if (k === "title") {
-			return [v.length + 1, "title", v, "ZZZZZ"];
+			return [v.length + 1, "title", v.toLowerCase(), "ZZZZZ"];
 		} else if (k === "artist2") {
 			return [v.length + 13, "artist2", v, ""];
 		} else if (k === "album2") {
@@ -169,7 +169,7 @@ function Remote() {
 		} else if (k === "title2") {
 			return [v.length + 11, "title2", v, ""];
 		} else {
-			return [v.length + 0, "search", v, "ZZZZZ"];
+			return [v.length + 0, "search", v.toLowerCase(), "ZZZZZ"];
 		}
 	}
 
