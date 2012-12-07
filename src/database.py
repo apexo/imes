@@ -411,7 +411,7 @@ class Database(object):
 			"TCOM", "TIT1", "TOWN", "MCDI", "TIT3", "TIPL",
 			"releasecountry", "asin", "metadata_block_picture", "releasestatus", "script", "releasetype", "label", "language", "author", "barcode", "tmpo", "\xa9too", "cpil", "pgap", "\xa9wrt",
 			"covr", "comment", "producer", "catalognumber", "format", "WCOP", "TBPM", "license", "TOAL", "PCNT", "isrc", "itunes_cddb_1",
-			"performer", "conductor", "mixer", "arranger", "copyright", "discid", "tool version", "tool name", "bpm", "intensity", "discsubtitle"):
+			"performer", "conductor", "mixer", "arranger", "copyright", "discid", "tool version", "tool name", "bpm", "intensity", "discsubtitle", "\xa9cmt", "WM/Lyrics", "WM/MCDI"):
 			return True
 		prefix, sep, key = kind.partition(":")
 		if sep and prefix in ["PRIV", "WXXX", "POPM", "COMM", "APIC", "UFID", "GEOB", "----", "USLT", "WCOM", "TXXX"]:
