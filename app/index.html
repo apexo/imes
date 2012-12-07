@@ -1,13 +1,18 @@
+<!doctype html>
 <html>
 <head>
 	<title>IMES</title>
+	<meta name="viewport" content="width=device-width, height=device-height, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, target-densityDpi=180" />
 	<style type="text/css">
+		#header {
+			background-color: white;
+		}
 		#middle {
-			overflow-y: scroll;
-			overflow-x: hidden;
+			/*overflow-y: scroll;
+			overflow-x: hidden;*/
 		}
 		#search-result {
-			overflow: hidden;
+			/*overflow: hidden;*/
 		}
 		.album-track {
 			padding:2px;
@@ -211,9 +216,10 @@ function doSearch(terms) {
 	var offset = 0;
 	var placeHolder = document.createElement("div");
 	var albumCache = {};
+	var scrollParent = document.body;
 	ac = albumCache;
-	placeHolder.style.height = Math.floor(target.parentElement.offsetHeight / 2);
 	placeHolder.style.visibility = "hidden";
+	placeHolder.style.height = Math.floor(scrollParent.parentElement.clientHeight / 2) + "px";
 
 	target.innerHTML = "";
 	target.appendChild(placeHolder);
@@ -321,7 +327,6 @@ function doSearch(terms) {
 	}
 
 	var state = "loading";
-	var scrollParent = target.parentElement;
 
 	function resume(ids) {
 		if (currentSearchToken !== mySearchToken) {
@@ -331,40 +336,38 @@ function doSearch(terms) {
 			if (ids[i] === null) {
 				target.removeChild(placeHolder);
 				placeHolder = null;
-				scrollParent.onscroll = null;
+				window.onscroll = null;
 				state = "done";
 				return;
 			}
 			getInfo(ids[i]);
 		}
 		offset += ids.length;
-		if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.offsetHeight) {
+		if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.parentElement.clientHeight) {
 			view.fetch(resume, page);
 		} else {
 			state = "paused";
 		}
 	}
 
-	scrollParent.onscroll = function() {
+	window.onscroll = function() {
 		if (currentSearchToken !== mySearchToken) {
-			console.log("stale onscroll handler", currentSearchToken, mySearchToken, state, scrollParent);
 			return;
 		}
 
 		if (state === "paused") {
-			if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.offsetHeight) {
+			if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.parentElement.clientHeight) {
 				state = "loading";
 				view.fetch(resume, page);
 			}
 		}
 	}
-	scrollParent.onscroll.token = mySearchToken;
 
 	view.fetch(resume, page);
 }
 
 function maybeResume() {
-	var middle = document.querySelector("#middle");
+	var middle = document.body;
 	if (middle.onscroll) {
 		middle.onscroll();
 	}
@@ -386,7 +389,9 @@ function setSearchTerms(terms, source) {
 
 function onLoad() {
 	setTimeout(function() {
-		new ViewportLayout(document.body, new VBoxLayout(document.body));
+		//new ViewportLayout(document.body, new VBoxLayout(document.body));
+		new HeaderLayout(document.body);
+		new VBoxLayout(document.querySelector("#header"));
 		new HBoxLayout(document.querySelector("#top .filter"));
 	
 		layoutManager.layout();
@@ -439,18 +444,20 @@ function onLoad() {
 	</script>
 </head>
 <body onload="onLoad()">
-	<div id="nav">
-		<a href="" class="active">Search</a>
-		<a href="">Playlist</a>
-		<a href="">Settings</a>
-	</div>
-	<div id="top">
-		<div class="filter">
-			<label for="search-terms" accesskey="F">Filter</label>
-			<input class="search" id="search-terms" name="search-terms" data-weight="1" onInput="setSearchTerms(this.value, 'user')"></input>
-			<div id="controls">
-				<img height="20" width="20" />
-				<img height="20" width="20" />
+	<div id="header">
+		<div id="nav">
+			<a href="" class="active">Search</a>
+			<a href="">Playlist</a>
+			<a href="">Settings</a>
+		</div>
+		<div id="top">
+			<div class="filter">
+				<label for="search-terms" accesskey="F">Filter</label>
+				<input class="search" id="search-terms" name="search-terms" data-weight="1" onInput="setSearchTerms(this.value, 'user')"></input>
+				<div id="controls">
+					<img height="20" width="20" />
+					<img height="20" width="20" />
+				</div>
 			</div>
 		</div>
 	</div>
@@ -458,6 +465,5 @@ function onLoad() {
 		<div id="search-result">
 		</div>
 	</div>
-	<div id="bottom"></div>
 </body>
 </html>

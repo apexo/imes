@@ -145,10 +145,10 @@ function AutoLayout(element) {
 			var child = children[i];
 			var cs = this.childSizes[i];
 
-			child.style.left = this.box.padding.left + this.childBoxes[i].margin.left;
-			child.style.top = this.box.padding.top + this.childBoxes[i].margin.top;
-			child.style.width = cs.width;
-			child.style.height = cs.height;
+			child.style.left = (this.box.padding.left + this.childBoxes[i].margin.left) + "px";
+			child.style.top = (this.box.padding.top + this.childBoxes[i].margin.top) + "px";
+			child.style.width = cs.width + "px";
+			child.style.height = cs.height + "px";
 			child.style.position = "absolute";
 
 			layoutManager.applyLayout(child);
@@ -402,12 +402,12 @@ function HBoxLayout(element) {
 			var cs = this.childSizes[i];
 			var cb = this.childBoxes[i];
 			
-			child.style.left = cs.left;
-			child.style.top = Math.floor((this.maxHeight - cs.height - cb.external.topBottom) / 2) + this.box.padding.top + cb.margin.top;
+			child.style.left = cs.left + "px";
+			child.style.top = (Math.floor((this.maxHeight - cs.height - cb.external.topBottom) / 2) + this.box.padding.top + cb.margin.top) + "px";
 			if (this.weights[i]) {
-				child.style.width = cs.width;
+				child.style.width = cs.width + "px";
 			}
-			child.style.height = cs.height;
+			child.style.height = cs.height + "px";
 			child.style.position = "absolute";
 
 			layoutManager.applyLayout(child);
@@ -519,13 +519,66 @@ function VBoxLayout(element) {
 			var cs = this.childSizes[i];
 			var cb = this.childBoxes[i];
 			
-			child.style.left = Math.floor((this.maxWidth - cs.width - cb.external.leftRight) / 2) + this.box.padding.left + cb.margin.left;
-			child.style.top = cs.top;
-			child.style.width = cs.width;
+			child.style.left = (Math.floor((this.maxWidth - cs.width - cb.external.leftRight) / 2) + this.box.padding.left + cb.margin.left) + "px";
+			child.style.top = cs.top + "px";
+			child.style.width = cs.width + "px";
 			if (this.weights[i]) {
-				child.style.height = cs.height;
+				child.style.height = cs.height + "px";
 			}
 			child.style.position = "absolute";
+
+			layoutManager.applyLayout(child);
+		}
+	}
+}
+
+function HeaderLayout(element) {
+	layoutManager.registerLayout(element, this);
+
+	this.element = element;
+	this.childBoxes = new Array();
+
+	var children = element.children;
+	for (var i = 0; i < children.length; i++) {
+		this.childBoxes[i] = getBox(children[i]);
+	}
+
+	this.box = getBox(element);
+
+	this.calculateLayout = function(width, height) {
+		var iw = window.innerWidth - this.box.external.leftRight - this.box.internal.leftRight;
+		var ih = 0;
+		var childSizes = new Array();
+
+		var children = this.element.children;
+		for (var i = 0; i < children.length; i++) {
+			childSizes[i] = layoutManager.calculateLayout(children[i], iw - this.childBoxes[i].external.leftRight, NaN);
+			ih += childSizes[i].height;
+		}
+
+		this.childSizes = childSizes;
+
+		return {
+			width: iw + this.box.internal.leftRight,
+			height: ih + this.box.internal.topBottom
+		}
+	}
+
+	this.applyLayout = function() {
+		var children = this.element.children;
+		for (var i = 0; i < children.length; i++) {
+			var child = children[i];
+			var cs = this.childSizes[i];
+			var cb = this.childBoxes[i];
+
+			if (i === 0) {
+				this.element.style.marginTop = (cs.height + cb.external.topBottom) + "px";
+				child.style.position = "fixed";
+				child.style.left = (this.box.padding.left + cb.margin.left) + "px";
+				child.style.top = (this.box.padding.top + cb.margin.top) + "px";
+				child.style.width = cs.width + "px";
+				child.style.height = cs.height + "px";
+			}
 
 			layoutManager.applyLayout(child);
 		}
