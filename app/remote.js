@@ -1,4 +1,4 @@
-var DB_URL = 'http://localhost:5984/'; // %%%DB_URL%%%
+var DB_URL = '/';
 var DB_PREFIX = ''; // %%%DB_PREFIX%%%
 
 function ajax_get(url, cb) {
