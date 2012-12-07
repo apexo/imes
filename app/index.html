@@ -299,6 +299,7 @@ function doSearch(terms) {
 			c.appendChild(tracklist);
 
 			formatAlbumTrack(cachedAlbum.i, tracklist);
+			target.removeChild(cachedAlbum.t);
 			delete cachedAlbum.t;
 			delete cachedAlbum.i;
 		} else {
