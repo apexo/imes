@@ -246,7 +246,6 @@ class Monitor(object):
 			if e.mask & inotifyx.IN_MOVED_FROM:
 				if i < l and (events[i].cookie == e.cookie):
 					e2 = events[i]
-					print e2
 					assert e2.mask == (inotifyx.IN_MOVED_TO | e.mask & inotifyx.IN_ISDIR)
 					i += 1
 					self._move(e.wd, e2.wd, e.mask, e.name, e2.name)
