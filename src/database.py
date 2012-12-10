@@ -109,7 +109,6 @@ class Database(object):
 	def cleanup(self, cookie):
 		map_fun = "function(doc) {if ( doc.cookie !== %s) { emit(doc._id, null); } }" % (couchdb.json.encode(cookie),)
 		for row in self.files.query(map_fun):
-			print "gone", row.id
 			del self.files[row.id]
 
 	def search(self, term):
