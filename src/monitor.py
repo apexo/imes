@@ -228,11 +228,12 @@ class Monitor(object):
 			WatchedPath(self, parent, item)
 		except IOError as e:
 			if e.errno == errno.ENOENT:
-				print "[monitor] ENOENT:", os.path.join(parent.path, item)
+				logStacktrace()
+				print "[monitor] ENOENT:", repr(os.path.join(parent.path, item))
 			elif e.errno == errno.EACCES:
-				print "[monitor] EACCES: ", os.path.join(parent.path, item)
+				print "[monitor] EACCES: ", repr(os.path.join(parent.path, item))
 			elif e.errno == errno.ENOTDIR:
-				print "[monitor] ENOTDIR: ", os.path.join(parent.path, item)
+				print "[monitor] ENOTDIR: ", repr(os.path.join(parent.path, item))
 			else:
 				raise
 
