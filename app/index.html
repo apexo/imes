@@ -438,6 +438,39 @@ function onLoad() {
 		window.addEventListener("popstate", function() {
 			setSearchTerms(decodeURI(document.location.hash.substring(1)), "location");
 		});
+
+		window.addEventListener("keydown", function(event) {
+			var terms = document.getElementById("search-terms");
+			if (event.target === terms) {
+				return;
+			}
+			if (event.keyCode === 0x46 && event.ctrlKey) {
+				terms.focus();
+			} else if (event.keyCode === 191 && event.shiftKey || event.keyCode === 111) {
+				terms.value = "";
+				terms.focus();
+			} else if (event.keyCode === 8) {
+				if (terms.value) {
+					if (event.ctrlKey) {
+						setSearchTerms("")
+					} else {
+						setSearchTerms(terms.value.substring(0, terms.value.length - 1));
+					}
+				}
+			} else {
+				return;
+			}
+			event.preventDefault();
+		});
+
+		window.addEventListener("keypress", function(event) {
+			var terms = document.getElementById("search-terms");
+			if (event.target === terms) {
+				return;
+			}
+			setSearchTerms(terms.value + String.fromCharCode(event.keyCode));
+		});
+
 	}, 0);
 }
 
