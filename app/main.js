@@ -71,6 +71,21 @@ function formatAlbumTrack(i, tracklist) {
 	return track;
 }
 
+function formatSingleTrack(i) {
+	var t = document.createElement("div");
+	t.classList.add("single-track");
+	if (i.album && i.album.length) {
+		t.appendChild(document.createTextNode("["));
+		albumLink(i, t);
+		t.appendChild(document.createTextNode("] "));
+	}
+	artistLink(i, t);
+	t.appendChild(document.createTextNode(" - "));
+	titleLink(i, t);
+	t.dataset.id = i._id;
+	return t;
+}
+
 function formatAlbumName(i, target) {
 	albumLink(i, target);
 	if (i.discnumber && (i.discnumber > 1 || i.totaldiscs && i.totaldiscs > 1)) {
@@ -109,8 +124,9 @@ function doSearch(terms) {
 	var view = remote.getView(terms);
 	var page = 10;
 	var placeHolder = document.createElement("div");
-	var albumCache = {};
 	var scrollParent = document.body;
+	var albumCache = {};
+	var idCache = {};
 	placeHolder.style.visibility = "hidden";
 	placeHolder.style.height = Math.floor(scrollParent.parentElement.clientHeight / 2) + "px";
 
@@ -118,7 +134,7 @@ function doSearch(terms) {
 	target.appendChild(placeHolder);
 
 	function addCover(target, info) {
-		if (!info.pictures || !info.pictures.length) {
+		if (!info.pictures || !info.pictures.length || target.querySelector(".album-cover")) {
 			return;
 		}
 		var p = info.pictures[0];
@@ -140,10 +156,34 @@ function doSearch(terms) {
 		cover.width = ss.w;
 		cover.height = ss.h;
 		cover.src = DB_URL + DB_PREFIX + "picture/" + p.key + "/" + f.f;
-		target.appendChild(cover);
+		target.insertBefore(cover, target.querySelector(".album-tracklist"));
 	}
 
-	function doProcess(i) {
+	function remove(id) {
+		var t = idCache[id];
+		if (!idCache.hasOwnProperty(id)) {
+			return;
+		}
+		delete idCache[id];
+		if (t.classList.contains("single-track")) {
+			target.removeChild(t);
+		} else {
+			var tracklist = t.parentElement;
+			tracklist.removeChild(t);
+			// TODO: maybe downgrade single remaining track to single-track?
+			if (!tracklist.firstElementChild) {
+				var albumContainer = tracklist.parentElement;
+				delete albumCache[albumContainer.dataset.key];
+				target.removeChild(albumContainer);
+			}
+		}
+	}
+
+	function add(i) {
+		if (idCache.hasOwnProperty(i._id)) {
+			return;
+		}
+
 		var album = i.album && i.album.length ? i.album[0] : "";
 		var artist = i.artist && i.artist.length ? i.artist[0] : "";
 		var title = i.title && i.title.length ? i.title[0] : "";
@@ -154,33 +194,15 @@ function doSearch(terms) {
 		var cachedAlbum = key ? albumCache[key] : null;
 
 		if (!cachedAlbum) {
-			var t = document.createElement("div");
-			t.classList.add("single-track");
-			if (album) {
-				t.appendChild(document.createTextNode("["));
-				albumLink(i, t);
-				t.appendChild(document.createTextNode("] "));
-			}
-			artistLink(i, t);
-			t.appendChild(document.createTextNode(" - "));
-			titleLink(i, t);
+			var t = formatSingleTrack(i);
+			idCache[i._id] = t;
 
 			if (key) {
-				albumCache[key] = {
-					t: t,
-					i: i,
-					ids: {}
-				}
-				albumCache[key].ids[i._id] = true;
+				albumCache[key] = {t: t, i: i}
 			}
 			target.insertBefore(t, placeHolder);
 			return;
 		}
-
-		if (cachedAlbum.ids.hasOwnProperty(i._id)) {
-			return;
-		}
-		cachedAlbum.ids[i._id] = true;
 
 		if (!cachedAlbum.container) {
 			var c = document.createElement("div");
@@ -196,16 +218,18 @@ function doSearch(terms) {
 			cachedAlbum.tracklist = tracklist;
 			tracklist.classList.add("album-tracklist");
 			c.appendChild(tracklist);
+			c.dataset.key = key;
 
-			formatAlbumTrack(cachedAlbum.i, tracklist);
+			idCache[cachedAlbum.i._id] = formatAlbumTrack(cachedAlbum.i, tracklist);
 			target.removeChild(cachedAlbum.t);
 			delete cachedAlbum.t;
 			delete cachedAlbum.i;
 		} else {
+			addCover(cachedAlbum.container, i);
 			target.removeChild(cachedAlbum.container);
 		}
 
-		formatAlbumTrack(i, cachedAlbum.tracklist);
+		idCache[i._id] = formatAlbumTrack(i, cachedAlbum.tracklist);
 		target.insertBefore(cachedAlbum.container, placeHolder);
 	}
 
@@ -216,7 +240,7 @@ function doSearch(terms) {
 			return;
 		}
 		for (var i = 0; i < ids.length; i++) {
-			doProcess(ids[i].doc);
+			add(ids[i].doc);
 		}
 		if (done) {
 			target.removeChild(placeHolder);
@@ -245,7 +269,33 @@ function doSearch(terms) {
 		}
 	}
 
-	view.fetch(resume, page);
+
+	function readyCb() {
+		view.fetch(resume, page);
+		return true;
+	}
+
+	function changesCb(changes) {
+		if (currentSearchToken !== mySearchToken) {
+			return false;
+		}
+
+		for (var i = 0; i < changes.length; i++) {
+			var change = changes[i];
+			if (change.deleted) {
+				remove(change.id);
+			} else if (view.filter(change)) {
+				remove(change.id);
+				add(change.doc);
+			}
+		}
+		maybeResume();
+	}
+
+	var subscription = new Subscribe("file", readyCb, changesCb, {
+		"include_docs": "true",
+		"limit": 10,
+	});
 }
 
 function maybeResume() {
