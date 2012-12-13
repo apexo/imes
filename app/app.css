@@ -1,0 +1,93 @@
+#header {
+	background-color: white;
+}
+#middle {
+	/*overflow-y: scroll;
+	overflow-x: hidden;*/
+}
+#search-result {
+	/*overflow: hidden;*/
+}
+.album-track {
+	padding:2px;
+	padding-left:2em;
+	background-color:#ddf;
+	background-image: -webkit-linear-gradient(top, #ddf, #eef);
+	background-image: -moz-linear-gradient(top, #ddf, #eef);
+}
+.album-label, .single-track {
+	padding:2px;
+	background-color:#ddf;
+	line-height:150%;
+	padding-left: 8px;
+	background-image: -webkit-linear-gradient(top, #bbe, #ddf);
+	background-image: -moz-linear-gradient(top, #bbe, #ddf);
+}
+.album-label, .album-track, .single-track {
+	cursor: pointer;
+}
+.album-label:hover, .album-track:hover, .single-track:hover {
+	background-image: none;
+	background-color: #8080ff;
+}
+.album-cover {
+	float:left;
+}
+.album-tracklist {
+	padding-left:160px
+}
+.album, .single-track, .filter {
+	margin-right:4px;
+}
+.album, .single-track {
+	clear: left;
+}
+.album {
+	margin:2px;
+	background-color: #ddf;
+}
+.filter {
+	padding:2px;
+	padding-left: 8px;
+	line-height:150%;
+	background-image: -webkit-linear-gradient(top, #bbe, #ddf);
+	background-image: -moz-linear-gradient(top, #bbe, #ddf);
+}
+#nav {
+	padding:0px 8px 0px 2px;
+	line-height:150%;
+}
+#nav a {
+	padding-top: 2px;
+	padding-bottom: 2px;
+	text-shadow:1px 1px 5px #FFFFFF;
+	color:black;
+	text-decoration:none;
+	background-color: #ddf;
+}
+#nav a.active {
+	background-image: -webkit-linear-gradient(top, #bbe, #ddf);
+	background-image: -moz-linear-gradient(top, #bbe, #ddf);
+}
+.filter input {
+	border:0;
+	padding:2px;
+}
+#controls {
+	display:inline-block;
+	padding:2px;
+	vertical-align:middle;
+	padding-right:6px;
+}
+#controls img {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	display: block;
+	float: left;
+	
+}
+body {
+	margin: 0;
+	/*overflow: hidden;*/
+}
