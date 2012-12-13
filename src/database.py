@@ -616,10 +616,15 @@ class Database(object):
 			old_id = row.id
 			assert old_id.startswith(srcPath)
 			new_id = dstPath + old_id[len(srcPath):]
-			doc = self.files[old_id]
-			del self.files[old_id]
+			doc = dict(self.files[old_id])
 			doc.pop("_id")
+			temp = self.files.get(new_id)
+			if temp is not None:
+				doc["_rev"] = temp["_rev"]
+			else:
+				doc.pop("_rev")
 			self.files[new_id] = doc
+			del self.files[old_id]
 
 	def remove(self, path, isDir):
 		if not isDir:
