@@ -34,7 +34,7 @@ function ViewProxy(url, startkey, endkey) {
 	this.endkey = endkey;
 	this.currentstartkey = startkey;
 	this.skip = 0;
-	this._url = url + "?endkey=" + encodeURIComponent(JSON.stringify(this.endkey));
+	this._url = url + "?include_docs=true&endkey=" + encodeURIComponent(JSON.stringify(this.endkey));
 
 	this.clone = function() {
 		return new ViewProxy(this.url, this.startkey, this.endkey);
@@ -63,7 +63,6 @@ function ViewProxy(url, startkey, endkey) {
 			var rows = result.rows;
 			var skip = me.skip;
 			var currentkey = me.currentstartkey;
-			var ids = new Array(rows.length);
 			for (var i = 0; i < rows.length; i++) {
 				var row = rows[i];
 				if (row.key == currentkey) {
@@ -72,63 +71,14 @@ function ViewProxy(url, startkey, endkey) {
 					currentkey = row.key;
 					skip = 1;
 				}
-				ids[i] = row.id;
 			}
 			me.skip = skip;
 			me.currentstartkey = currentkey;
-			if (!limit || ids.length < limit) {
-				ids.push(null);
-			}
-			callback(ids);
+			var done = !limit || rows.length < limit;
+			callback(rows, done);
 		}
 
 		ajax_get(url, cb);
-	}
-}
-
-function ViewFilter(proxy, nextFilter) {
-	this.proxy = proxy;
-	this.nextFilter = nextFilter;
-	this.ids = null;
-	this.waiting = [];
-
-	var me = this;
-
-	function doFilter(ids, cb) {
-		var filtered = [];
-		var myids = me.ids;
-		for (var i = 0; i < ids.length; i++) {
-			if (myids.hasOwnProperty(ids[i]) || ids[i] === null) {
-				filtered.push(ids[i]);
-			}	
-		}
-		if (me.nextFilter) {
-			me.nextFilter.filter(filtered, cb);
-		} else {
-			cb(filtered);
-		}
-	}
-
-	proxy.fetch(function(ids) {
-		me.ids = {};
-		for (var i = 0; i < ids.length; i++) {
-			if (ids[i] !== null) {
-				me.ids[ids[i]] = true;
-			}
-		}
-		var w = me.waiting;
-		me.waiting = null;
-		for (var i = 0; i < w.length; i++) {
-			doFilter(w[i][0], w[i][1]);
-		}
-	})
-
-	this.filter = function(ids, cb) {
-		if (this.waiting !== null) {
-			this.waiting.push([ids, cb]);
-		} else {
-			doFilter(ids, cb);
-		}
 	}
 }
 
@@ -136,19 +86,31 @@ function ViewIterator(proxy, filter) {
 	this.proxy = proxy;
 	this.filter = filter;
 
-	this.fetch = function(callback, limit) {
-		var me = this;
-
-		function cb(ids) {
-			if (me.filter) {
-				me.filter.filter(ids, callback);
-			} else {
-				callback(ids);
+	var filtered = filter ?
+		function(rows) {
+			var result = [];
+			for (var i = 0; i < rows.length; i++) {
+				if (filter(rows[i])) {
+					result[result.length] = rows[i];
+				} else {
+				}
 			}
+			return result;
+		}
+		:
+		function(rows) {
+			return rows;
+		};
+
+	this.fetch = function(callback, limit) {
+		function cb(rows, done) {
+			callback(filtered(rows), done);
 		}
 		this.proxy.fetch(cb, limit);
 	}
 }
+
+
 
 function Remote() {
 	var viewPrefix = "file/_design/db/_view/";
@@ -193,6 +155,14 @@ function Remote() {
 		return [v.length + p.mod, p.view, p.transform(v), p.range];
 	}
 
+	function _createFilter(spec, i0, i1) {
+		var f = [];
+		for (var i = i0; i < i1; i++) {
+			f.push([spec[i][1], spec[i][2]]);
+		}
+		return createFilter(f);
+	}
+
 	this.getView = function(terms) {
 		var terms = terms.split(/[ \t]+/);
 		var temp = [];
@@ -206,15 +176,12 @@ function Remote() {
 			temp.push([0, "search", ""]);
 		}
 		temp.sort();
-		for (var i = 0; i < temp.length; i++) {
-			temp[i] = new ViewProxy(DB_URL + DB_PREFIX + viewPrefix + temp[i][1], temp[i][2], temp[i][2] + temp[i][3]);
-		}
-		
-		var filter = null;
-		for (var i = 1; i < temp.length; i++) {
-			filter = new ViewFilter(temp[i], filter);
-		}
-		return new ViewIterator(temp[0], filter);
+		var ps = temp[temp.length - 1];
+		var proxy = new ViewProxy(DB_URL + DB_PREFIX + viewPrefix + ps[1], ps[2], ps[2] + ps[3]);
+		var filter = temp.length < 1 ? null : _createFilter(temp, 0, temp.length - 1);
+		var result = new ViewIterator(proxy, filter);
+		result.filter = _createFilter(temp, 0, temp.length);
+		return result;
 	}
 }
 

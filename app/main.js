@@ -211,31 +211,21 @@ function doSearch(terms) {
 		target.insertBefore(cachedAlbum.container, placeHolder);
 	}
 
-	function getInfo(id) {
-		get_file_info(id, function(data) {
-			if (currentSearchToken !== mySearchToken) {
-				return;
-			}
-			doProcess(data);
-			maybeResume();
-		});
-	}
-
 	var state = "loading";
 
-	function resume(ids) {
+	function resume(ids, done) {
 		if (currentSearchToken !== mySearchToken) {
 			return;
 		}
 		for (var i = 0; i < ids.length; i++) {
-			if (ids[i] === null) {
-				target.removeChild(placeHolder);
-				placeHolder = null;
-				window.onscroll = null;
-				state = "done";
-				return;
-			}
-			getInfo(ids[i]);
+			doProcess(ids[i].doc);
+		}
+		if (done) {
+			target.removeChild(placeHolder);
+			placeHolder = null;
+			window.onscroll = null;
+			state = "done";
+			return;
 		}
 		offset += ids.length;
 		if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.parentElement.clientHeight) {
