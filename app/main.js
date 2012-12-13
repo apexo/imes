@@ -108,11 +108,9 @@ function doSearch(terms) {
 	}
 	var view = remote.getView(terms);
 	var page = 10;
-	var offset = 0;
 	var placeHolder = document.createElement("div");
 	var albumCache = {};
 	var scrollParent = document.body;
-	ac = albumCache;
 	placeHolder.style.visibility = "hidden";
 	placeHolder.style.height = Math.floor(scrollParent.parentElement.clientHeight / 2) + "px";
 
@@ -227,7 +225,6 @@ function doSearch(terms) {
 			state = "done";
 			return;
 		}
-		offset += ids.length;
 		if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.parentElement.clientHeight) {
 			view.fetch(resume, page);
 		} else {
