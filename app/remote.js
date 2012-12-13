@@ -1,13 +1,20 @@
 var DB_URL = '/';
 var DB_PREFIX = ''; // %%%DB_PREFIX%%%
 
-function ajax_get(url, cb) {
+function _default_error_cb(url, xhr) {
+	console.log("XHR error", xhr.status, xhr, url);
+}
+
+function ajax_get(url, cb, error) {
+	error = error || _default_error_cb;
 	var xhr = new XMLHttpRequest();
 	xhr.open("GET", url, true);
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState === 4) {
 			if (xhr.status === 200) {
 				cb(xhr.responseText);
+			} else {
+				error(url, xhr);
 			}
 		}
 	}
