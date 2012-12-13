@@ -217,3 +217,127 @@ function Remote() {
 		return new ViewIterator(temp[0], filter);
 	}
 }
+
+function Subscribe(db, readyCb, changesCb, config) {
+	// http://localhost:5984/file/_changes?limit=1&since=60868&feed=longpoll
+	var url = DB_URL + DB_PREFIX + db + "/_changes";
+	var mode = "failed";
+	var seq = null;
+	var me = this;
+
+	/*
+		initial state: preparing
+
+		preparing  --[cancel]-> failed
+		preparing  --[error]--> failed
+		preparing  ---[ok]----> pending
+		failed     -[prepare]-> preparing
+
+		pending    --[start]--> processing
+		processing --[cancel]-> pending
+		processing ---[ok]----> waiting
+		waiting    --[cancel]-> pending
+		waiting    --[error]--> pending
+		waiting    ---[ok]----> processing
+	*/
+
+	function ready(data) {
+		var data = JSON.parse(data);
+		seq = data.last_seq;
+		mode = "pending";
+		url += "?feed=longpoll";
+		if (config.filter) {
+			url += "&filter=" + config.filter;
+		}
+		if (config.timeout) {
+			url += "&timeout=" + config.timeout;
+		}
+		if (config.heartbeat) {
+			url += "&heartbeat=" + config.heartbeat;
+		}
+		if (config.limit) {
+			url += "&limit=" + config.limit;
+		}
+		if (config.include_docs) {
+			url += "&include_docs=" + config.include_docs;
+		}
+		if (readyCb(me) !== false) {
+			me.start();
+		}
+	}
+
+	function readyError(url, xhr) {
+		console.log("readyError", mode, url, xhr);
+		if (mode !== "preparing") {
+			return;
+		}
+		mode = "cancelled";
+		if (config.readyErrorCb && config.readyErrorCb(me, xhr) === true) {
+			prepare();
+		}
+	}
+
+	function changes(data) {
+		if (mode !== "waiting") {
+			return;
+		}
+		mode = "processing";
+		var data = JSON.parse(data);
+		seq = data.last_seq;
+		if (changesCb(data.results) === false) {
+			mode = "pending";
+		} else {
+			poll();
+		}
+	}
+
+	function changesError(url, xhr) {
+		console.log("changesError", mode, url, xhr);
+		if (mode !== "waiting") {
+			return;
+		}
+		mode = "pending";
+		if (config.errorCb && config.errorCb(me, xhr) === true) {
+			mode = "processing";
+			poll();
+		}
+	}
+
+	function poll() {
+		if (mode !== "processing") {
+			throw ["illegal state (poll)", mode];
+		}
+		mode = "waiting";
+		ajax_get(url + "&since=" + seq, changes, changesError);
+	}
+
+	this.cancel = function() {
+		if (mode === "preparing") {
+			mode = "failed";
+		} else if (mode === "processing" || mode === "waiting") {
+			mode = "pending";
+		}
+	}
+
+	this.start = function() {
+		if (mode !== "pending") {
+			throw ["illegal state (start)", mode];
+		}
+		mode = "processing";
+		poll();
+	}
+
+	this.prepare = function() {
+		if (mode !== "failed") {
+			throw ["illegal state (prepare)", mode];
+		}
+		mode = "preparing";
+		ajax_get(url + "?descending=true&limit=1", ready, readyError);
+	}
+
+	this.getMode = function() {
+		return mode;
+	}
+
+	this.prepare();
+}
