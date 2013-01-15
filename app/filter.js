@@ -1,13 +1,13 @@
 createFilter = (function() {
 	function artist(term) {
-		var start = term.toLowerCase(), end = start + "zzzzz";
+		var start = term.toLocaleLowerCase(), end = start + "zzzzz";
 		return function(doc) {
 			var a = doc.artist;
 			if (a && a.length) {
 				for (var i = 0; i < a.length; i++) {
-					var value = a[i].toLowerCase().split(' ');
+					var value = a[i].toLocaleLowerCase().split(' ');
 					for (var j = 0; j < value.length; j++) {
-						if ((start <= value[j]) && (value[j] <= end)) {
+						if ((start.localeCompare(value[j]) <= 0) && (value[j].localeCompare(end) <= 0)) {
 							return true;
 						}
 					}
@@ -17,14 +17,14 @@ createFilter = (function() {
 		};
 	}
 	function album(term) {
-		var start = term.toLowerCase(), end = start + "zzzzz";
+		var start = term.toLocaleLowerCase(), end = start + "zzzzz";
 		return function(doc) {
 			var a = doc.album;
 			if (a && a.length) {
 				for (var i = 0; i < a.length; i++) {
-					var value = a[i].toLowerCase().split(' ');
+					var value = a[i].toLocaleLowerCase().split(' ');
 					for (var j = 0; j < value.length; j++) {
-						if ((start <= value[j]) && (value[j] <= end)) {
+						if ((start.localeCompare(value[j]) <= 0) && (value[j].localeCompare(end) <= 0)) {
 							return true;
 						}
 					}
@@ -34,14 +34,14 @@ createFilter = (function() {
 		};
 	}
 	function title(term) {
-		var start = term.toLowerCase(), end = start + "zzzzz";
+		var start = term.toLocaleLowerCase(), end = start + "zzzzz";
 		return function(doc) {
 			var a = doc.title;
 			if (a && a.length) {
 				for (var i = 0; i < a.length; i++) {
-					var value = a[i].toLowerCase().split(' ');
+					var value = a[i].toLocaleLowerCase().split(' ');
 					for (var j = 0; j < value.length; j++) {
-						if ((start <= value[j]) && (value[j] <= end)) {
+						if ((start.localeCompare(value[j]) <= 0) && (value[j].localeCompare(end) <= 0)) {
 							return true;
 						}
 					}
