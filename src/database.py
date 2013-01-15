@@ -46,10 +46,13 @@ CTYPE_MAP = {
 CRE_REPLACE = re.compile("^.*%%%([A-Z_]+)%%%$")
 
 def _id(d):
-	# base64 uses + and /, which are very safe to include in URL path
+	# base64 uses + and /, which are not very safe to include in URL path
 	# base64url uses - and _ instead
 	# since we cannot use _ at the beginning of document id, we use . instead
 	return d.encode("base64")[:(len(d)*8+5) // 6].replace("+", "-").replace("/", ".")
+
+def sha1_id(data):
+	return _id(hashlib.sha1(data).digest())
 
 class Database(object):
 	def __init__(self, url, prefix):
@@ -167,7 +170,7 @@ class Database(object):
 		return img.resize((nw, nh), PIL.Image.ANTIALIAS)
 
 	def updatePicture(self, data, version=1):
-		k = _id(hashlib.sha1(data).digest())
+		k = sha1_id(data)
 		pic = self.pictures.get(k)
 		if pic is not None and "inprogress" not in pic and pic.get("version", 0) >= version and len(pic.get("_attachments", {})) > 0:
 			return k, pic["formats"]
