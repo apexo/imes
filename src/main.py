@@ -9,23 +9,22 @@ class Adapter(monitor.Monitor):
 	def __init__(self, db):
 		super(Adapter, self).__init__()
 		self.db = db
-		self.cookie = database._id(open("/dev/urandom", "rb", 0).read(9))
 
 	def add(self, dstPath):
-		self.db.update(dstPath, self.cookie)
+		self.db.update(dstPath)
 
 	def move(self, srcPath, dstPath, isDir):
 		if isDir:
 			self.db.move(srcPath, dstPath)
 		else:
 			self.db.remove(srcPath, False)
-			self.db.update(dstPath, self.cookie)
+			self.db.update(dstPath)
 
 	def remove(self, srcPath, isDir):
 		self.db.remove(srcPath, isDir)
 
 	def cleanup(self):
-		self.db.cleanup(self.cookie)
+		self.db.cleanup()
 
 def interact(db):
 	while True:
@@ -53,7 +52,7 @@ def main():
 		pprint.pprint(config)
 		return
 
-	db = database.Database(config["database"]["url"], config["database"]["prefix"])
+	db = database.Database(config["database"]["url"], config["database"]["name"])
 
 	db.update_data(".")
 	if args.update:
@@ -69,6 +68,7 @@ def main():
 		adapter.addRoot(path)
 	adapter.deferCleanup()
 
+	db.prepare()
 	adapter.run()
 
 if __name__ == '__main__':

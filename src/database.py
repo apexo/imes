@@ -55,7 +55,7 @@ def sha1_id(data):
 	return _id(hashlib.sha1(data).digest())
 
 class Database(object):
-	def __init__(self, url, prefix):
+	def __init__(self, url, db_name):
 		self.scanner = {
 			mutagen.flac.FLAC: self.updateFLAC,
 			mutagen.mp3.MP3: self.updateMP3,
@@ -63,23 +63,30 @@ class Database(object):
 			mutagen.mp4.MP4: self.updateMP4,
 			mutagen.asf.ASF: self.updateASF,
 		}
-		self.db = couchdb.Server(url)
-		self.files = self._create(prefix + "file")
-		self.pictures = self._create(prefix + "picture")
-		self.app = self._create(prefix + "app")
+		self._db = couchdb.Server(url)
+		self.db = self._create(db_name)
+		self._temp = None
+		self._well_known = set(["app", "_design/file"])
 
 		self._replace = {
 			"DB_URL": url,
-			"DB_PREFIX": prefix,
+			"DB_NAME": db_name,
 		}
 
 	def _update_views(self):
-		d = self.files.get("_design/db", {})
+		d = self.db.get("_design/file", {})
+
 		views = d.setdefault("views", {})
 		for f in glob.glob("view/file/*.map.js"):
 			name = os.path.split(f)[1][:-7]
 			views[name] = {"map": open(f, "rb").read().decode("UTF-8")}
-		self.files["_design/db"] = d
+
+		filters = d.setdefault("filters", {})
+		for f in glob.glob("view/file/*.filter.js"):
+			name = os.path.split(f)[1][:-10]
+			filters[name] = open(f, "rb").read().decode("UTF-8")
+
+		self.db["_design/file"] = d
 
 	def _do_replace(self, f):
 		result = StringIO.StringIO()
@@ -93,12 +100,12 @@ class Database(object):
 
 
 	def _update_app(self):
-		a = self.app.get("1", {})
-		self.app["1"] = a
+		a = self.db.get("app", {})
+		self.db["app"] = a
 
 		for f in glob.glob("app/*"):
 			name = os.path.split(f)[1]
-			self.app.put_attachment(a, self._do_replace(open(f)), name, CTYPE_MAP[os.path.splitext(name)[1]])
+			self.db.put_attachment(a, self._do_replace(open(f)), name, CTYPE_MAP[os.path.splitext(name)[1]])
 
 	def update_data(self, path):
 		p = os.getcwd()
@@ -110,13 +117,19 @@ class Database(object):
 		finally:
 			os.chdir(p)
 
-	def cleanup(self, cookie):
-		map_fun = "function(doc) {if ( doc.cookie !== %s) { emit(doc._id, null); } }" % (couchdb.json.encode(cookie),)
-		for row in self.files.query(map_fun):
-			del self.files[row.id]
+	def prepare(self):
+		temp = set()
+		for row in self.db.view("_all_docs"):
+			temp.add(row.id)
+		self._temp = temp - self._well_known
+
+	def cleanup(self):
+		print "cleaning up %d objects" % (len(self._temp),)
+		for id in self._temp:
+			del self.db[id]
 
 	def search(self, term):
-		def view(term, prefix="_design/db/_view/"):
+		def view(term, prefix="_design/file/_view/"):
 			if term.startswith("artist:"):
 				return prefix + "artist", term[7:]
 			if term.startswith("album:"):
@@ -134,7 +147,7 @@ class Database(object):
 		else:
 			terms = [""]
 
-		views = [self.files.view(v)[t2:t2 + u"ZZZZZ"] for (v, t2) in (view(t) for t in terms)]
+		views = [self.db.view(v)[t2:t2 + u"ZZZZZ"] for (v, t2) in (view(t) for t in terms)]
 		#print list(views[0])[0]
 		keys = set(row.id for row in views[0])
 		for view in views[1:]:
@@ -144,14 +157,14 @@ class Database(object):
 
 	def _create(self, name):
 		try:
-			return self.db[name]
+			return self._db[name]
 		except couchdb.ResourceNotFound:
 			pass
 		try:
-			return self.db.create(name)
+			return self._db.create(name)
 		except couchdb.PreconditionFailed:
 			pass
-		return self.db[name]
+		return self._db[name]
 
 	@staticmethod
 	def _autoscale(img, max_width, max_height):
@@ -171,11 +184,14 @@ class Database(object):
 
 	def updatePicture(self, data, version=1):
 		k = sha1_id(data)
-		pic = self.pictures.get(k)
+		pic = self.db.get(k)
+		if pic is not None and pic.get("type") != "picture":
+			raise KeyError("hash collision")
 		if pic is not None and "inprogress" not in pic and pic.get("version", 0) >= version and len(pic.get("_attachments", {})) > 0:
+			self._temp.discard(k)
 			return k, pic["formats"]
 		if pic is not None:
-			del self.pictures[k]
+			del self.db[k]
 
 		print "processing image", k
 		try:
@@ -189,8 +205,8 @@ class Database(object):
 			if img.mode == "P":
 				img = img.convert("RGB")
 
-			doc = {"formats": formats, "inprogress": True, "version": version}
-			self.pictures[k] = doc
+			doc = {"formats": formats, "inprogress": True, "version": version, "type": "picture"}
+			self.db[k] = doc
 
 			for s in COVER_ART_SIZES:
 				key, mw, mh = str(s), s, s
@@ -207,13 +223,14 @@ class Database(object):
 			return None, None
 
 		for name, data, mime in attach:
-			self.pictures.put_attachment(doc, data, name, mime)
+			self.db.put_attachment(doc, data, name, mime)
 
 		print doc
-		doc = self.pictures[k]
+		doc = self.db[k]
 		print doc
 		doc.pop("inprogress")
-		self.pictures[k] = doc
+		self._temp.discard(k)
+		self.db[k] = doc
 
 		print formats
 		print "done processing image"
@@ -547,16 +564,19 @@ class Database(object):
 		# TODO: APEv2 (???)
 		return doc
 
-	def update(self, path, cookie, version=1, ignore=set()):
+	def update(self, path, version=1, ignore=set()):
 		try:
-			path = path.decode("UTF-8")
+			dpath = path.decode("UTF-8")
 		except UnicodeDecodeError:
 			print "invalid file name:", repr(path)
 			return
 		ext = os.path.splitext(path)[1].lower()
 		if ext in (".sid", ".mod", ".stm", ".s3m", ".jpg", ".jpeg"):
 			return
-		info = self.files.get(path)
+		k = sha1_id(path)
+		info = self.db.get(k)
+		if info is not None and (info.get("type", "file") != "file" or info.get("path") != dpath):
+			raise KeyError("hash collision: %r" % (info,))
 		try:
 			st = os.lstat(path)
 		except OSError as e:
@@ -567,10 +587,14 @@ class Database(object):
 			return
 
 		if info is not None and st.st_mtime == info["mtime"] and st.st_size == info["size"] and version <= info.get("version", 0):
-			if info.get("cookie") != cookie:
-				info["cookie"] = cookie
-				self.files[path] = info
-			return
+			for p in info.get("pictures", []):
+				if not p["key"] in self.db:
+					print "missing picture for", path
+					break
+				self._temp.discard(p["key"])
+			else:
+				self._temp.discard(k)
+				return
 
 		#print "processing file", path
 		m = None
@@ -602,40 +626,43 @@ class Database(object):
 
 		old = info
 		info = s(path, m, info)
+		info["path"] = dpath
+		info["type"] = "file"
 		info["mtime"] = st.st_mtime
 		info["size"] = st.st_size
 		info["version"] = version
-		info["cookie"] = cookie
 		if old is not None:
 			info["_rev"] = old["_rev"]
 
 		#print path
 		#print info
-		self.files[path] = info
+		self._temp.discard(k)
+		self.db[k] = info
 		#print "done processing file"
 
 	def move(self, srcPath, dstPath):
-		for row in self.files.view("_design/db/_view/path")[srcPath]:
-			old_id = row.id
-			assert old_id.startswith(srcPath)
-			new_id = dstPath + old_id[len(srcPath):]
-			doc = dict(self.files[old_id])
+		for row in self.db.view("_design/file/_view/path")[srcPath]:
+			doc = dict(self.db[row.id])
 			doc.pop("_id")
-			temp = self.files.get(new_id)
+			old_path = doc["path"].encode("UTF-8")
+			assert old_path.startswith(srcPath)
+			new_path = dstPath + old_path[len(srcPath):]
+			new_id = sha1_id(new_path)
+			doc["path"] = new_path
+			temp = self.db.get(new_id)
 			if temp is not None:
 				doc["_rev"] = temp["_rev"]
 			else:
 				doc.pop("_rev")
-			self.files[new_id] = doc
-			del self.files[old_id]
+			self.db[new_id] = doc
+			del self.db[row.id]
 
 	def remove(self, path, isDir):
 		if not isDir:
 			try:
-				del self.files[path]
+				del self.db[sha1_id(path)]
 			except couchdb.ResourceNotFound:
 				pass
 			return
-		for row in self.files.view("_design/db/_view/path")[path]:
-			assert row.id.startswith(path)
-			del self.files[row.id]
+		for row in self.db.view("_design/file/_view/path")[path]:
+			del self.db[row.id]

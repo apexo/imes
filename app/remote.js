@@ -1,5 +1,5 @@
 var DB_URL = '/';
-var DB_PREFIX = ''; // %%%DB_PREFIX%%%
+var DB_NAME = 'imes'; // %%%DB_NAME%%%
 
 function _default_error_cb(url, xhr) {
 	console.log("XHR error", xhr.status, xhr, url);
@@ -25,7 +25,7 @@ function get_file_info(name, callback) {
 	function cb(data) {
 		callback(JSON.parse(data));
 	}
-	ajax_get(DB_URL + DB_PREFIX + "file/" + encodeURIComponent(name), cb);
+	ajax_get(DB_URL + DB_NAME + "/" + encodeURIComponent(name), cb);
 }
 
 function ViewProxy(url, startkey, endkey) {
@@ -113,7 +113,7 @@ function ViewIterator(proxy, filter) {
 
 
 function Remote() {
-	var viewPrefix = "file/_design/db/_view/";
+	var viewPrefix = DB_NAME + "/_design/file/_view/";
 
 	function lc(v) {
 		return v.toLowerCase();
@@ -177,7 +177,7 @@ function Remote() {
 		}
 		temp.sort();
 		var ps = temp[temp.length - 1];
-		var proxy = new ViewProxy(DB_URL + DB_PREFIX + viewPrefix + ps[1], ps[2], ps[2] + ps[3]);
+		var proxy = new ViewProxy(DB_URL + viewPrefix + ps[1], ps[2], ps[2] + ps[3]);
 		var filter = temp.length < 1 ? null : _createFilter(temp, 0, temp.length - 1);
 		var result = new ViewIterator(proxy, filter);
 		result.filter = _createFilter(temp, 0, temp.length);
@@ -185,9 +185,9 @@ function Remote() {
 	}
 }
 
-function Subscribe(db, readyCb, changesCb, config) {
+function Subscribe(readyCb, changesCb, config) {
 	// http://localhost:5984/file/_changes?limit=1&since=60868&feed=longpoll
-	var url = DB_URL + DB_PREFIX + db + "/_changes";
+	var url = DB_URL + DB_NAME + "/_changes";
 	var mode = "failed";
 	var seq = null;
 	var me = this;

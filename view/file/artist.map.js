@@ -1,4 +1,7 @@
 function (doc) {
+	if (doc.type !== "file") {
+		return;
+	}
 	if (doc.artist && doc.artist.length) {
 		for (var i = 0; i < doc.artist.length; i++) {
 			var value = doc.artist[i].toLowerCase().split(' ');

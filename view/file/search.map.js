@@ -1,4 +1,7 @@
 function (doc) {
+	if (doc.type !== "file") {
+		return;
+	}
 	var dup = {};
 
 	if (doc.artist && doc.artist.length) {

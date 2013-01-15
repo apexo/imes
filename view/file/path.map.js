@@ -1,5 +1,8 @@
 function (doc) {
-	var path = doc._id;
+	if (doc.type !== "file") {
+		return;
+	}
+	var path = doc.path;
 	var p = path.lastIndexOf("/");
 	while (p > 0) {
 		path = path.substring(0, p);

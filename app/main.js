@@ -32,7 +32,7 @@ function albumLink(i, target) {
 }
 
 function titleLink(i, target) {
-	var instead = i._id.substring(i._id.lastIndexOf("/"));
+	var instead = i.path.substring(i.path.lastIndexOf("/"));
 	makeLink(i.title, target, "title-link", ", ", "Unknown Title [" + instead + "]");
 }
 
@@ -155,7 +155,7 @@ function doSearch(terms) {
 		cover.classList.add("album-cover");
 		cover.width = ss.w;
 		cover.height = ss.h;
-		cover.src = DB_URL + DB_PREFIX + "picture/" + p.key + "/" + f.f;
+		cover.src = DB_URL + DB_NAME + "/" + p.key + "/" + f.f;
 		target.insertBefore(cover, target.querySelector(".album-tracklist"));
 	}
 
@@ -187,7 +187,7 @@ function doSearch(terms) {
 		var album = i.album && i.album.length ? i.album[0] : "";
 		var artist = i.artist && i.artist.length ? i.artist[0] : "";
 		var title = i.title && i.title.length ? i.title[0] : "";
-		var path = i._id.substring(0, i._id.lastIndexOf("/"));
+		var path = i.path.substring(0, i.path.lastIndexOf("/"));
 		var disc = i.discnumber;
 
 		var key = album ? path + '\x00' + album + '\x00' + (disc || 0) : null;
@@ -292,9 +292,10 @@ function doSearch(terms) {
 		maybeResume();
 	}
 
-	var subscription = new Subscribe("file", readyCb, changesCb, {
+	var subscription = new Subscribe(readyCb, changesCb, {
 		"include_docs": "true",
 		"limit": 10,
+		"filter": "file/all"
 	});
 }
 
