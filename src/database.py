@@ -27,6 +27,7 @@ import struct
 import glob
 import os
 import re
+import json
 
 COVER_ART_SIZES = (512, 256, 128, 64)
 
@@ -66,27 +67,71 @@ class Database(object):
 		self._db = couchdb.Server(url)
 		self.db = self._create(db_name)
 		self._temp = None
-		self._well_known = set(["app", "_design/file"])
+		self._well_known = set()
 
 		self._replace = {
 			"DB_URL": url,
 			"DB_NAME": db_name,
 		}
 
-	def _update_views(self):
-		d = self.db.get("_design/file", {})
+		try:
+			self.db["_security"] = json.loads(open("res/security", "rb").read().decode("UTF-8"))
+		except KeyError:
+			# couchdb module tries to read id & rev from result,
+			# but since _security is not versioned, this will fail;
+			# however, update should succeed
+			pass
 
-		views = d.setdefault("views", {})
-		for f in glob.glob("view/file/*.map.js"):
-			name = os.path.split(f)[1][:-7]
-			views[name] = {"map": open(f, "rb").read().decode("UTF-8")}
+	def _update_designs(self, basepath="res/design"):
+		for name in os.listdir(basepath):
+			path = os.path.join(basepath, name)
+			if os.path.isdir(path) and name and not name.startswith("_"):
+				self._update_design(path, name)
 
-		filters = d.setdefault("filters", {})
-		for f in glob.glob("view/file/*.filter.js"):
-			name = os.path.split(f)[1][:-10]
-			filters[name] = open(f, "rb").read().decode("UTF-8")
+	def _update_design(self, basepath, name):
+		d = self.db.get("_design/" + name, {})
 
-		self.db["_design/file"] = d
+		self._update_views(d, os.path.join(basepath, "views"))
+		self._update_filters(d, os.path.join(basepath, "filters"))
+		self._update_misc(d, basepath)
+
+		self.db["_design/" + name] = d
+		self._well_known.add("_design/" + name)
+
+	def _update_views(self, d, basepath):
+		views = {}
+
+		for name in os.listdir(basepath):
+			path = os.path.join(basepath, name)
+			if not name.startswith("_") and os.path.isfile(path):
+				if name.endswith(".map.js"):
+					views.setdefault(name[:-7], {})["map"] = open(path, "rb").read().decode("UTF-8")
+				elif name.endswitgh(".reduce.js"):
+					views.setdefault(name[:-10], {})["reduce"] = open(path, "rb").read().decode("UTF-8")
+
+		if not views:
+			d.pop("views", None)
+		else:
+			d["views"] = views
+
+	def _update_filters(self, d, basepath):
+		filters = {}
+
+		for name in os.listdir(basepath):
+			path = os.path.join(basepath, name)
+			if not name.startswith("_") and name.endswith(".js") and os.path.isfile(path):
+				filters[name[:-3]] = open(path, "rb").read().decode("UTF-8")
+
+		if not filters:
+			d.pop("filters", None)
+		else:
+			d["filters"] = filters
+
+	def _update_misc(self, d, basepath):
+		d.pop("validate_doc_update", None)
+		path = os.path.join(basepath, "validate_doc_update.js")
+		if os.path.isfile(path):
+			d["validate_doc_update"] = open(path, "rb").read().decode("UTF-8")
 
 	def _do_replace(self, f):
 		result = StringIO.StringIO()
@@ -107,12 +152,14 @@ class Database(object):
 			name = os.path.split(f)[1]
 			self.db.put_attachment(a, self._do_replace(open(f)), name, CTYPE_MAP[os.path.splitext(name)[1]])
 
+		self._well_known.add("app")
+
 	def update_data(self, path):
 		p = os.getcwd()
 		try:
 			os.chdir(os.path.join(p, path))
 
-			self._update_views()
+			self._update_designs()
 			self._update_app()
 		finally:
 			os.chdir(p)
