@@ -137,7 +137,8 @@ function doSearch(terms) {
 		if (!info.pictures || !info.pictures.length || target.querySelector(".album-cover")) {
 			return;
 		}
-		var p = info.pictures[0];
+		var front = info.pictures.filter(function(p) {return p.type === 3;});
+		var p = front.length ? front[0] : info.pictures[0];
 		var formats = [];
 		//console.log(p);
 		for (var key in p.formats) {
