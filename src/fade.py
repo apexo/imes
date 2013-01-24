@@ -11,34 +11,22 @@ import os
 # f'(0) = 0
 # f'(1) = 0
 
-
-# a + b + c + d = 65535
-# 3a + 2b = 0
-# a + b = 65535
-# b = 65535 - a
-# a + 2 * 65535 = 0
-
-# f(x) = -131070x³ + 196605x²
-
-def p(x):
-	#return (-131070 * x + 196605) * x * x
-	return (-65536 * x + 98304) * x * x
-
 SAMPLE_RATE = 44100
 BUFFER_SIZE = 1152 #SAMPLE_RATE // 100
 SAMPLE_TYPE = numpy.int16
-SAMPLE_SIZE = len(memoryview(numpy.array([0], dtype=SAMPLE_TYPE).view(numpy.uint8)))
+SAMPLE_SIZE = len(numpy.zeros(1, SAMPLE_TYPE).view(numpy.uint8))
 NUM_CHANNELS = 2
+PREROLL_SAMPLES = 11520
 
-def makeBlender(samples, channels, cache={}):
-	if (samples, channels) in cache:
-		return cache[samples, channels]
-	f = 1.0 / (samples - 1)
-
-	result = cache[samples, channels] = numpy.array([
-		[p(i*f)] * channels for i in xrange(samples)
-	], dtype=numpy.uint16)
-	return result
+def makeBlender(samples, channels=NUM_CHANNELS,
+	cache={},
+	p=lambda x: (-65536 * x + 98304) * x * x
+):
+	k = samples, channels
+	if k not in cache:
+		f = 1.0 / (samples - 1)
+		cache[k] = numpy.array([[p(i*f)] * channels for i in xrange(samples)], dtype=numpy.uint16)
+	return cache[k]
 
 def singleton(cls):
 	return cls()
@@ -49,9 +37,9 @@ class EOF(object):
 		return 0, self
 
 class Decoder(object):
-	def __init__(self, fd, channels, sampleType=SAMPLE_TYPE):
+	def __init__(self, fd, channels=NUM_CHANNELS, sampleType=SAMPLE_TYPE):
 		self.fd = fd
-		self.temp = numpy.array([[0] * channels] * BUFFER_SIZE, dtype=sampleType)
+		self.temp = numpy.zeros((BUFFER_SIZE, channels), sampleType)
 		self.mv = memoryview(self.temp.reshape([channels * BUFFER_SIZE]).view(numpy.uint8))
 		self.ofs = 0
 		self.bytesPerSample = channels * SAMPLE_SIZE
@@ -88,9 +76,17 @@ class SampleCounter(object):
 		return 0, EOF
 
 class SoxDecoder(Decoder):
-	def __init__(self, fileName, channels):
+	def __init__(self, fileName, gain=None, channels=NUM_CHANNELS):
+		if gain and gain.endswith("dB"):
+			gain = gain[:-2].strip()
+		try:
+			if not gain or abs(float(gain) < 0.01):
+				gain = None
+		except ValueError:
+			gain = None
+		gain = [] if gain is None else ["gain", gain]
 		self.p = None
-		self.p = subprocess.Popen(["sox", fileName, "-r", str(SAMPLE_RATE), "-b", str(SAMPLE_SIZE * 8), "-c", str(channels), "-t", "raw", "-"], stdout=subprocess.PIPE)
+		self.p = subprocess.Popen(["sox", fileName, "-r", str(SAMPLE_RATE), "-b", str(SAMPLE_SIZE * 8), "-c", str(channels), "-t", "raw", "-"] + gain, stdout=subprocess.PIPE)
 		super(SoxDecoder, self).__init__(self.p.stdout.fileno(), channels)
 
 	def __del__(self):
@@ -124,42 +120,82 @@ class Joiner(object):
 			self.current = self.items.pop(0)
 
 class Stable(object):
-	def __init__(self, src):
+	def __init__(self, src, zeroFill=False):
 		self.src = src
+		self.zeroFill = zeroFill
 
 	def read_into(self, buf, ofs, limit):
 		n, self.src = self.src.read_into(buf, ofs, limit)
 		if not n:
+			if self.zeroZill:
+				return zeroer.read_info(buf, ofs, limit)[0], self
 			return 0, EOF
-			#n = zeroer.read_into(buf, ofs, limit)[0]
+		return n, self
+
+class Pauser(object):
+	def __init__(self, src, samples, callback, paused=False, channels=NUM_CHANNELS):
+		assert isinstance(src, (SampleCounter, Stable))
+		self.src = src
+		self.pausedSrc = zeroer if paused else src
+		self.state = "paused" if paused else "playing"
+		self.nextState = "paused" if paused else "playing"
+		self.samples = samples
+		self.channels = channels
+		self.callback = callback
+
+	def pause(self, paused=True):
+		self.nextState = "paused" if paused else "playing"
+
+	def read_into(self, buf, ofs, limit):
+		if self.state == "playing" and self.nextState == "paused":
+			self.pausedSrc = Blender(self.src, zeroer, self.samples, 0, self.channels)
+			self.state = "pausing"
+		elif self.state == "paused" and self.nextState == "playing":
+			self.pausedSrc = Blender(zeroer, self.src, self.samples, 0, self.channels)
+			self.state = "resuming"
+		n, self.pausedSrc = self.pausedSrc.read_into(buf, ofs, limit)
+		if self.state == "pausing" and self.pausedSrc is zeroer:
+			self.state = "paused"
+			self.callback()
+		elif self.state == "resuming" and self.pausedSrc is self.src:
+			self.state = "playing"
+		if not n:
+			return 0, EOF
 		return n, self
 
 class Skipper(object):
-	def __init__(self, src, samples, channels, sampleType=SAMPLE_TYPE):
+	def __init__(self, src, samples, channels=NUM_CHANNELS, sampleType=SAMPLE_TYPE):
 		self.src = src
 		self.samples = samples
 		self.tempSize = min(BUFFER_SIZE, samples)
 		self.temp = numpy.zeros((self.tempSize, channels), sampleType)
 
-	def preroll(self):
+	def preroll(self, limit=None):
 		while self.samples:
-			n, self.src = self.src.read_into(self.temp, 0, min(self.samples, self.tempSize))
+			lim = min(self.samples, self.tempSize)
+			if limit is not None:
+				lim = min(lim, limit)
+			n, self.src = self.src.read_into(self.temp, 0, lim)
 			assert n <= self.tempSize and n <= self.samples
 			if not n:
-				self.samples = 0
-				return False
-			else:
-				self.samples -= n
+				return True
+			self.samples -= n
+			if limit is not None:
+				limit -= n
+				assert limit >= 0
+				if limit == 0:
+					return False
 		return True
 
 	def read_into(self, buf, ofs, limit):
 		if self.samples:
-			if not self.preroll():
+			self.preroll()
+			if self.samples:
 				return 0, EOF
 		return self.src.read_into(buf, ofs, limit)
 
 class LookAhead(object):
-	def __init__(self, src, samples, channels, callback, sampleType=SAMPLE_TYPE):
+	def __init__(self, src, samples, callback, channels=NUM_CHANNELS, sampleType=SAMPLE_TYPE):
 		self.src = src
 		self.remaining = 0
 		self.limit = samples
@@ -170,10 +206,12 @@ class LookAhead(object):
 		self.callback = callback
 		self.eof = False
 
-	def preroll(self):
-		self.fill()
+	def preroll(self, limit=None):
+		if hasattr(self.src, "preroll") and not self.src.preroll(limit):
+			return False
+		return not self.fill(limit)
 
-	def fill(self):
+	def fill(self, limit=None):
 		while not self.eof and self.remaining <= self.limit:
 			if self.read == self.write and not self.remaining:
 				self.read = self.write = 0
@@ -182,19 +220,26 @@ class LookAhead(object):
 				n = self.read - self.write
 			else:
 				n = self.size - self.write
+			if limit is not None:
+				n = min(limit, n)
 			assert n > 0
 			n, self.src = self.src.read_into(self.temp, self.write, n)
 			if not n:
 				self.eof = True
-				return False
+				return
 			self.remaining += n
 			self.write += n
 			if self.write == self.size:
 				self.write = 0
-		return not self.eof
+			if limit is not None:
+				limit -= n
+				assert limit >= 0
+				if limit == 0:
+					return True
 
 	def read_into(self, buf, ofs, limit):
-		if not self.fill() and self.callback is not None and self.remaining <= self.limit:
+		self.fill()
+		if self.eof and self.callback is not None and self.remaining <= self.limit:
 			cb, self.limit, self.callback = self.callback, 0, None
 			return cb(self).read_into(buf, ofs, limit)
 		n = self.remaining - self.limit
@@ -313,29 +358,9 @@ class Limiter(object):
 		self.samples -= n
 		return n, self
 
-class Channel(object):
-	def __init__(self, src, mapper):
-		self.src = src
-		self.mapper = mapper
-
-	def read(self, dstBuffer, limit):
-		return self.mapper(self.src, dstBuffer, limit)
-
-def makeChannelMapper(srcChannels, dstMap, sampleType=SAMPLE_TYPE, bufferSize=BUFFER_SIZE):
-	def mapper(src, dstBuffer, limit, temp=numpy.array([0] * (len(dstMap) * bufferSize), dtype=sampleType)):
-		n = src.read(temp, len(dstBuffer) // len(dstMap) * srcChannels)
-		i = j = 0
-		while i < n:
-			for k, l in enumerate(dstMap):
-				dstBuffer[j + k] = temp[i + l]
-			i += srcChannels
-			j += len(dstMap)
-		return j
-	return mapper
-
 if __name__ == '__main__':
 	def test(src, channels=2, sampleType=SAMPLE_TYPE):
-		buf = numpy.array([[0]*channels] * BUFFER_SIZE, dtype=sampleType)
+		buf = numpy.zeros((BUFFER_SIZE, channels), sampleType)
 		src_old = src
 		total = 0
 		n, src = src.read_into(buf, 0, len(buf))

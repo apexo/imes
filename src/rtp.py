@@ -22,7 +22,7 @@ class MediaStream(object):
 			| (0 << 13) # padding = 0
 			| (0 << 12) # X = 0
 			| (0 << 8) # CC = 0
-			| (0 << 7) # M = 7
+			| (0 << 7) # M = 0
 			| (14) # PT = 14
 		)
 

@@ -96,6 +96,9 @@ class Async(Proxy):
 		self._writeBlocked = False
 		self._temp = b""
 
+	def stop(self):
+		self.reactor.unregister(self._read_fd)
+
 	def _rpc(self, command, *args, **kwargs):
 		callback = kwargs.pop("callback", None)
 		if callback is None:
@@ -144,6 +147,18 @@ class Async(Proxy):
 		if self._writeBlocked:
 			self.reactor.unregister(self._write_fd)
 
+	def _call(self, i, cmd, args, kw):
+		if i:
+			def cb(result):
+				rdata = marshal.dumps(result)
+				hdr = HDR.pack(i | 0x80000000, len(rdata))
+				self._queue.append(hdr)
+				self._queue.append(rdata)
+				if not self._writeBlocked:
+					self._write(select.EPOLLOUT)
+			kw["callback"] = cb
+		self.commandMap[cmd](*args, **kw)
+
 	def _read(self, event):
 		if event != select.EPOLLIN:
 			print "IPC problem (r):", event
@@ -169,14 +184,7 @@ class Async(Proxy):
 					self._outstanding.pop(i & 0x7FFFFFFF)(response)
 				else:
 					cmd, args, kw = marshal.loads(data)
-					result = self.commandMap[cmd](*args, **kw)
-					if i:
-						rdata = marshal.dumps(result)
-						hdr = HDR.pack(i | 0x80000000, len(rdata))
-						self._queue.append(hdr)
-						self._queue.append(rdata)
-						if not self._writeBlocked:
-							self._write(select.EPOLLOUT)
+					self._call(i, cmd, args, kw)
 
 def slave(reactor, r, w):
 	def bye():
