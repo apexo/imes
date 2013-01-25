@@ -85,7 +85,7 @@ class SoxDecoder(Decoder):
 		if gain and gain.endswith("dB"):
 			gain = gain[:-2].strip()
 		try:
-			if not gain or abs(float(gain) < 0.01):
+			if not gain or abs(float(gain)) < 0.01:
 				gain = None
 		except ValueError:
 			gain = None

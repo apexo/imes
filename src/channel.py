@@ -450,7 +450,7 @@ class Worker(object):
 
 	def _preroll(self, la, info):
 		info2 = {"tooLate": False, "prerolled": None, "info": info}
-		decoder = SoxDecoder(info["path"])
+		decoder = SoxDecoder(info["path"], self.replayGain(info))
 		if info["pos"] > 0:
 			skipped = Skipper(decoder, info["pos"])
 		else:
