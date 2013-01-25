@@ -21,7 +21,8 @@ class Proxy(object):
 		return MethodProxy(self, name)
 
 	def __del__(self):
-		os.close(self._read_fd)
+		if self._read_fd is not None:
+			os.close(self._read_fd)
 		os.close(self._write_fd)
 
 class Sync(Proxy):
@@ -95,9 +96,15 @@ class Async(Proxy):
 		self.reactor.register(self._read_fd, select.EPOLLIN, self._read)
 		self._writeBlocked = False
 		self._temp = b""
+		self.essential = False
 
 	def stop(self):
-		self.reactor.unregister(self._read_fd)
+		if self._read_fd is not None:
+			self.reactor.unregister(self._read_fd)
+			self._read_fd = None
+		if self.essential:
+			self.reactor.stop()
+			self.essential = False
 
 	def _rpc(self, command, *args, **kwargs):
 		callback = kwargs.pop("callback", None)
@@ -162,13 +169,15 @@ class Async(Proxy):
 	def _read(self, event):
 		if event != select.EPOLLIN:
 			print "IPC problem (r):", event
-			self.reactor.unregister(self._read_fd)
+			self.stop()
 			return
 		while True:
 			try:
 				data = os.read(self._read_fd, 4096)
 				if not data:
 					print "IPC problem; unexpected EOF (r)", event
+					self.stop()
+					return
 			except OSError as e:
 				if e.errno == errno.EAGAIN:
 					return

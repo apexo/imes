@@ -3,6 +3,7 @@ import numpy
 import ast
 import subprocess
 import os
+import errno
 
 # f(x) = -2x³ + 3x²
 
@@ -49,11 +50,15 @@ class Decoder(object):
 			assert limit > 0
 			lim = min(len(self.mv), limit * self.bytesPerSample) - self.ofs
 			assert lim > 0, (len(self.mv), limit, self.bytesPerSample, self.ofs)
-			data = os.read(self.fd, lim)
-			if not data:
-				return 0, EOF
-			self.mv[self.ofs : self.ofs + len(data)] = data
-			self.ofs += len(data)
+			try:
+				data = os.read(self.fd, lim)
+				if not data:
+					return 0, EOF
+				self.mv[self.ofs : self.ofs + len(data)] = data
+				self.ofs += len(data)
+			except OSError as e:
+				if e.errno == errno.EINTR:
+					continue
 		n, rem = divmod(self.ofs, self.bytesPerSample)
 		assert n > 0, rem >= 0
 		#print len(buf), ofs, n, len(self.temp), 0, n
@@ -127,8 +132,8 @@ class Stable(object):
 	def read_into(self, buf, ofs, limit):
 		n, self.src = self.src.read_into(buf, ofs, limit)
 		if not n:
-			if self.zeroZill:
-				return zeroer.read_info(buf, ofs, limit)[0], self
+			if self.zeroFill:
+				return zeroer.read_into(buf, ofs, limit)[0], self
 			return 0, EOF
 		return n, self
 

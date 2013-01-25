@@ -3,6 +3,7 @@ import struct
 import random
 import errno
 import socket
+import collections
 
 from fade import Blender, LookAhead, Stable, SoxDecoder, EOF, SampleCounter, Skipper, Joiner, zeroer, Pauser
 from lame import Encoder
@@ -125,6 +126,7 @@ class Channel(object):
 		self._fetching = False
 		self.autoPaused = True
 		self._think = False
+		self.queue = collections.deque(maxlen=int((self.jitterBuffer*1225+31+32)/32))
 
 	def getMasterApi(self):
 		return {
@@ -151,6 +153,7 @@ class Channel(object):
 			worker_pid = Worker.fork(db, name, m2w_r, w2m_w, c2w_r, w2c_w, *close_fds)
 			return channel_pid, worker_pid
 
+		print "enter: channel processor", name
 		os.close(m2w_r)
 		os.close(w2m_w)
 		os.close(c2w_r)
@@ -162,11 +165,14 @@ class Channel(object):
 		channel = Channel(socket, reactor)
 		master = Async(channel.getMasterApi(), m2c_r, c2m_w, reactor)
 		worker = Async(channel.getWorkerApi(), w2c_r, c2w_w, reactor)
+		master.essential = worker.essential = True
 		channel.start(master, worker)
 		try:
 			reactor.run()
-		finally:
-			raise SystemExit()
+		except (KeyboardInterrupt, SystemExit):
+			pass
+		print "exit: channel processor", name
+		raise SystemExit()
 
 	def start(self, master, worker):
 		self.master = master
@@ -280,7 +286,8 @@ class Worker(object):
 		self.temp = bytearray("\x00" * 2048)
 		self.view = memoryview(self.temp)
 
-		self.status = self.db[self.key]
+		self.status = self.db.get(self.key, {"paused": False})
+		self.status.setdefault("type", "imes:channel")
 		self.playlist = u"playlist:channel:" + self.name
 		if "current" not in self.status:
 			self.status["current"] = {
@@ -291,7 +298,7 @@ class Worker(object):
 			}
 
 		self.setReplayGainMode(self.status.get("replayGain", "album"))
-		self.psrc = Pauser(self.src, self.blendTime, self._paused, self.status.get("paused", False))
+		self.psrc = Pauser(self.src, self.blendTime, self._paused, True)
 		self.encoder = Encoder(self.psrc)
 		self.autoPaused = True
 
@@ -310,21 +317,26 @@ class Worker(object):
 		for fd in close_fds:
 			os.close(fd)
 
+		print "enter: channel worker", name
 		reactor = Reactor()
 		worker = Worker(db, name, reactor)
 		master = Async(worker.getMasterApi(), m2w_r, w2m_w, reactor)
 		channel = Async(worker.getChannelApi(), c2w_r, w2c_w, reactor)
+		master.essential = worker.essential = True
 		worker.start(master, channel)
 		try:
 			reactor.run()
-		finally:
-			raise SystemExit()
+		except (KeyboardInterrupt, SystemExit):
+			pass
+		worker.updateStatus()
+		print "exit: channel worker", name
+		raise SystemExit()
 
 	def _paused(self):
 		while self._pausedCb:
 			self._pausedCb.pop(0)()
 
-	def _autoStart(self):
+	def _autoStart(self, t):
 		if self.src.src is EOF and not self.status.get("paused", False):
 			self._enqueueNext(None)
 
@@ -351,7 +363,7 @@ class Worker(object):
 				"plid": self.currentInfo["plid"],
 				"idx": self.currentInfo["idx"],
 				"fid": self.currentInfo["fid"],
-				"ofs": self.currentInfo["ofs"] + self.currentPosition.samples,
+				"pos": self.currentInfo["pos"] + self.currentPosition.samples,
 			}
 		else:
 			currentlyPlaying = None
@@ -391,7 +403,6 @@ class Worker(object):
 			self.updateStatus()
 
 	def destroy(self):
-		self.updateStatus()
 		raise SystemExit()
 
 	def play(self, plid, idx, fid, pos=0, callback=None):
@@ -404,7 +415,7 @@ class Worker(object):
 		self.channel = channel
 		self.master = master
 
-		self._autoStart()
+		self._autoStart(clock())
 
 	def _startBlending(self, la):
 		if la.info["prerolled"] is None:
@@ -430,7 +441,7 @@ class Worker(object):
 		if e is None or not self._play(la, *e):
 			if self.status["current"]["fid"]:
 				self.status["current"]["idx"] += 1
-				self.status["current"]["ofs"] = 0
+				self.status["current"]["pos"] = 0
 				self.status["current"]["fid"] = ""
 			self.currentPosition = self.currentInfo = None
 			self.updateStatus()
@@ -440,8 +451,8 @@ class Worker(object):
 	def _preroll(self, la, info):
 		info2 = {"tooLate": False, "prerolled": None, "info": info}
 		decoder = SoxDecoder(info["path"])
-		if info["ofs"] > 0:
-			skipped = Skipper(decoder, info["ofs"])
+		if info["pos"] > 0:
+			skipped = Skipper(decoder, info["pos"])
 		else:
 			skipped = decoder
 		nla = LookAhead(skipped, LOOK_AHEAD, self._enqueueNext)
@@ -496,6 +507,7 @@ class Worker(object):
 		skip = status["current"]["fid"] if next_ else ""
 
 		for entry in v[key:]:
+			entry = entry.doc
 			if not entry["_id"].startswith(self.playlist + "/"):
 				return
 			for id_ in entry["items"][idx:]:
@@ -525,6 +537,6 @@ class Worker(object):
 				"plid": self.currentInfo["plid"],
 				"idx": self.currentInfo["idx"],
 				"fid": self.currentInfo["fid"],
-				"ofs": self.currentInfo["ofs"] + self.currentPosition.samples,
+				"pos": self.currentInfo["pos"] + self.currentPosition.samples,
 			}
 		self.db[self.key] = self.status

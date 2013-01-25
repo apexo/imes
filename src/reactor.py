@@ -3,6 +3,8 @@ import heapq
 import time
 import errno
 import signal
+import os
+import fcntl
 
 #clock = getattr(time, "monotonic", time.time)
 clock = time.time
@@ -17,6 +19,7 @@ class Reactor(object):
 		self.events = {}
 		self.monotonicClocks = set()
 		self.pids = {}
+		self._running = True
 
 	def defer(self, task, *args, **kw):
 		self.deferred.append((task, args, kw))
@@ -31,6 +34,8 @@ class Reactor(object):
 		heapq.heappush(self.scheduled, (t, 1, task, args, kw))
 
 	def register(self, fd, events, cb, *args, **kw):
+		fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL) | os.O_NONBLOCK)
+
 		self.events[fd] = cb, args, kw
 		self.poll.register(fd, events)
 
@@ -54,7 +59,7 @@ class Reactor(object):
 
 	def registerPid(self, pid, callback):
 		if not self.pids:
-			signal.signal(signal.SIGCHLD, f._childExited)
+			signal.signal(signal.SIGCHLD, self._childExited)
 		self.pids[pid] = callback
 
 	def _childExited(self, signo=None, frame=None):
@@ -73,10 +78,21 @@ class Reactor(object):
 					raise
 				return
 
+	def _stop(self, signo, frame):
+		self._running = False
+
+	def stop(self):
+		def shutdown(self):
+			raise SystemExit()
+		self.defer(shutdown)
+
 	def run(self):
 		t0 = clock()
 		t1 = _never
-		while True:
+		oldInt = signal.signal(signal.SIGINT, self._stop)
+		oldTerm = signal.signal(signal.SIGTERM, self._stop)
+
+		while self._running:
 			idle = True
 			t = clock()
 			if t < t0 - 0.1:
@@ -114,3 +130,6 @@ class Reactor(object):
 			if idle and self.deferredIdle:
 				item = self.deferredIdle.pop(0)
 				item[0](*item[1], **item[2])
+
+		signal.signal(signal.SIGINT, oldInt)
+		signal.signal(signal.SIGTERM, oldTerm)

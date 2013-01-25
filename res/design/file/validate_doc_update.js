@@ -10,9 +10,13 @@ function (newDoc, oldDoc, userCtx, secObj) {
 	if (!type) {
 		throw({forbidden: 'Document must have type.'});
 	}
-	if (type === "file" || type === "picture") {
+	if (type === "file" || type === "picture" || type === "imes:state" || type === "imes:channel") {
 		if (!isAdmin) {
 			throw({forbidden: 'Only admin can change database.'});
+		}
+	} else if (type === "playlist") {
+		if (newDoc._id.substring(0, 9) !== "playlist:") {
+			throw({forbidden: 'Invalid ID.'});
 		}
 	} else {
 		throw({forbidden: 'Unsupported type.'});

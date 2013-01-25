@@ -15,8 +15,8 @@ GC_INTERVAL = 15
 random = open("/dev/urandom", "rb", 4096)
 _never = clock() + 365 * 86400 * 100
 
-def createAuthToken(self):
-	return random.read(30).encode("base64").replace("+", "-").replace("/", ".")
+def createAuthToken():
+	return random.read(30).encode("base64").replace("+", "-").replace("/", ".").rstrip("\n")
 
 class MonotonicClockValue(object):
 	__slots__ = ["value"]
@@ -112,7 +112,7 @@ class _Session(object):
 		return clock() > self.expires
 
 	def refresh(self, timeout=None):
-		self.expired = clock() + (self.default_timeout if timeout is None else timeout)
+		self.expires = clock() + (self.default_timeout if timeout is None else timeout)
 
 class MediaStream(_Session):
 	default_timeout = RTP_TIMEOUT
@@ -131,7 +131,7 @@ class MediaStream(_Session):
 
 	def refresh(self, state):
 		super(MediaStream, self).refresh()
-		self.state._mediaStreams[self.ssrc] = self.state._mediaStreams.pop(self.ssrc)
+		state._mediaStreams[self.ssrc] = state._mediaStreams.pop(self.ssrc)
 
 	def discard(self, state):
 		self.session.mediaStreams.remove(self)
@@ -139,8 +139,8 @@ class MediaStream(_Session):
 		self.device.mediaStreams.remove(self)
 		self.device = None
 		if self.channel is not None:
-			self.channel.channel.removeMediaStream(self.ssrc)
-			self.channel.mediaStreams.remove(self)
+			if self.channel.channel is not None:
+				self.channel.channel.removeMediaStream(self.ssrc)
 			self.channel = None
 		state._mediaStreams.pop(self.ssrc)
 
@@ -155,7 +155,7 @@ class Session(_Session):
 
 	@classmethod
 	def generate_id(self):
-		return random.read(12).encode("base64")
+		return random.read(12).encode("base64").rstrip("\n")
 
 	def refresh(self, state):
 		super(Session, self).refresh()
@@ -188,10 +188,6 @@ class Channel(object):
 			m2c_w, c2m_r, m2w_w, w2m_r
 		)
 
-		os.close(m2c_r)
-		os.close(c2m_w)
-		os.close(m2w_r)
-		os.close(w2m_w)
 
 		self.channel = Async(channelApi, c2m_r, m2c_w, reactor)
 		self.worker = Async(workerApi, w2m_r, m2w_w, reactor)
@@ -208,20 +204,16 @@ class Channel(object):
 		self.channel = None
 		self.worker = None
 		if self.worker_pid:
-			print "killing channel worker"
 			os.kill(self.worker_pid, signal.SIGTERM)
 			self.worker_pid = None
 		if self.channel_pid:
-			print "killing channel processor"
 			os.kill(self.channel_pid, signal.SIGTERM)
 			self.channel_pid = None
 
 	def _onChildExited(self, pid, status):
 		if pid == self.channel_pid:
-			print "channel processor for channel %r exited with status %r" % (self.name, status)
 			self.channel_pid = None
 		elif pid == self.worker_pid:
-			print "channel worker for channel %r exited with status %r" % (self.name, status)
 			self.worker_pid = None
 		else:
 			return
@@ -243,7 +235,7 @@ class User(_Session):
 		self.aggregate = None
 		self._initializing = True
 		try:
-			self.state.setUserAggregate(self, state._aggregates.get(aggregateName))
+			state.setUserAggregate(self, aggregateName)
 		finally:
 			self._initializing = False
 
@@ -286,12 +278,12 @@ class State(object):
 		self._mediaStreams = OrderedDict()
 		self._sessions = OrderedDict()
 
-		self._collectGarbage()
+		self._collectGarbage(clock())
 		self._loadState()
 
 	def _saveState(self):
-		state = self.db.get("de.apexo.imes:state", {})
-		state.type = "de.apexo.imes:state"
+		state = self.db.get("imes:state", {})
+		state["type"] = "imes:state"
 		state.update({
 			"aggregates": dict((aggregate.name, {
 				"channel": None if aggregate.channel is None else aggregate.channel.name,
@@ -306,10 +298,10 @@ class State(object):
 			}) for delegate in self._delegates.itervalues()),
 			"channels": [channel.name for channel in self._channels.itervalues()],
 		})
-		self.db["de.apexo.imes:state"] = state
+		self.db["imes:state"] = state
 
 	def _loadState(self):
-		state = self.db.get("de.apexo.imes:state", {
+		state = self.db.get("imes:state", {
 			"aggregates": {},
 			"devices": {},
 			"delegates": {},
@@ -333,14 +325,14 @@ class State(object):
 			for device in delegate.devices:
 				device.delegates.add(delegate)
 
-	def _collectGarbage(self):
+	def _collectGarbage(self, t):
 		for collection in (self._mediaStreams, self._sessions, self._users):
 			for value in collection.itervalues():
 				if not value.expired:
 					break
 				value.discard(self)
 
-		self.reactor.scheduleMonotonic(clock() + GC_INTERVAL, self._collectGarbage)
+		self.reactor.scheduleMonotonic(t + GC_INTERVAL, self._collectGarbage)
 
 	def setUserAggregate(self, user, aggregateName):
 		oldAggregate = user.aggregate
@@ -349,11 +341,13 @@ class State(object):
 		if newAggregate is not oldAggregate:
 			user.aggregate = newAggregate
 			if oldAggregate is not None:
+				oldAggregate.users.discard(user)
 				for device in oldAggregate.devices:
-					device.update(self)
+					device.update(self, self.reactor)
 			if newAggregate is not None:
+				newAggregate.users.add(user)
 				for device in newAggregate.devices:
-					device.update(self)
+					device.update(self, self.reactor)
 			user.save(self)
 
 	def setAggregateChannel(self, aggregate, channelName):
@@ -366,7 +360,7 @@ class State(object):
 				channel.aggregates.add(aggregate)
 			aggregate.channel = channel
 			for device in aggregate.devices:
-				device.update(self)
+				device.update(self, self.reactor)
 			self._saveState()
 
 	def setDeviceAggregate(self, device, aggregateName):
@@ -377,7 +371,7 @@ class State(object):
 			if aggregate is not None:
 				aggregate.devices.add(device)
 			device.aggregate = aggregate
-			device.update(self)
+			device.update(self, self.reactor)
 			self._saveState()
 
 	def setDelegateDevices(self, delegate, deviceNames):
@@ -391,14 +385,14 @@ class State(object):
 				device.delegates.add(delegate)
 			delegate.devices = newDevices
 			for device in oldDevices ^ newDevices:
-				device.update(self)
+				device.update(self, self.reactor)
 			self._saveState()
 
 	def setDelegatePaused(self, delegate, paused, timeout=None):
 		assert timeout is None or paused
 		delegate.pause(paused, timeout, self.reactor)
 		for device in delegate.devices:
-			device.update(self)
+			device.update(self, self.reactor)
 
 	def setChannelPaused(self, channel, paused):
 		channel.worker.setPaused(paused)
@@ -422,9 +416,10 @@ class State(object):
 		self._mediaStreams[ssrc] = ms = MediaStream(ssrc, session, device)
 		session.mediaStreams.add(ms)
 		device.mediaStreams.add(ms)
-		ms.refresh(RTP_TIMEOUT)
+		ms.refresh(self)
 		self.setMediaStreamPaused(ms, device._paused)
 		self.setMediaStreamChannel(ms, device._channel)
+		device.update(self, self.reactor)
 		return ms
 
 	def createSession(self, rtpAddr):
@@ -436,7 +431,7 @@ class State(object):
 			i -= 1
 			id = Session.generate_id()
 		self._sessions[id] = s = Session(id, rtpAddr)
-		s.refresh(RTSP_SESSION_TIMEOUT)
+		s.refresh(self)
 		return s
 
 	def createChannel(self, name):
@@ -450,7 +445,7 @@ class State(object):
 		return sorted(self._channels)
 
 	def getChannel(self, name):
-		return self._delgate[name]
+		return self._channels[name]
 
 	def createAggregate(self, name):
 		if name in self._aggregates:
@@ -463,7 +458,7 @@ class State(object):
 		return sorted(self._aggregates)
 
 	def getAggregate(self, name):
-		return self._delgate[name]
+		return self._aggregates[name]
 
 	def createDevice(self, name):
 		if name in self._devices:
@@ -476,7 +471,7 @@ class State(object):
 		return sorted(self._devices)
 
 	def getDevice(self, name):
-		return self._delgate[name]
+		return self._devices[name]
 
 	def createDelegate(self, name):
 		if name in self._delegates:
@@ -489,7 +484,7 @@ class State(object):
 		return sorted(self._delegates)
 
 	def getDelegate(self, name):
-		return self._delgate[name]
+		return self._delegates[name]
 
 	def setMediaStreamPaused(self, mediaStream, paused):
 		if mediaStream.paused == paused:
@@ -503,7 +498,7 @@ class State(object):
 			user = self._users(name)
 		else:
 			self._users[name] = user = User(self, name)
-		user.refresh()
+		user.refresh(self)
 		return user
 
 	def setMediaStreamChannel(self, mediaStream, channel):
