@@ -37,14 +37,17 @@ class Delegate(object):
 		self._pausedUntil = None
 		self._autoUnpauseToken = None
 
-	def _unpause(self, token, reactor):
+	def _unpause(self, t, token, reactor, state):
 		if token == self._autoUnpauseToken:
 			assert self._pausedUntil is not None
 			reactor.unregisterMonotonicClock(self._pausedUntil)
 			self._autoUnpauseToken = None
 			self._pausedUntil = None
 
-	def pause(self, paused, timeout, reactor):
+			for device in self.devices:
+				device.update(state, reactor)
+
+	def pause(self, paused, timeout, reactor, state):
 		assert timeout is None or paused
 
 		pausedUntil = None if timeout is None else clock() + timeout
@@ -60,7 +63,7 @@ class Delegate(object):
 				self._pausedUntil = MonotonicClockValue(pausedUntil)
 				reactor.registerMonotonicClock(self._pausedUntil)
 				self._autoUnpauseToken = random.read(8)
-				reactor.scheduleMonotonic(pausedUntil, self._unpause, self._autoUnpauseToken, reactor)
+				reactor.scheduleMonotonic(pausedUntil, self._unpause, self._autoUnpauseToken, reactor, state)
 		else:
 			self._paused = False
 
@@ -320,7 +323,7 @@ class State(object):
 			if device.aggregate is not None:
 				device.aggregate.devices.add(device)
 		for name, value in state["delegates"].iteritems():
-			self._aggregates[name] = delegate = Delegate(name, value["authToken"])
+			self._delegates[name] = delegate = Delegate(name, value["authToken"])
 			delegate.devices = set(self._devices[deviceName] for deviceName in value["devices"] if deviceName in self._devices)
 			for device in delegate.devices:
 				device.delegates.add(delegate)
@@ -376,7 +379,7 @@ class State(object):
 
 	def setDelegateDevices(self, delegate, deviceNames):
 		oldDevices = set(delegate.devices)
-		newDevices = set(self._device[deviceName] for deviceName in deviceNames)
+		newDevices = set(self._devices[deviceName] for deviceName in deviceNames)
 
 		if oldDevices != newDevices:
 			for device in oldDevices - newDevices:
@@ -390,7 +393,7 @@ class State(object):
 
 	def setDelegatePaused(self, delegate, paused, timeout=None):
 		assert timeout is None or paused
-		delegate.pause(paused, timeout, self.reactor)
+		delegate.pause(paused, timeout, self.reactor, self)
 		for device in delegate.devices:
 			device.update(self, self.reactor)
 
@@ -495,7 +498,7 @@ class State(object):
 
 	def getUser(self, name):
 		if name in self._users:
-			user = self._users(name)
+			user = self._users[name]
 		else:
 			self._users[name] = user = User(self, name)
 		user.refresh(self)
@@ -516,3 +519,29 @@ class State(object):
 			oldChannel = mediaStream.channel
 			mediaStream.channel = None
 			oldChannel.channel.removeMediaStream(mediaStream.ssrc, callback=proceed)
+
+	def getUserStatus(self, user, callback):
+		result = {}
+		aggregate = user.aggregate
+		result["devices"] = {}
+		if aggregate is None:
+			result["aggregate"] = None
+			channel = None
+		else:
+			result["aggregate"] = aggregate.name
+			channel = aggregate.channel
+			for device in aggregate.devices:
+				d = result["devices"].setdefault(device.name, {})
+				d["connected"] = bool(device.mediaStreams)
+				d["delegates_paused"] = [delegate.name for delegate in device.delegates if delegate.paused]
+		if channel is None:
+			result["channel"] = None
+		else:
+			result["channel"] = channel.name
+			if channel.worker is not None:
+				def proceed(value):
+					result.update(value)
+					callback(result)
+				channel.worker.getStatus(callback=proceed)
+				return
+		callback(result)

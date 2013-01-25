@@ -7,6 +7,7 @@ import collections
 import errno
 import select
 import urlparse
+import json
 
 from fade import SoxDecoder
 from lame import Encoder
@@ -26,6 +27,7 @@ class Connection(object):
 		self.read = 0
 		self.data = {}
 		self.firstLine = None
+		self.queue = []
 
 	def close(self):
 		self.reactor.unregister(self.sock.fileno())
@@ -35,47 +37,120 @@ class Connection(object):
 		print repr(self.firstLine), self.data
 		if not self.firstLine:
 			self.close()
+
 		request, uri, version = self.firstLine.split(None, 2)
-		if version.startswith("RTSP/"):
-			if version != "RTSP/1.0":
-				self.close()
-				return
-			try:
-				self._doRtsp(request, uri, self.data)
-			except Exception as e:
-				self.sock.send("RTSP/1.0 500 Internal Server Error\r\n\r\n" + str(e) + "\r\n")
-				self.close()
-			self.firstLine = None
-			self.data = {}
-			return
+		self.queue.append((request, uri, version, self.data))
+		self.firstLine = None
+		self.data = {}
 
-		if version.startswith("HTTP/"):
-			if version != "HTTP/1.0" and version != "HTTP/1.1":
-				self.close()
-				return
-			try:
-				self._doHttp(request, uri, data)
-			except Exception as e:
-				self.sock.send("HTTP/1.1 500 Internal Server Error\r\n\r\n" + str(e) + "\r\n")
-				self.close()
-			self.firstLine = None
-			self.data = {}
-			return
+		if len(self.queue) == 1:
+			self._processNext()
 
-		self.close()
-		return
-
-	def _doRtsp(self, request, uri, data):
-		if request == "OPTIONS":
-			response = "RTSP/1.0 200 OK\r\nCSeq: %s\r\nPublic: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n\r\n" % data["cseq"]
-			self.sock.send(response)
-			return
+	def _processNext(self):
+		request, uri, version, data = self.queue[0]
 
 		p = urlparse.urlparse(uri)
 		path = p.path.strip("/").split("/")
+
+		def callback(response):
+			if isinstance(response, Exception):
+				self.sock.send(version + " 500 Internal Server Error\r\n\r\n" + str(e) + "\r\n")
+				self.close()
+			else:
+				self.sock.send(response)
+				self.queue.pop(0)
+				if self.queue:
+					self.reactor.defer(self._processNext)
+
+		try:
+			if version.startswith("RTSP/"):
+				if version != "RTSP/1.0":
+					self.close()
+					return
+				response = self._doRtsp(request, uri, path, data, callback)
+
+			elif version.startswith("HTTP/"):
+				if version != "HTTP/1.0" and version != "HTTP/1.1":
+					self.close()
+					return
+				response = self._doHttp(request, uri, path, data, callback)
+
+			else:
+				self.close()
+				return
+
+		except Exception as e:
+			logException()
+			callback(e)
+			return
+
+		if response is not None:
+			callback(response)
+			return
+
+	def _doHttpUser(self, request, uri, data, user, cmd, args, callback):
+		def ok(response, ctype="application/json"):
+			return "HTTP/1.1 200 OK\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n%s\r\n" % (len(response), ctype, response)
+
+		if cmd == "channels":
+			if args:
+				raise ValueError()
+			return ok(json.dumps(self.handler.state.listChannels))
+		elif cmd == "status":
+			if args:
+				raise ValueError(repr(args))
+			def cb(value):
+				callback(ok(json.dumps(value)))
+			self.handler.state.getUserStatus(user, cb)
+			return
+		else:
+			raise ValueError()
+
+	def _doHttpDelegate(self, request, uri, data, delegate, cmd, args, callback):
+		if cmd == "pause":
+			if not args:
+				timeout = None
+			elif len(args) == 1:
+				timeout = int(args[0])
+				if not 0 < timeout < 3600:
+					raise ValueError()
+			else:
+				raise ValueError()
+			self.handler.state.setDelegatePaused(delegate, True, timeout)
+			return "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+		elif cmd == "unpause":
+			if args:
+				raise ValueError()
+			self.handler.state.setDelegatePaused(delegate, False)
+			return "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+		else:
+			raise Exception("not authorized")
+
+	def _doHttp(self, request, uri, path, data, callback):
+		if request not in ("GET",):
+			raise Exception("not authorized")
+		if len(path) < 4:
+			raise Exception("not authorized")
+		if path[0] == "delegate":
+			target = self.handler.state.getDelegate(path[1])
+			p = self._doHttpDelegate
+		elif path[0] == "user":
+			target = self.handler.state.getUser(path[1])
+			p = self._doHttpUser
+		else:
+			raise Exception("not authorized")
+		if path[2] != target.authToken:
+			print target, repr(target.authToken), target.name, type(target), repr(path)
+			raise Exception("not authorized")
+		return p(request, uri, data, target, path[3], path[4:], callback)
+
+	def _doRtsp(self, request, uri, path, data, callback):
+		if request == "OPTIONS":
+			return "RTSP/1.0 200 OK\r\nCSeq: %s\r\nPublic: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n\r\n" % data["cseq"]
+
 		if len(path) < 3 or path[0] != "device" or path[1] not in self.handler.state._devices:
 			raise Exception("not authorized")
-		device = self.handler.state._devices[path[1]]
+		device = self.handler.state.getDevice(path[1])
 		if path[2] != device.authToken:
 			raise Exception("not authorized")
 
@@ -89,8 +164,7 @@ a=recvonly
 m=audio 0 RTP/AVP 14
 a=rtpmap:14 mpa/90000/2
 """
-			response = "RTSP/1.0 200 OK\r\nCSeq: %s\r\nContent-Type: application/sdp\r\nContent-Length: %d\r\n\r\n" % (data["cseq"], len(sdp)) + sdp
-			self.sock.send(response)
+			return "RTSP/1.0 200 OK\r\nCSeq: %s\r\nContent-Type: application/sdp\r\nContent-Length: %d\r\n\r\n" % (data["cseq"], len(sdp)) + sdp
 		elif request == "SETUP":
 			transport = data["transport"].split(";")
 			if transport[0] != "RTP/AVP" and transport[0] != "RTP/AVP/UDP":
@@ -108,19 +182,17 @@ a=rtpmap:14 mpa/90000/2
 			rtpAddr = (self.addr[0], plo) + self.addr[2:]
 			session = self.handler.state.createSession(rtpAddr)
 			tsp = data["transport"] + ";server_port=" + self.handler.server_port
-			response = "RTSP/1.0 200 OK\r\nCSeq: %s\r\nSession: %s;timeout=60\r\nTransport: %s\r\n\r\n" % (data["cseq"], session.id, tsp)
-			self.sock.send(response)
+			return "RTSP/1.0 200 OK\r\nCSeq: %s\r\nSession: %s;timeout=60\r\nTransport: %s\r\n\r\n" % (data["cseq"], session.id, tsp)
 		elif request == "PLAY":
 			sessionId = data["session"]
 			session = self.handler.state._sessions[sessionId]
 			media = self.handler.state.createMediaStream(session, device)
-			response = "RTSP/1.0 200 OK\r\nCSeq: %s\r\nSession: %s\r\n\r\n" % (data["cseq"], session.id)
-			self.sock.send(response)
+			return "RTSP/1.0 200 OK\r\nCSeq: %s\r\nSession: %s\r\n\r\n" % (data["cseq"], session.id)
 		elif request == "TEARDOWN":
 			sessionId = data["session"]
 			session = self.handler.state._sessions[sessionId]
 			session.discard(self.handler.state)
-			response = "RTSP/1.0 200 OK\r\nCSeq: %s\r\n" % (data["cseq"])
+			return "RTSP/1.0 200 OK\r\nCSeq: %s\r\n" % (data["cseq"])
 		else:
 			raise ValueError("unsupported request: %s" % (request,))
 
@@ -197,9 +269,15 @@ class RTSPHandler(object):
 		except KeyError:
 			c = self.state.getChannel("test")
 		self.state.setAggregateChannel(a, "test")
-		print d.name, d.authToken
+		print "device/%s/%s" % (d.name, d.authToken)
 		u = self.state.getUser("el")
 		self.state.setUserAggregate(u, "test")
+		try:
+			de = self.state.createDelegate("test")
+		except KeyError:
+			de = self.state.getDelegate("test")
+		self.state.setDelegateDevices(de, ["test"])
+		print "delegate/%s/%s" % (de.name, de.authToken)
 
 		self.reactor = reactor
 		self.reactor.register(self.sock.fileno(), select.EPOLLIN, self._connection)

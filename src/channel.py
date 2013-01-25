@@ -328,13 +328,15 @@ class Worker(object):
 			reactor.run()
 		except (KeyboardInterrupt, SystemExit):
 			pass
+		except:
+			logException()
 		worker.updateStatus()
 		print "exit: channel worker", name
 		raise SystemExit()
 
 	def _paused(self):
 		while self._pausedCb:
-			self._pausedCb.pop(0)()
+			self._pausedCb.pop(0)(None)
 
 	def _autoStart(self, t):
 		if self.src.src is EOF and not self.status.get("paused", False):
@@ -380,7 +382,7 @@ class Worker(object):
 		if callback is not None:
 			assert autoPaused
 			if self.psrc.state == "paused":
-				callback()
+				callback(None)
 			else:
 				self._pausedCb.append(callback)
 
