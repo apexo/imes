@@ -82,7 +82,7 @@ class Reactor(object):
 		self._running = False
 
 	def stop(self):
-		def shutdown(self):
+		def shutdown():
 			raise SystemExit()
 		self.defer(shutdown)
 

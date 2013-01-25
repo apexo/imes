@@ -308,7 +308,22 @@ function maybeResume() {
 }
 
 function enqueueTracks(ids) {
-	console.log("TODO", "enqueue", ids);
+	if (!targetPlaylist) {
+		return alert("You must select a playlist first.");
+	}
+	var
+		tpl = targetPlaylist,
+		date = new Date().toISOString().replace(/[-:.TZ]/g, ""),
+		rnd = Math.floor(Math.random() * 4294967296).toString(16);
+	while (rnd.length < 8) {
+		rnd = "0" + rnd;
+	}
+	var id = encodeURIComponent(tpl + "/" + date + "/" + rnd);
+	ajax_post(DB_URL + DB_NAME + "/" + id, {
+		"type": "playlist",
+		"items": ids
+	}, function() {}, null, "PUT");
+	//console.log("TODO", "enqueue", ids);
 }
 
 function setSearchTerms(terms, source) {
@@ -405,5 +420,6 @@ function onLoad() {
 			setSearchTerms(terms.value + String.fromCharCode(event.keyCode));
 		});
 
+		queryUser();
 	}, 0);
 }

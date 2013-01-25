@@ -323,7 +323,7 @@ class Worker(object):
 		master = Async(worker.getMasterApi(), m2w_r, w2m_w, reactor)
 		channel = Async(worker.getChannelApi(), c2w_r, w2c_w, reactor)
 		master.essential = worker.essential = True
-		worker.start(master, channel)
+		worker.start(channel, master)
 		try:
 			reactor.run()
 		except (KeyboardInterrupt, SystemExit):

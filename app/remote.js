@@ -1,5 +1,6 @@
 var DB_URL = '/';
 var DB_NAME = 'imes'; // %%%DB_NAME%%%
+var BACKEND = 'http://127.0.0.1:9997/';
 
 function _default_error_cb(url, xhr) {
 	console.log("XHR error", xhr.status, xhr, url);
@@ -19,6 +20,23 @@ function ajax_get(url, cb, error) {
 		}
 	}
 	xhr.send(null);
+}
+
+function ajax_post(url, data, cb, error, method) {
+	error = error || _default_error_cb;
+	var xhr = new XMLHttpRequest();
+	xhr.open(method || "POST", url, true);
+	xhr.setRequestHeader("Content-Type", "application/json")
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState === 4) {
+			if (xhr.status === 200 || xhr.status === 201) {
+				cb(xhr.responseText);
+			} else {
+				error(url, xhr);
+			}
+		}
+	}
+	xhr.send(JSON.stringify(data));
 }
 
 function get_file_info(name, callback) {

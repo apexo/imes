@@ -38,7 +38,11 @@ class Connection(object):
 		if not self.firstLine:
 			self.close()
 
-		request, uri, version = self.firstLine.split(None, 2)
+		try:
+			request, uri, version = self.firstLine.split(None, 2)
+		except ValueError:
+			self.close()
+			return
 		self.queue.append((request, uri, version, self.data))
 		self.firstLine = None
 		self.data = {}
@@ -90,7 +94,7 @@ class Connection(object):
 
 	def _doHttpUser(self, request, uri, data, user, cmd, args, callback):
 		def ok(response, ctype="application/json"):
-			return "HTTP/1.1 200 OK\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n%s\r\n" % (len(response), ctype, response)
+			return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n%s\r\n" % (self.handler.dbHost, len(response), ctype, response)
 
 		if cmd == "channels":
 			if args:
@@ -140,7 +144,6 @@ class Connection(object):
 		else:
 			raise Exception("not authorized")
 		if path[2] != target.authToken:
-			print target, repr(target.authToken), target.name, type(target), repr(path)
 			raise Exception("not authorized")
 		return p(request, uri, data, target, path[3], path[4:], callback)
 
@@ -220,23 +223,26 @@ a=rtpmap:14 mpa/90000/2
 			self.sock.close() # ???
 			return
 		self.write += n
-		if self.write == len(self.buf):
+		if self.write >= len(self.buf):
 			print "buffer overflow"
-			self.reactor.unregister(self.sock.fileno())
+			self.close()
 			return
 		p = self.buf.find("\r\n", self.read)
-		while p >= self.read:
+		while self.read <= p < self.write:
 			self._processLine(self.view[self.read : p].tobytes())
 			self.read = p + 2
 			p = self.buf.find("\r\n", self.read)
 		if self.read:
 			self.view[0 : self.write - self.read] = self.view[self.read : self.write]
+			self.write -= self.read
+			self.read = 0
 		#print repr(self.buf)
 
 
 
 class RTSPHandler(object):
 	def __init__(self, addr, db, userDb, reactor):
+		self.dbHost = "http://localhost:5984"
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.bind(addr)
