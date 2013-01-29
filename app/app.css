@@ -1,5 +1,6 @@
 #header {
 	background-color: white;
+	z-index: 1;
 }
 #middle {
 	/*overflow-y: scroll;
@@ -14,6 +15,7 @@
 	background-color:#ddf;
 	background-image: -webkit-linear-gradient(top, #ddf, #eef);
 	background-image: -moz-linear-gradient(top, #ddf, #eef);
+	position: relative;
 }
 .album-label, .single-track {
 	padding:2px;
@@ -41,10 +43,14 @@
 }
 .album, .single-track {
 	clear: left;
+	position: relative;
 }
 .album {
 	margin:2px;
 	background-color: #ddf;
+}
+.currently-playing {
+	font-weight: bold;
 }
 .filter {
 	padding:2px;
@@ -90,4 +96,17 @@
 body {
 	margin: 0;
 	/*overflow: hidden;*/
+}
+.progress-bar {
+	height: 100%;
+	position: absolute;
+	background-color: green;
+	opacity: 0.3;
+	top: 0px;
+	left: 0px;
+}
+.length-indicator {
+	position: absolute;
+	right: 1em;
+	top: 0px;
 }

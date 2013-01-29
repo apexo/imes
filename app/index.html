@@ -7,17 +7,18 @@
 	<script type="text/javascript" src="layout.js"></script>
 	<script type="text/javascript" src="remote.js"></script>
 	<script type="text/javascript" src="filter.js"></script>
+	<script type="text/javascript" src="raf.js"></script>
 	<script type="text/javascript" src="main.js"></script>
 </head>
 <body onload="onLoad()">
 	<div id="header">
 		<div id="nav">
-			<a href="" class="active">Search</a>
-			<a href="">Playlist</a>
-			<a href="">Settings</a>
+			<a href="" class="active" data-targets="search-result,filter,playlist-select">Search</a>
+			<a href="" data-targets="playlist,playlist-select">Playlist</a>
+			<a href="" data-targets="settings">Settings</a>
 		</div>
 		<div id="top">
-			<div class="filter">
+			<div class="filter" id="filter" data-weight="1">
 				<label for="search-terms" accesskey="F">Filter</label>
 				<input class="search" id="search-terms" name="search-terms" data-weight="1" onInput="setSearchTerms(this.value, 'user')"></input>
 				<div id="controls">
@@ -25,10 +26,20 @@
 					<img height="20" width="20" />
 				</div>
 			</div>
+			<div id="playlist-select">
+				<select name="playlist">
+				</select>
+			</div>
 		</div>
 	</div>
 	<div id="middle" data-weight="1">
 		<div id="search-result">
+		</div>
+		<div id="playlist" style="display:none">
+			playlist
+		</div>
+		<div id="settings" style="display:none">
+			settings
 		</div>
 	</div>
 </body>

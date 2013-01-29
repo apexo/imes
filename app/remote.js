@@ -40,8 +40,9 @@ function ajax_post(url, data, cb, error, method) {
 }
 
 function get_file_info(name, callback) {
+	var extraArguments = Array.prototype.slice.call(arguments, 2);
 	function cb(data) {
-		callback(JSON.parse(data));
+		callback.apply(this, extraArguments.concat([JSON.parse(data)]));
 	}
 	ajax_get(DB_URL + DB_NAME + "/" + encodeURIComponent(name), cb);
 }
@@ -128,7 +129,100 @@ function ViewIterator(proxy, filter) {
 	}
 }
 
+function plkey(plid, idx) {
+	return plid + "\0" + idx.toString();
+}
 
+function PlaylistIterator(proxy, skip, reverse) {
+	this.todo = [];
+	this.done = false;
+	this.proxy = proxy;
+	if (reverse) {
+		proxy._url += "&descending=true";
+		if (skip === 0) {
+			proxy.skip = 1;
+		}
+	}
+	this.fetch = function(callback, limit) {
+		var pending = {}, order = [], result = [], me = this;
+		function cb2(plid, idx, value) {
+			pending[plkey(plid, idx)] = value;
+			while (order.length && pending.hasOwnProperty(order[0])) {
+				var key = order.shift();
+				result.push({"key": key, "value": pending[key]});
+				delete pending[key];
+			}
+			if (!order.length) {
+				callback(result, false);
+			}
+		}
+		function getinfo() {
+			for (var i = 0; i < limit && me.todo.length; i++) {
+				var item = me.todo.shift();
+				order.push(plkey(item.plid, item.idx));
+				get_file_info(item.id, cb2, item.plid, item.idx);
+			}
+			if (!order.length) {
+				callback([], true);
+			}
+		}
+		function cb(rows, done) {
+			console.log("CB", rows, done);
+			for (var i = 0; i < rows.length; i++) {
+				var items = rows[i].doc.items;
+				if (reverse) {
+					for (var j = skip === null ? items.length - 1: skip - 1; j >= 0; j--) {
+						if (!items[j]) {
+							console.log("confused; rev", items, j, rows, i, skip);
+						}
+						me.todo.push({id: items[j], plid: rows[i].doc._id, idx: j});
+					}
+					skip = null;
+				} else {
+					for (var j = skip || 0; j < items.length; j++) {
+						if (!items[j]) {
+							console.log("confused", items, j, rows, i);
+						}
+						me.todo.push({id: items[j], plid: rows[i].doc._id, idx: j});
+					}
+					skip = 0;
+				}
+			}
+			if (done) {
+				me.done = true;
+			}
+			getinfo();
+		}
+		if (this.done) {
+			if (!this.todo.length) {
+				return callback([], true);
+			}
+			getinfo();
+		} else if (this.todo.length < limit) {
+			this.proxy.fetch(cb, limit);
+		} else {
+			getinfo();
+		}
+	}
+}
+
+function PlaylistView(playlist, plid, idx) {
+	var viewPrefix = DB_NAME + "/_all_docs/";
+
+	var reverseEndkey = playlist + "/";
+	var startkey = plid ? plid : playlist + "/";
+	var endkey = playlist + "/z";
+
+	this.getForwardIterator = function() {
+		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, endkey);
+		return new PlaylistIterator(proxy, idx, false);
+	}
+
+	this.getReverseIterator = function() {
+		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, reverseEndkey);
+		return new PlaylistIterator(proxy, idx, true);
+	}
+}
 
 function Remote() {
 	var viewPrefix = DB_NAME + "/_design/file/_view/";
