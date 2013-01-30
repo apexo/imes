@@ -14,6 +14,18 @@ from lame import Encoder
 from reactor import clock
 from state import State
 
+class FixedLengthBodyDecoder(object):
+	def __init__(self, length):
+		self.length = length
+		self.value = ""
+		self.remaining = length
+
+	def feed(self, data, ofs, length):
+		n = min(length, self.remaining)
+		self.value += data[ofs:ofs+n].tobytes()
+		self.remaining -= n
+		return n, not self.remaining
+
 class Connection(object):
 	def __init__(self, addr, sock, reactor, handler):
 		self.addr = addr
@@ -28,10 +40,16 @@ class Connection(object):
 		self.data = {}
 		self.firstLine = None
 		self.queue = []
+		self.body = None
 
 	def close(self):
 		self.reactor.unregister(self.sock.fileno())
 		self.sock.close()
+
+	def _bodyDecoder(self, data):
+		if "content-length" in data:
+			return FixedLengthBodyDecoder(int(data["content-length"]))
+		raise ValueError()
 
 	def _complete(self):
 		print repr(self.firstLine), self.data
@@ -43,15 +61,20 @@ class Connection(object):
 		except ValueError:
 			self.close()
 			return
-		self.queue.append((request, uri, version, self.data))
+		if self.body is None:
+			if request == "POST":
+				self.body = self._bodyDecoder(self.data)
+				return
+		self.queue.append((request, uri, version, self.data, None if self.body is None else self.body.value))
 		self.firstLine = None
 		self.data = {}
+		self.body = None
 
 		if len(self.queue) == 1:
 			self._processNext()
 
 	def _processNext(self):
-		request, uri, version, data = self.queue[0]
+		request, uri, version, data, body = self.queue[0]
 
 		p = urlparse.urlparse(uri)
 		path = p.path.strip("/").split("/")
@@ -71,14 +94,13 @@ class Connection(object):
 				if version != "RTSP/1.0":
 					self.close()
 					return
-				response = self._doRtsp(request, uri, path, data, callback)
+				response = self._doRtsp(request, uri, path, data, body, callback)
 
 			elif version.startswith("HTTP/"):
 				if version != "HTTP/1.0" and version != "HTTP/1.1":
 					self.close()
 					return
-				response = self._doHttp(request, uri, path, data, callback)
-
+				response = self._doHttp(request, uri, path, data, body, callback)
 			else:
 				self.close()
 				return
@@ -92,25 +114,41 @@ class Connection(object):
 			callback(response)
 			return
 
-	def _doHttpUser(self, request, uri, data, user, cmd, args, callback):
+	def _doHttpUser(self, request, uri, data, body, user, cmd, args, callback):
 		def ok(response, ctype="application/json"):
 			return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n%s\r\n" % (self.handler.dbHost, len(response), ctype, response)
 
 		if cmd == "channels":
+			if request != "GET":
+				raise Exception("not authorized")
 			if args:
 				raise ValueError()
 			return ok(json.dumps(self.handler.state.listChannels))
 		elif cmd == "status":
+			if request != "GET":
+				raise Exception("not authorized")
 			if args:
 				raise ValueError(repr(args))
 			def cb(value):
 				callback(ok(json.dumps(value)))
 			self.handler.state.getUserStatus(user, cb)
 			return
+		elif cmd == "play":
+			if args:
+				raise ValueError(repr(args))
+			if request == "OPTIONS":
+				return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nAccess-Control-Allow-Methods: POST\r\nAccess-Control-Allow-Headers: content-type\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" % (self.handler.dbHost,)
+			elif request == "POST":
+				data = json.loads(body)
+				self.handler.state.play(user, data["plid"], data["idx"], data["fid"])
+			else:
+				raise Exception("not authorized")
 		else:
 			raise ValueError()
 
-	def _doHttpDelegate(self, request, uri, data, delegate, cmd, args, callback):
+	def _doHttpDelegate(self, request, uri, data, body, delegate, cmd, args, callback):
+		if request != "GET":
+			raise Exception("not authorized")
 		if cmd == "pause":
 			if not args:
 				timeout = None
@@ -130,8 +168,8 @@ class Connection(object):
 		else:
 			raise Exception("not authorized")
 
-	def _doHttp(self, request, uri, path, data, callback):
-		if request not in ("GET",):
+	def _doHttp(self, request, uri, path, data, body, callback):
+		if request not in ("GET", "POST", "OPTIONS"):
 			raise Exception("not authorized")
 		if len(path) < 4:
 			raise Exception("not authorized")
@@ -145,9 +183,9 @@ class Connection(object):
 			raise Exception("not authorized")
 		if path[2] != target.authToken:
 			raise Exception("not authorized")
-		return p(request, uri, data, target, path[3], path[4:], callback)
+		return p(request, uri, data, body, target, path[3], path[4:], callback)
 
-	def _doRtsp(self, request, uri, path, data, callback):
+	def _doRtsp(self, request, uri, path, data, body, callback):
 		if request == "OPTIONS":
 			return "RTSP/1.0 200 OK\r\nCSeq: %s\r\nPublic: DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE\r\n\r\n" % data["cseq"]
 
@@ -201,8 +239,7 @@ a=rtpmap:14 mpa/90000/2
 
 	def _processLine(self, line):
 		if line == b'':
-			self._complete()
-			return
+			return self._complete()
 		if self.firstLine is None:
 			self.firstLine = line
 			return
@@ -227,16 +264,31 @@ a=rtpmap:14 mpa/90000/2
 			print "buffer overflow"
 			self.close()
 			return
-		p = self.buf.find("\r\n", self.read)
-		while self.read <= p < self.write:
-			self._processLine(self.view[self.read : p].tobytes())
-			self.read = p + 2
+		while True:
+			if self.body is not None:
+				while True:
+					n, done = self.body.feed(self.view, self.read, self.write-self.read)
+					if done:
+						self._complete()
+						break
+					assert n > 0
+					self.read += n
+					if self.read == self.write:
+						self.read = self.write = 0
+						return
 			p = self.buf.find("\r\n", self.read)
-		if self.read:
-			self.view[0 : self.write - self.read] = self.view[self.read : self.write]
-			self.write -= self.read
-			self.read = 0
-		#print repr(self.buf)
+			while self.body is None and self.read <= p < self.write:
+				self._processLine(self.view[self.read : p].tobytes())
+				self.read = p + 2
+				p = self.buf.find("\r\n", self.read)
+			if self.body is not None:
+				continue
+			if self.read:
+				self.view[0 : self.write - self.read] = self.view[self.read : self.write]
+				self.write -= self.read
+				self.read = 0
+			break
+			#print repr(self.buf)
 
 
 

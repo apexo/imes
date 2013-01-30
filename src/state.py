@@ -545,3 +545,10 @@ class State(object):
 				channel.worker.getStatus(callback=proceed)
 				return
 		callback(result)
+
+	def play(self, user, plid, idx, fid):
+		aggregate = user.aggregate
+		if aggregate is not None:
+			channel = aggregate.channel
+			if channel is not None and channel.worker is not None:
+				channel.worker.play(plid, idx, fid)

@@ -705,6 +705,21 @@ function updatePlaylist() {
 	update();
 }
 
+function playNow(track) {
+	var
+		key = track.dataset.key,
+		sep = key.indexOf("\0"),
+		plid = key.substring(0, sep),
+		idx = parseInt(key.substring(sep+1)),
+		fid = track.dataset.id;
+
+	ajax_post(BACKEND + "user/" + currentUserName + "/" + currentUserAuthToken + "/play", {
+		"plid": plid,
+		"idx": idx,
+		"fid": fid
+	}, function() {}, null, "POST");
+}
+
 function onLoad() {
 	setTimeout(function() {
 		//new ViewportLayout(document.body, new VBoxLayout(document.body));
@@ -745,6 +760,32 @@ function onLoad() {
 			event.preventDefault();
 		}, false);
 
+		document.querySelector("#playlist").addEventListener("click", function(event) {
+			var target = event.target;
+			var cl = target.classList;
+			if (cl.contains("album-track")) {
+				playNow(target);
+			} else if (cl.contains("album-label")) {
+				var tracks = target.parentElement.querySelectorAll(".album-track");
+				playNow(tracks[0]);
+			} else if (cl.contains("single-track")) {
+				playNow(target);
+			} else if (cl.contains("album-link")) {
+				setSearchTerms("album2:" + encodeURI(target.firstChild.textContent));
+				// TODO: navigate to search results
+			} else if (cl.contains("artist-link")) {
+				setSearchTerms("artist2:" + encodeURI(target.firstChild.textContent));
+				// TODO: navigate to search results
+			} else if (cl.contains("title-link")) {
+				setSearchTerms("title2:" + encodeURI(target.firstChild.textContent));
+				// TODO: navigate to search results
+			} else {
+				return;
+			}
+			event.stopPropagation();
+			event.preventDefault();
+		}, false);
+
 		var navTargets = {}, navLinks = document.querySelectorAll("#nav a");
 		for (var i = 0; i < navLinks.length; i++) {
 			var navLink = navLinks[i];
@@ -775,6 +816,7 @@ function onLoad() {
 						navLink.classList.remove("active");
 					}
 				}
+				layoutManager.layout();
 				var e = document.createEvent("HTMLEvents");
 				e.initEvent("scroll", true, true);
 				window.dispatchEvent(e);
