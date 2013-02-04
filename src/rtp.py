@@ -106,7 +106,6 @@ class Connection(object):
 				return
 
 		except Exception as e:
-			logException()
 			callback(e)
 			return
 

@@ -2,6 +2,8 @@ var currentSearchToken = 0;
 var currentPlaylistToken = 0;
 var remote = null;
 var plidCache = {};
+var playlist = new avltree();
+var subscription = null;
 
 function makeLink(data, target, cls, sep, instead) {
 	var n = 0;
@@ -326,11 +328,17 @@ function doSearch(terms) {
 		doScroll();
 	}
 
-	var subscription = new Subscribe(readyCb, changesCb, {
+	subscription = new Subscribe(readyCb, changesCb, {
 		"include_docs": "true",
 		"limit": 10,
 		"filter": "file/all"
 	});
+	if (currentChannel) {
+		subscription.args.channel = currentChannel;
+	}
+	if (targetPlaylist) {
+		subscription.args.playlist = targetPlaylist.substring(9);
+	}
 }
 
 function enqueueTracks(ids) {
@@ -472,6 +480,13 @@ function updateProgressBar(pb, offset, length, t0) {
 	}
 }
 
+function initProgressBar(el) {
+	var pb = createProgressBar();
+	el.classList.add("currently-playing");
+	el.appendChild(pb);
+	updateProgressBar(pb, currentStatus.currentlyPlaying.pos, el.dataset.length, currentStatus.currentlyPlaying.t0);
+}
+
 function removeProgressBar(element) {
 	element.removeChild(element.getElementsByClassName("progress-bar")[0]);
 	element.getElementsByClassName("length-indicator")[0].firstChild.textContent = formatLength(element.dataset.length);
@@ -487,6 +502,9 @@ function queryStatus() {
 
 		if (s.channel !== currentChannel) {
 			currentChannel = s.channel;
+			if (subscription) {
+				subscription.args.channel = s.channel;
+			}
 			updatePlaylists();
 			updatePlaylist();
 		}
@@ -569,6 +587,9 @@ function updatePlaylist() {
 		return;
 	}
 
+	subscription.args.playlist = targetPlaylist.substring(9);
+	subscription.updateArguments();
+
 	var plid, idx;
 	if (targetPlaylist === "playlist:channel:" + currentStatus.channel && currentStatus.currentlyPlaying) {
 		plid = currentStatus.currentlyPlaying.plid;
@@ -580,7 +601,7 @@ function updatePlaylist() {
 
 	var forwardPlaceHolder = document.createElement("div");
 	var backwardPlaceHolder = document.createElement("div");
-	/*var*/ view = new PlaylistView(targetPlaylist, plid, idx);
+	var view = new PlaylistView(targetPlaylist, plid, idx);
 	forwardPlaceHolder.style.visibility = "hidden";
 	backwardPlaceHolder.style.visibility = "hidden";
 	var scrollParent = document.body;
@@ -602,19 +623,27 @@ function updatePlaylist() {
 
 	function add(item, last, insertBefore, p) {
 		var key = albumKey(item.value), el;
+		var plid = currentStatus && currentStatus.currentlyPlaying ? plkey(currentStatus.currentlyPlaying.plid, currentStatus.currentlyPlaying.idx) : "";
 		if (last && last.key && last.key === key) {
 			if (!last.container) {
 				last.container = makeAlbum(last.i, key);
 				target.insertBefore(last.container, last.t);
 				target.removeChild(last.t);
 				plidCache[last.t.dataset.key] = el = formatAlbumTrack(last.i, last.container.getElementsByClassName("album-tracklist")[0]);
+				if (last.t.dataset.key === plid) {
+					initProgressBar(el);
+				}
+				playlist = playlist.insert(last.t.dataset.key, el);
 				el.dataset.key = last.t.dataset.key;
 				delete last.t;
 				delete last.i;
 			}
 			plidCache[item.key] = el = formatAlbumTrack(item.value, last.container.getElementsByClassName("album-tracklist")[0], p);
+			playlist = playlist.insert(item.key, el);
 			el.dataset.key = item.key;
-			// TODO: add progress bar if currently playing
+			if (item.key === plid) {
+				initProgressBar(el);
+			}
 			return last;
 		}
 		last = {
@@ -623,8 +652,11 @@ function updatePlaylist() {
 			key: key
 		};
 		plidCache[item.key] = last.t;
+		playlist = playlist.insert(item.key, last.t);
 		last.t.dataset.key = item.key;
-		// TODO: add progress bar if currently playing
+		if (item.key === plid) {
+			initProgressBar(last.t);
+		}
 		target.insertBefore(last.t, insertBefore);
 		return last;
 	}

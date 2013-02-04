@@ -20,6 +20,7 @@ function ajax_get(url, cb, error) {
 		}
 	}
 	xhr.send(null);
+	return xhr;
 }
 
 function ajax_post(url, data, cb, error, method) {
@@ -37,6 +38,7 @@ function ajax_post(url, data, cb, error, method) {
 		}
 	}
 	xhr.send(JSON.stringify(data));
+	return xhr;
 }
 
 function get_file_info(name, callback) {
@@ -172,17 +174,11 @@ function PlaylistIterator(proxy, skip, reverse) {
 				var items = rows[i].doc.items;
 				if (reverse) {
 					for (var j = skip === null ? items.length - 1: skip - 1; j >= 0; j--) {
-						if (!items[j]) {
-							console.log("confused; rev", items, j, rows, i, skip);
-						}
 						me.todo.push({id: items[j], plid: rows[i].doc._id, idx: j});
 					}
 					skip = null;
 				} else {
 					for (var j = skip || 0; j < items.length; j++) {
-						if (!items[j]) {
-							console.log("confused", items, j, rows, i);
-						}
 						me.todo.push({id: items[j], plid: rows[i].doc._id, idx: j});
 					}
 					skip = 0;
@@ -303,6 +299,9 @@ function Subscribe(readyCb, changesCb, config) {
 	var mode = "failed";
 	var seq = null;
 	var me = this;
+	var xhr = null;
+
+	this.args = {};
 
 	/*
 		initial state: preparing
@@ -382,12 +381,22 @@ function Subscribe(readyCb, changesCb, config) {
 		}
 	}
 
+	function getArguments() {
+		var result = "";
+		for (k in me.args) {
+			if (me.args.hasOwnProperty(k)) {
+				result += "&" + k + "=" + encodeURIComponent(me.args[k]);
+			}
+		}
+		return result;
+	}
+
 	function poll() {
 		if (mode !== "processing") {
 			throw ["illegal state (poll)", mode];
 		}
 		mode = "waiting";
-		ajax_get(url + "&since=" + seq, changes, changesError);
+		xhr = ajax_get(url + "&since=" + seq + getArguments(), changes, changesError);
 	}
 
 	this.cancel = function() {
@@ -404,6 +413,14 @@ function Subscribe(readyCb, changesCb, config) {
 		}
 		mode = "processing";
 		poll();
+	}
+
+	this.updateArguments = function() {
+		if (mode === "pending") {
+			xhr.abort();
+			mode = "processing";
+			me.poll();
+		}
 	}
 
 	this.prepare = function() {
