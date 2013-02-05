@@ -30,8 +30,12 @@ SearchResult.handleSearch = function(value) {
 }
 
 var Playlist = {};
-Playlist.createSingleTrackButtons = Playlist.createAlbumButtons = Playlist.createAlbumTrackButtons = function(target) {
+Playlist.createSingleTrackButtons = Playlist.createAlbumTrackButtons = function(target) {
 	createButton(target, "play");
+	createButton(target, "remove");
+}
+
+Playlist.createAlbumButtons = function(target) {
 	createButton(target, "remove");
 }
 
