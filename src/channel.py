@@ -171,6 +171,8 @@ class Channel(object):
 			reactor.run()
 		except (KeyboardInterrupt, SystemExit):
 			pass
+		except:
+			traceback.print_exc()
 		print "exit: channel processor", name
 		raise SystemExit()
 
@@ -329,7 +331,7 @@ class Worker(object):
 		except (KeyboardInterrupt, SystemExit):
 			pass
 		except:
-			logException()
+			traceback.print_exc()
 		worker.updateStatus()
 		print "exit: channel worker", name
 		raise SystemExit()
