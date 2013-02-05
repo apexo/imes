@@ -9,11 +9,65 @@ SearchResult.createSingleTrackButtons = SearchResult.createAlbumButtons = Search
 	createButton(target, "play");
 }
 
+SearchResult.handleAlbumTrack = SearchResult.handleSingleTrack = function(button, target) {
+	if (button !== "play") {return alert(button);};
+	enqueueTracks([target.dataset.id]);
+}
+
+SearchResult.handleAlbum = function(button, target) {
+	if (button !== "play") {return alert(button);};
+	var ids = [];
+	var tracks = target.parentElement.querySelectorAll(".album-track");
+	for (var i = 0; i < tracks.length; i++) {
+		var t = tracks[i];
+		ids.push(t.dataset.id);
+	}
+	enqueueTracks(ids);
+}
+
+SearchResult.handleSearch = function(value) {
+	setSearchTerms(value);
+}
 
 var Playlist = {};
 Playlist.createSingleTrackButtons = Playlist.createAlbumButtons = Playlist.createAlbumTrackButtons = function(target) {
 	createButton(target, "play");
 	createButton(target, "remove");
+}
+
+Playlist.handleAlbumTrack = Playlist.handleSingleTrack = function(button, target) {
+	if (button === "play") {
+		playNow(target);
+	} else if (button === "remove") {
+		var plkey = target.dataset.key;
+		deleteFromPlaylist(plkey_plid(plkey), [plkey_idx(plkey)]);
+	}
+}
+
+Playlist.handleAlbum = function(button, target) {
+	var tracks = target.parentElement.querySelectorAll(".album-track");
+	if (button === "play") {
+		playNow(tracks[0]);
+	} else if (button === "remove") {
+		var plids = {};
+		for (var i = 0; i < tracks.length; i++) {
+			var plkey = tracks[i].dataset.key, plid = plkey_plid(plkey), idx = plkey_idx(plkey);
+			if (!plids.hasOwnProperty(plid)) {
+				plids[plid] = [];
+			}
+			plids[plid].push(idx);
+		}
+		for (var plid in plids) {
+			if (plids.hasOwnProperty(plid)) {
+				deleteFromPlaylist(plid, plids[plid]);
+			}
+		}
+	}
+}
+
+Playlist.handleSearch = function(value) {
+	// TODO: navigate to search results
+	setSearchTerms(value);
 }
 
 function makeLink(data, target, cls, sep, instead) {
@@ -213,7 +267,7 @@ function deleteTrack(track, albumCache) {
 			if (albumCache) {
 				delete albumCache[albumContainer.dataset.key];
 			}
-			target.removeChild(albumContainer);
+			albumContainer.parentElement.removeChild(albumContainer);
 		}
 	}
 }
@@ -362,6 +416,34 @@ function doSearch(terms) {
 		manager.addListener(subscription.onready, readyCb, this);
 	}
 	manager.addListener(subscription.onchange, changesCb, this);
+}
+
+function deleteFromPlaylist(plid, idxs) {
+	function ok() {
+	}
+	function error() {
+		console.log("deletion failed", arguments);
+	}
+	var url = DB_URL + DB_NAME + "/" + encodeURIComponent(plid);
+	function doDelete(value) {
+		value = JSON.parse(value);
+		for (var i = 0; i < idxs.length; i++) {
+			value.items[idxs[i]] = null;
+		}
+		var not_empty = false;
+		for (var i = 0; i < value.items.length; i++) {
+			if (value.items[i]) {
+				not_empty = true;
+				break;
+			}
+		}
+		if (not_empty) {
+			ajax_post(url, value, ok, error, "PUT");
+		} else {
+			ajax_post(url + "?rev=" + value._rev, null, ok, error, "DELETE");
+		}
+	}
+	ajax_get(url, doDelete);
 }
 
 function enqueueTracks(ids) {
@@ -659,11 +741,8 @@ function updatePlaylist() {
 		var items = [];
 		playlist.getRange(plid_range_low(plid), plid_range_high(plid), items);
 		for (var i = 0; i < items.length; i++) {
-			var key = items[i], entry = playlist.lookupGte(key);
-			if (entry.key === key) {
-				playlist = playlist.remove(entry.key);
-				deleteTrack(entry.value);
-			}
+			playlist = playlist.remove(items[i].dataset.key);
+			deleteTrack(items[i]);
 		}
 	}
 
@@ -672,7 +751,6 @@ function updatePlaylist() {
 		for (var i = 0; i < doc.items.length; i++) {
 			var id = doc.items[i], key = plkey(plid, i);
 			if (!id) {
-				console.log("deleted", key);
 				var entry = playlist.lookupGte(key);
 				if (entry.key === key) {
 					playlist = playlist.remove(entry.key);
@@ -854,6 +932,43 @@ function playNow(track) {
 	}, function() {}, null, "POST");
 }
 
+function installClickHandler(target, handler) {
+	target.addEventListener("click", function(event) {
+		var target = event.target;
+		var cl = target.classList;
+		var button = null;
+		if (cl.contains("play-button")) {
+			button = "play";
+		} else if (cl.contains("remove-button")) {
+			button = "remove";
+		}
+		if (button) {
+			target = target.parentElement;
+			cl = target.classList;
+
+			if (cl.contains("album-track")) {
+				handler.handleAlbumTrack(button, target);
+			} else if (cl.contains("album-label")) {
+				handler.handleAlbum(button, target);
+			} else if (cl.contains("single-track")) {
+				handler.handleSingleTrack(button, target);
+			} else {
+				return;
+			}
+		} else if (cl.contains("album-link")) {
+			handler.handleSearch("album2:" + encodeURI(target.firstChild.textContent));
+		} else if (cl.contains("artist-link")) {
+			handler.handleSearch("artist2:" + encodeURI(target.firstChild.textContent));
+		} else if (cl.contains("title-link")) {
+			handler.handleSearch("title2:" + encodeURI(target.firstChild.textContent));
+		} else {
+			return;
+		}
+		event.stopPropagation();
+		event.preventDefault();
+	}, false);
+}
+
 function onLoad() {
 	if (subscription) {
 		alert("???");
@@ -885,33 +1000,8 @@ function onLoad() {
 		window.addEventListener("resize", function() {
 			layoutManager.layout();
 		});
-		document.querySelector("#search-result").addEventListener("click", function(event) {
-			var target = event.target;
-			var cl = target.classList;
-			if (cl.contains("album-track")) {
-				enqueueTracks([target.dataset.id]);
-			} else if (cl.contains("album-label")) {
-				var ids = [];
-				var tracks = target.parentElement.querySelectorAll(".album-track");
-				for (var i = 0; i < tracks.length; i++) {
-					var t = tracks[i];
-					ids.push(t.dataset.id);
-				}
-				enqueueTracks(ids);
-			} else if (cl.contains("single-track")) {
-				enqueueTracks([target.dataset.id]);
-			} else if (cl.contains("album-link")) {
-				setSearchTerms("album2:" + encodeURI(target.firstChild.textContent));
-			} else if (cl.contains("artist-link")) {
-				setSearchTerms("artist2:" + encodeURI(target.firstChild.textContent));
-			} else if (cl.contains("title-link")) {
-				setSearchTerms("title2:" + encodeURI(target.firstChild.textContent));
-			} else {
-				return;
-			}
-			event.stopPropagation();
-			event.preventDefault();
-		}, false);
+		installClickHandler(document.getElementById("search-result"), SearchResult);
+		installClickHandler(document.getElementById("playlist"), Playlist);
 
 		document.querySelector("#playlist").addEventListener("click", function(event) {
 			var target = event.target;
