@@ -115,36 +115,116 @@ class Connection(object):
 			callback(response)
 			return
 
-	def _doHttpUser(self, request, uri, data, body, user, cmd, args, callback):
-		def ok(response, ctype="application/json"):
-			return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n%s\r\n" % (self.handler.dbHost, len(response), ctype, response)
+	def _httpModel(self, request, uri, data, body, user, cmd, args, callback, create, delete, list_, get, transform):
+		if request == "GET":
+			if not args:
+				return self._ok(json.dumps(list_()))
+			elif len(args) == 1:
+				return self._ok(json.dumps(transform(get(args[0]))))
+			else:
+				raise Exception("not authorized")
+		elif request == "PUT":
+			if len(args) == 1:
+				create(args[0])
+				return self._ok("")
+			else:
+				raise Exception("not authorized")
+		elif request == "DELETE":
+			if len(args) == 1:
+				delete(args[0])
+				return self._ok("")
+			else:
+				raise Exception("not authorized")
+		else:
+			raise Exception("not authorized")
 
-		if cmd == "channels":
-			if request != "GET":
-				raise Exception("not authorized")
+	def _ok(self, response, ctype="application/json"):
+		return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n%s\r\n" % (self.handler.dbHost, len(response), ctype, response)
+
+	def _doHttpUser(self, request, uri, data, body, user, cmd, args, callback):
+		state = self.handler.state
+
+		if cmd == "status":
 			if args:
-				raise ValueError()
-			return ok(json.dumps(self.handler.state.listChannels))
-		elif cmd == "status":
-			if request != "GET":
 				raise Exception("not authorized")
-			if args:
-				raise ValueError(repr(args))
 			def cb(value):
-				callback(ok(json.dumps(value)))
-			self.handler.state.getUserStatus(user, cb)
-			return
+				callback(self._ok(json.dumps(value)))
+			if request == "GET":
+				self.handler.state.getUserStatus(user, cb)
+			elif request == "POST":
+				data = json.loads(body)
+				if "aggregate" in data:
+					state.setUserAggregate(user, data["aggregate"])
+				if "channel" in data:
+					state.setAggregateChannel(user.aggregate, data["channel"])
+				self.handler.state.getUserStatus(user, cb)
+			else:
+				raise Exception("not authorized")
 		elif cmd == "play":
 			if args:
-				raise ValueError(repr(args))
+				raise Exception("not authorized")
 			if request == "OPTIONS":
 				return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nAccess-Control-Allow-Methods: POST\r\nAccess-Control-Allow-Headers: content-type\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" % (self.handler.dbHost,)
 			elif request == "POST":
 				data = json.loads(body)
 				self.handler.state.play(user, data["plid"], data["idx"], data["fid"])
-				return ok("{}")
+				return self._ok("{}")
 			else:
 				raise Exception("not authorized")
+		elif cmd == "channel":
+			if len(args) == 1 and request == "POST":
+				data = json.loads(body)
+				if "paused" in data:
+					state.setChannelPaused(state.getChannel(args[0]), data["paused"])
+				return self._ok("{}")
+			return self._httpModel(request, uri, data, body, user, cmd, args, callback,
+				state.createChannel, state.deleteChannel, state.listChannels, state.getChannel,
+				lambda channel: {
+					"aggregates": sorted([aggregate.name for aggregate in channel.aggregates])
+				}
+			)
+		elif cmd == "device":
+			if len(args) == 1 and request == "POST":
+				data = json.loads(body)
+				if "aggregate" in data:
+					state.setDeviceAggregate(state.getDevice(args[0]), data["aggregate"])
+				return self._ok("{}")
+			return self._httpModel(request, uri, data, body, user, cmd, args, callback,
+				state.createDevice, state.deleteDevice, state.listDevices, state.getDevice,
+				lambda device: {
+					"authToken": device.authToken,
+					"aggregate": None if device.aggregate is None else device.aggregate.name,
+					"delegates": sorted([delegate.name for delegate in device.delegates]),
+				}
+			)
+		elif cmd == "delegate":
+			if len(args) == 1 and request == "POST":
+				data = json.loads(body)
+				if "devices" in data:
+					state.setDelegateDevices(state.getDelegate(args[0]), data["devices"])
+				return self._ok("{}")
+			return self._httpModel(request, uri, data, body, user, cmd, args, callback,
+				state.createDelegate, state.deleteDelegate, state.listDelegates, state.getDelegate,
+				lambda delegate: {
+					"authToken": delegate.authToken,
+					"devices": sorted([device.name for device in delegate.devices]),
+					"paused": delegate.paused,
+				}
+			)
+		elif cmd == "aggregate":
+			if len(args) == 1 and request == "POST":
+				data = json.loads(body)
+				if "channel" in data:
+					state.setAggregateChannel(state.getAggregate(args[0]), data["channel"])
+				return self._ok("{}")
+			return self._httpModel(request, uri, data, body, user, cmd, args, callback,
+				state.createAggregate, state.deleteAggregate, state.listAggregates, state.getAggregate,
+				lambda aggregate: {
+					"devices": sorted([device.name for device in aggregate.devices]),
+					"users": sorted([user.name for user in aggregate.users]),
+					"devices": sorted([device.name for device in aggregate.devices]),
+				}
+			)
 		else:
 			raise ValueError()
 

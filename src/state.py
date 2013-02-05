@@ -353,7 +353,7 @@ class State(object):
 					device.update(self, self.reactor)
 			user.save(self)
 
-	def setAggregateChannel(self, aggregate, channelName):
+	def setAggregateChannel(self, aggregate, channelName, saveState=True):
 		channel = self._channels[channelName] if channelName else None
 
 		if aggregate.channel is not channel:
@@ -364,9 +364,10 @@ class State(object):
 			aggregate.channel = channel
 			for device in aggregate.devices:
 				device.update(self, self.reactor)
-			self._saveState()
+			if saveState:
+				self._saveState()
 
-	def setDeviceAggregate(self, device, aggregateName):
+	def setDeviceAggregate(self, device, aggregateName, saveState=True):
 		aggregate = self._aggregates[aggregateName] if aggregateName else None
 		if device.aggregate is not aggregate:
 			if device.aggregate is not None:
@@ -375,7 +376,8 @@ class State(object):
 				aggregate.devices.add(device)
 			device.aggregate = aggregate
 			device.update(self, self.reactor)
-			self._saveState()
+			if saveState:
+				self._saveState()
 
 	def setDelegateDevices(self, delegate, deviceNames):
 		oldDevices = set(delegate.devices)
@@ -450,6 +452,13 @@ class State(object):
 	def getChannel(self, name):
 		return self._channels[name]
 
+	def deleteChannel(self, name):
+		channel = self._channels.pop(name)
+		for aggregate in channel.aggregates:
+			self.setAggregateChannel(aggregate, None, False)
+		channel.stop()
+		self._saveState()
+
 	def createAggregate(self, name):
 		if name in self._aggregates:
 			raise KeyError()
@@ -462,6 +471,16 @@ class State(object):
 
 	def getAggregate(self, name):
 		return self._aggregates[name]
+
+	def deleteAggregate(self, name):
+		aggregate = self._aggregates.pop(name)
+		if aggregate.channel is not None:
+			aggregate.channel.aggregates.discard(aggregate)
+		for user in aggregate.users:
+			self.setUserAggregate(user, None)
+		for device in aggregate.devices:
+			self.setDeviceAggregate(device, None, False)
+		self._saveState()
 
 	def createDevice(self, name):
 		if name in self._devices:
@@ -476,6 +495,16 @@ class State(object):
 	def getDevice(self, name):
 		return self._devices[name]
 
+	def deleteDevice(self, name):
+		device = self._devices.pop(name)
+		if device.aggregate is not None:
+			device.aggregate.devices.discard(device)
+		for delegate in device.delegates:
+			delegate.devices.discard(device)
+		for mediaStream in device.mediaStreams:
+			mediaStream.discard(self)
+		self._saveState()
+
 	def createDelegate(self, name):
 		if name in self._delegates:
 			raise KeyError()
@@ -488,6 +517,13 @@ class State(object):
 
 	def getDelegate(self, name):
 		return self._delegates[name]
+
+	def deleteDelegate(self, name):
+		delegate = self._delegates.pop(name)
+		for device in delegate.devices:
+			device.delegates.discard(delegate)
+			device.update(self, self.reactor)
+		self._saveState()
 
 	def setMediaStreamPaused(self, mediaStream, paused):
 		if mediaStream.paused == paused:
@@ -544,6 +580,16 @@ class State(object):
 					callback(result)
 				channel.worker.getStatus(callback=proceed)
 				return
+			info = self.db.get(u"channel:" + channel.name, {})
+			result["currentlyPlaying"] = None
+			result["savedPosition"] = info.get("current", {
+				"plid": u"playlist:channel:" + channel.name,
+				"idx": 0,
+				"fid": "",
+				"pos": 0,
+			})
+			result["autoPaused"] = True
+			result["paused"] = info.get("paused", False)
 		callback(result)
 
 	def play(self, user, plid, idx, fid):

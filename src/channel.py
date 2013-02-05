@@ -4,6 +4,7 @@ import random
 import errno
 import socket
 import collections
+import traceback
 
 from fade import Blender, LookAhead, Stable, SoxDecoder, EOF, SampleCounter, Skipper, Joiner, zeroer, Pauser
 from lame import Encoder
@@ -347,7 +348,6 @@ class Worker(object):
 	def getChannelApi(self):
 		return {
 			"fetch": self.fetch,
-			"setPaused": self.setPaused,
 			"setAutoPaused": self.setAutoPaused,
 			"destroy": self.destroy,
 		}
@@ -395,6 +395,7 @@ class Worker(object):
 			"destroy": self.destroy,
 			"play": self.play,
 			"getStatus": self.getStatus,
+			"setPaused": self.setPaused,
 		}
 
 	def getReplayGainMode(self, callback):

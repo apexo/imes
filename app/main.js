@@ -561,10 +561,10 @@ function createLengthIndicator(text) {
 	return result;
 }
 
-function updateProgressBar(pb, offset, length, t0) {
+function updateProgressBar(pb, offset, length, t0, now, color) {
 	var
 		total = length ? Math.floor(length * 44100 + 0.5) : 0,
-		pos = offset + Math.floor((Date.now() - t0) * 44.1 + 0.5);
+		pos = offset + Math.floor((now - t0) * 44.1 + 0.5);
 
 	pb.parentElement.getElementsByClassName("length-indicator")[0].firstChild.textContent = formatLength(length, pos / 44100);
 
@@ -572,6 +572,7 @@ function updateProgressBar(pb, offset, length, t0) {
 		pb.style.backgroundColor = "red";
 		pb.style.width = "100%";
 	} else {
+		pb.style.backgroundColor = color;
 		pb.style.width = Math.min(pos * 100 / total, 100) + "%";
 	}
 }
@@ -580,11 +581,31 @@ function initProgressBar(el) {
 	var pb = createProgressBar();
 	el.classList.add("currently-playing");
 	el.appendChild(pb);
-	updateProgressBar(pb, currentStatus.currentlyPlaying.pos, el.dataset.length, currentStatus.currentlyPlaying.t0);
 
 	function update() {
-		updateProgressBar(pb, currentStatus.currentlyPlaying.pos, el.dataset.length, currentStatus.currentlyPlaying.t0);
+		var color, now, t0, pos;
+		if (currentStatus.currentlyPlaying) {
+			t0 = currentStatus.currentlyPlaying.t0;
+			if (currentStatus.paused) {
+				color = "blue";
+				now = t0;
+			} else if (currentStatus.autoPaused) {
+				color = "yellow";
+				now = t0;
+			} else {
+				color = "";
+				now = Date.now();
+			}
+			pos = currentStatus.currentlyPlaying;
+		} else {
+			now = t0 = Date.now();
+			color = "black";
+			pos = currentStatus.savedPosition;
+		}
+		updateProgressBar(pb, pos.pos, el.dataset.length, t0, now, color);
 	}
+
+	update();
 
 	RAF.register("playlist", update);
 	el.scrollIntoViewIfNeeded();
@@ -634,36 +655,30 @@ function queryStatus() {
 			updatePlaylist();
 		}
 
-		//var target = document.querySelector("#playlist-select select");
 		var target = document.querySelector("#playlist");
 		var cp = target.getElementsByClassName("currently-playing")
 
-		if (!s.currentlyPlaying) {
-			for (var i = 0; i < cp.length; i++) {
+		var pos = s.currentlyPlaying ? s.currentlyPlaying : s.savedPosition;
+		if (s.currentlyPlaying) {
+			s.currentlyPlaying.t0 = Date.now();
+		}
+
+		var found = false, key = plkey(pos.plid, pos.idx);
+
+		for (var i = 0; i < cp.length; i++) {
+			if (cp[i].dataset.key === key) {
+				found = true;
+			} else {
 				removeProgressBar(cp[i]);
 				i -= 1;
 			}
-		} else {
-			s.currentlyPlaying.t0 = Date.now();
-			var found = false;
-			var key = plkey(s.currentlyPlaying.plid, s.currentlyPlaying.idx);
-			var progressBar;
-			for (var i = 0; i < cp.length; i++) {
-				if (cp[i].dataset.key === key) {
-					found = true;
-					progressBar = cp[i].getElementsByClassName("progress-bar")[0];
-				} else {
-					removeProgressBar(cp[i]);
-					i -= 1;
-				}
-			}
-			cp = null;
+		}
 
+		if (!found) {
 			var entry = playlist.lookupGte(key);
-			var el = entry && entry.key === key ? entry.value : null;
 
-			if (!found && el) {
-				progressBar = initProgressBar(el);
+			if (entry && entry.key == key) {
+				initProgressBar(entry.value);
 			}
 		}
 
@@ -709,10 +724,11 @@ function updatePlaylist() {
 	subscription.args.playlist = targetPlaylist.substring(9);
 	subscription.updateArguments();
 
-	var plid, idx;
-	if (targetPlaylist === "playlist:channel:" + currentStatus.channel && currentStatus.currentlyPlaying) {
-		plid = currentStatus.currentlyPlaying.plid;
-		idx = currentStatus.currentlyPlaying.idx;
+	var plid, idx, pos;
+	pos = currentStatus ? (currentStatus.currentlyPlaying ? currentStatus.currentlyPlaying : currentStatus.savedPosition) : null;
+	if (pos && targetPlaylist === "playlist:channel:" + currentStatus.channel) {
+		plid = pos.plid;
+		idx = pos.idx;
 	} else {
 		plid = targetPlaylist + "/";
 		idx = 0;
@@ -766,7 +782,8 @@ function updatePlaylist() {
 
 	function add(item, last, insertBefore, p) {
 		var key = albumKey(item.value), el;
-		var plid = currentStatus && currentStatus.currentlyPlaying ? plkey(currentStatus.currentlyPlaying.plid, currentStatus.currentlyPlaying.idx) : "";
+		var pos = currentStatus ? (currentStatus.currentlyPlaying ? currentStatus.currentlyPlaying : currentStatus.savedPosition) : null;
+		var plid = pos ? plkey(pos.plid, pos.idx) : "";
 		if (last && last.key && last.key === key) {
 			if (!last.container) {
 				last.container = makeAlbum(last.i, key, Playlist);
