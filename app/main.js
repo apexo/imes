@@ -1,9 +1,8 @@
 var currentSearchToken = 0;
 var currentPlaylistToken = 0;
 var remote = null;
-var plidCache = {};
-var playlist = new avltree();
 var subscription = null;
+var playlist = new avltree();
 
 function makeLink(data, target, cls, sep, instead) {
 	var n = 0;
@@ -179,6 +178,23 @@ function albumKey(i) {
 	return album ? path + '\x00' + album + '\x00' + (disc || 0) : null;
 }
 
+function deleteTrack(track, albumCache) {
+	if (track.classList.contains("single-track")) {
+		target.parentElement.removeChild(track);
+	} else {
+		var tracklist = track.parentElement;
+		tracklist.removeChild(track);
+		// TODO: maybe downgrade single remaining track to single-track?
+		if (!tracklist.firstElementChild) {
+			var albumContainer = tracklist.parentElement;
+			if (albumCache) {
+				delete albumCache[albumContainer.dataset.key];
+			}
+			target.removeChild(albumContainer);
+		}
+	}
+}
+
 function doSearch(terms) {
 	currentSearchToken += 1;
 	var mySearchToken = currentSearchToken;
@@ -205,32 +221,15 @@ function doSearch(terms) {
 			return;
 		}
 		delete idCache[id];
-		if (t.classList.contains("single-track")) {
-			target.removeChild(t);
-		} else {
-			var tracklist = t.parentElement;
-			tracklist.removeChild(t);
-			// TODO: maybe downgrade single remaining track to single-track?
-			if (!tracklist.firstElementChild) {
-				var albumContainer = tracklist.parentElement;
-				delete albumCache[albumContainer.dataset.key];
-				target.removeChild(albumContainer);
-			}
-		}
+		deleteTrack(t, albumCache);
 	}
 
 	function add(i) {
-		if (idCache.hasOwnProperty(i._id)) {
+		if (idCache.hasOwnProperty(i._id) || i.type !== "file") {
 			return;
 		}
 
-		var album = i.album && i.album.length ? i.album[0] : "";
-		var artist = i.artist && i.artist.length ? i.artist[0] : "";
-		var title = i.title && i.title.length ? i.title[0] : "";
-		var path = i.path.substring(0, i.path.lastIndexOf("/"));
-		var disc = i.discnumber;
-
-		var key = album ? path + '\x00' + album + '\x00' + (disc || 0) : null;
+		var key = albumKey(i);
 		var cachedAlbum = key ? albumCache[key] : null;
 
 		if (!cachedAlbum) {
@@ -265,11 +264,11 @@ function doSearch(terms) {
 		target.insertBefore(cachedAlbum.container, placeHolder);
 	}
 
-	var state = "loading";
+	var state = "paused";
 
 	function resume(ids, done) {
 		if (currentSearchToken !== mySearchToken) {
-			return;
+			return release();
 		}
 		for (var i = 0; i < ids.length; i++) {
 			add(ids[i].doc);
@@ -277,8 +276,8 @@ function doSearch(terms) {
 		if (done) {
 			target.removeChild(placeHolder);
 			placeHolder = null;
-			window.removeEventListener("scroll", doScroll);
-			window.removeEventListener("resize", doScroll);
+			window.removeEventListener("scroll", update);
+			window.removeEventListener("resize", update);
 			state = "done";
 			return;
 		}
@@ -289,9 +288,9 @@ function doSearch(terms) {
 		}
 	}
 
-	function doScroll() {
+	function update() {
 		if (currentSearchToken !== mySearchToken) {
-			return;
+			return release();
 		}
 
 		if (state === "paused") {
@@ -302,17 +301,15 @@ function doSearch(terms) {
 		}
 	}
 
-	window.addEventListener("scroll", doScroll);
-	window.addEventListener("resize", doScroll);
-
 	function readyCb() {
-		view.fetch(resume, page);
-		return true;
+		window.addEventListener("scroll", update);
+		window.addEventListener("resize", update);
+		update();
 	}
 
 	function changesCb(changes) {
 		if (currentSearchToken !== mySearchToken) {
-			return false;
+			return release();
 		}
 
 		for (var i = 0; i < changes.length; i++) {
@@ -325,20 +322,23 @@ function doSearch(terms) {
 			}
 		}
 
-		doScroll();
+		update();
 	}
 
-	subscription = new Subscribe(readyCb, changesCb, {
-		"include_docs": "true",
-		"limit": 10,
-		"filter": "file/all"
-	});
-	if (currentChannel) {
-		subscription.args.channel = currentChannel;
+	var manager = new EventManager();
+
+	function release() {
+		manager.destroy();
+		window.removeEventListener("scroll", update);
+		window.removeEventListener("resize", update);
 	}
-	if (targetPlaylist) {
-		subscription.args.playlist = targetPlaylist.substring(9);
+
+	if (subscription.ready) {
+		readyCb();
+	} else {
+		manager.addListener(subscription.onready, readyCb, this);
 	}
+	manager.addListener(subscription.onchange, changesCb, this);
 }
 
 function enqueueTracks(ids) {
@@ -357,7 +357,6 @@ function enqueueTracks(ids) {
 		"type": "playlist",
 		"items": ids
 	}, function() {}, null, "PUT");
-	//console.log("TODO", "enqueue", ids);
 }
 
 function setSearchTerms(terms, source) {
@@ -392,10 +391,10 @@ function queryUser() {
 			console.log(userInfo);
 
 			if (!userInfo.imes || !userInfo.imes.authToken) {
-				alaert("could not retrieve auth token");
+				alert("could not retrieve auth token");
 				return;
 			}
-			currentUserAuthToken =  userInfo.imes.authToken;
+			currentUserAuthToken = userInfo.imes.authToken;
 
 			queryStatus();
 		});
@@ -434,12 +433,6 @@ function createProgressBar() {
 	var pb = document.createElement("div");
 	pb.classList.add("progress-bar");
 	pb.appendChild(document.createTextNode("\xa0"))
-	//pb.style.height = "100%";
-	//pb.style.position = "absolute";
-	//pb.style.backgroundColor = "green";
-	//pb.style.opacity = "0.3";
-	//pb.style.top = "0px";
-	//pb.style.left = "0px";
 	return pb;
 }
 
@@ -460,8 +453,6 @@ function createLengthIndicator(text) {
 	var result = document.createElement("div");
 	result.appendChild(document.createTextNode(text));
 	result.classList.add("length-indicator");
-	//result.style.position = "relative";
-	//result.style.right = "1em";
 	return result;
 }
 
@@ -485,6 +476,12 @@ function initProgressBar(el) {
 	el.classList.add("currently-playing");
 	el.appendChild(pb);
 	updateProgressBar(pb, currentStatus.currentlyPlaying.pos, el.dataset.length, currentStatus.currentlyPlaying.t0);
+
+	function update() {
+		updateProgressBar(pb, currentStatus.currentlyPlaying.pos, el.dataset.length, currentStatus.currentlyPlaying.t0);
+	}
+
+	RAF.register("playlist", update);
 }
 
 function removeProgressBar(element) {
@@ -494,17 +491,39 @@ function removeProgressBar(element) {
 	RAF.unregister("playlist");
 }
 
+var statusUpdatePending = false;
+var statusUpdateScheduled = false;
+
+function doScheduledStatusUpdate() {
+	statusUpdateScheduled = false;
+	queryStatus();
+}
+
+function scheduleStatusUpdate(timeout) {
+	if (statusUpdateScheduled) {
+		return;
+	}
+	statusUpdateScheduled = true;
+
+	setTimeout(doScheduledStatusUpdate, timeout);
+}
+
 function queryStatus() {
+	if (statusUpdatePending) {
+		return;
+	}
+	statusUpdatePending = true;
+
 	ajax_get(BACKEND + "user/" + currentUserName + "/" + currentUserAuthToken + "/status", function(result) {
+		statusUpdatePending = false;
+
 		var s = JSON.parse(result);
 
 		currentStatus = s;
 
 		if (s.channel !== currentChannel) {
 			currentChannel = s.channel;
-			if (subscription) {
-				subscription.args.channel = s.channel;
-			}
+			subscription.args.channel = s.channel;
 			updatePlaylists();
 			updatePlaylist();
 		}
@@ -533,26 +552,20 @@ function queryStatus() {
 				}
 			}
 			cp = null;
-			if (!found && plidCache.hasOwnProperty(key)) {
-				progressBar = createProgressBar();
-				plidCache[key].classList.add("currently-playing");
-				plidCache[key].appendChild(progressBar);
-			}
 
-			if (progressBar) {
-				var length = plidCache[key].dataset.length;
-				s.currentlyPlaying.length = length;
-				updateProgressBar(progressBar, s.currentlyPlaying.pos, length, s.currentlyPlaying.t0);
-				function update() {
-					updateProgressBar(progressBar, s.currentlyPlaying.pos, length, s.currentlyPlaying.t0);
-				}
-				RAF.register("playlist", update);
+			var entry = playlist.lookupGte(key);
+			var el = entry && entry.key === key ? entry.value : null;
+
+			if (!found && el) {
+				progressBar = initProgressBar(el);
 			}
 		}
 
-		setTimeout(queryStatus, 5000);
+		scheduleStatusUpdate(5000);
 	}, function() {
-		setTimeout(queryStatus, 30000);
+		statusUpdatePending = false;
+
+		scheduleStatusUpdate(30000);
 	});
 }
 
@@ -579,7 +592,7 @@ function isVisible(element, within) {
 function updatePlaylist() {
 	currentPlaylistToken += 1;
 	var myToken = currentPlaylistToken;
-	plidCache = {};
+	playlist = new avltree();
 
 	var target = document.querySelector("#playlist");
 	target.innerHTML = "";
@@ -595,7 +608,7 @@ function updatePlaylist() {
 		plid = currentStatus.currentlyPlaying.plid;
 		idx = currentStatus.currentlyPlaying.idx;
 	} else {
-		plid = targetPlaylist;
+		plid = targetPlaylist + "/";
 		idx = 0;
 	}
 
@@ -614,12 +627,40 @@ function updatePlaylist() {
 
 	var forward = view.getForwardIterator();
 	var backward = view.getReverseIterator();
-	var forwardActive = false;
-	var backwardActive = false;
-	var forwardDone = false;
-	var backwardDone = false;
+	var forwardActive = false, backwardActive = false;
+	var forwardDone = false, backwardDone = false;
+	var forwardLast = null, backwardLast = null;
 
-	var forwardLast, backwardLast = null;
+	function remove(plid) {
+		var items = [];
+		playlist.getRange(plid_range_low(plid), plid_range_high(plid), items);
+		for (var i = 0; i < items.length; i++) {
+			var key = items[i], entry = playlist.lookupGte(key);
+			if (entry.key === key) {
+				playlist = playlist.remove(entry.key);
+				deleteTrack(entry.value);
+			}
+		}
+	}
+
+	function onupdate(doc) {
+		var plid = doc._id;
+		for (var i = 0; i < doc.items.length; i++) {
+			var id = doc.items[i], key = plkey(plid, i);
+			if (!id) {
+				console.log("deleted", key);
+				var entry = playlist.lookupGte(key);
+				if (entry.key === key) {
+					playlist = playlist.remove(entry.key);
+					deleteTrack(entry.value);
+				}
+			} else {
+				if (!playlist.count || key > playlist.max().key) {
+					resumeForward();
+				}
+			}
+		}
+	}
 
 	function add(item, last, insertBefore, p) {
 		var key = albumKey(item.value), el;
@@ -629,18 +670,18 @@ function updatePlaylist() {
 				last.container = makeAlbum(last.i, key);
 				target.insertBefore(last.container, last.t);
 				target.removeChild(last.t);
-				plidCache[last.t.dataset.key] = el = formatAlbumTrack(last.i, last.container.getElementsByClassName("album-tracklist")[0]);
+				el = formatAlbumTrack(last.i, last.container.getElementsByClassName("album-tracklist")[0]);
+				el.dataset.key = last.t.dataset.key;
+				playlist = playlist.insert(last.t.dataset.key, el);
 				if (last.t.dataset.key === plid) {
 					initProgressBar(el);
 				}
-				playlist = playlist.insert(last.t.dataset.key, el);
-				el.dataset.key = last.t.dataset.key;
 				delete last.t;
 				delete last.i;
 			}
-			plidCache[item.key] = el = formatAlbumTrack(item.value, last.container.getElementsByClassName("album-tracklist")[0], p);
-			playlist = playlist.insert(item.key, el);
+			el = formatAlbumTrack(item.value, last.container.getElementsByClassName("album-tracklist")[0], p);
 			el.dataset.key = item.key;
+			playlist = playlist.insert(item.key, el);
 			if (item.key === plid) {
 				initProgressBar(el);
 			}
@@ -651,9 +692,8 @@ function updatePlaylist() {
 			i: item.value,
 			key: key
 		};
-		plidCache[item.key] = last.t;
-		playlist = playlist.insert(item.key, last.t);
 		last.t.dataset.key = item.key;
+		playlist = playlist.insert(item.key, last.t);
 		if (item.key === plid) {
 			initProgressBar(last.t);
 		}
@@ -674,7 +714,6 @@ function updatePlaylist() {
 
 		if (done) {
 			target.removeChild(forwardPlaceHolder);
-			forwardPlaceHolder = null;
 			forwardDone = true;
 		} else {
 			forwardActive = false;
@@ -707,10 +746,6 @@ function updatePlaylist() {
 		update();
 	}
 
-	function release() {
-		window.removeEventListener("scroll", doScroll);
-	}
-
 	function update() {
 		if (currentPlaylistToken !== myToken) {
 			return release();
@@ -724,35 +759,97 @@ function updatePlaylist() {
 			backward.fetch(addBackward, 10);
 		}
 		if (forwardDone && backwardDone) {
-			release();
+			window.removeEventListener("scroll", update);
+			window.removeEventListener("resize", update);
 		}
 	}
 
-	function doScroll() {
+	function resumeForward() {
+		if (forwardDone && backwardDone) {
+			window.addEventListener("scroll", update);
+			window.addEventListener("resize", update);
+		}
+		if (forwardDone) {
+			target.appendChild(forwardPlaceHolder);
+			forwardDone = false;
+			forwardActive = false;
+		}
+		forward.done = false;
 		update();
 	}
 
-	window.addEventListener("scroll", doScroll);
+	var manager = new EventManager();
 
-	update();
+	function readyCb() {
+		window.addEventListener("scroll", update);
+		window.addEventListener("resize", update);
+		update();
+	}
+
+	function release() {
+		manager.destroy();
+		window.removeEventListener("scroll", update);
+		window.removeEventListener("resize", update);
+	}
+
+	function changesCb(changes) {
+		if (currentPlaylistToken !== myToken) {
+			return release();
+		}
+
+		for (var i = 0; i < changes.length; i++) {
+			var change = changes[i];
+			if (change.deleted) {
+				remove(change.id);
+			} else if (change.doc.type === "playlist") {
+				onupdate(change.doc);
+			}
+		}
+
+		update();
+	}
+
+	if (subscription.ready) {
+		readyCb();
+	} else {
+		manager.addListener(subscription.onready, readyCb, this);
+	}
+
+	manager.addListener(subscription.onchange, changesCb, this);
 }
 
 function playNow(track) {
 	var
 		key = track.dataset.key,
-		sep = key.indexOf("\0"),
-		plid = key.substring(0, sep),
-		idx = parseInt(key.substring(sep+1)),
 		fid = track.dataset.id;
 
 	ajax_post(BACKEND + "user/" + currentUserName + "/" + currentUserAuthToken + "/play", {
-		"plid": plid,
-		"idx": idx,
+		"plid": plkey_plid(key),
+		"idx": plkey_idx(key),
 		"fid": fid
 	}, function() {}, null, "POST");
 }
 
 function onLoad() {
+	if (subscription) {
+		alert("???");
+		return;
+	}
+	subscription = new Subscription({
+		"include_docs": "true",
+		"limit": 10,
+		"filter": "file/all"
+	})
+	subscription.onchange.addListener(function(changes) {
+		for (var i = 0; i < changes.length; i++) {
+			var change = changes[i];
+			if (!change.deleted && change.doc.type === "imes:channel") {
+				console.log(change.doc);
+				queryStatus();
+			}
+		}
+	});
+
 	setTimeout(function() {
 		//new ViewportLayout(document.body, new VBoxLayout(document.body));
 		new HeaderLayout(document.body);

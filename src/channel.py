@@ -441,12 +441,17 @@ class Worker(object):
 			self.master.scrobble(self.currentInfo["fid"])
 		e = self.getNextPlaylistEntry(self.status, la is not None)
 		if e is None or not self._play(la, *e):
+			update = False
 			if self.status["current"]["fid"]:
 				self.status["current"]["idx"] += 1
 				self.status["current"]["pos"] = 0
 				self.status["current"]["fid"] = ""
-			self.currentPosition = self.currentInfo = None
-			self.updateStatus()
+				update = True
+			if self.currentPosition is not None:
+				self.currentPosition = self.currentInfo = None
+				update = True
+			if update:
+				self.updateStatus()
 			self.reactor.scheduleMonotonic(clock() + 5, self._autoStart)
 		return la
 

@@ -74,6 +74,21 @@ avltree.prototype.lookupGte = function(key) {
 	return result === undefined ? this : result;
 }
 
+avltree.prototype.getRange = function(lo, hi, result) {
+	if (this.key === undefined) {
+		return;
+	}
+	if (this.left && lo < this.key) {
+		this.left.getRange(lo, hi, result);
+	}
+	if (lo <= this.key && this.key <= hi) {
+		result.push(this.value);
+	}
+	if (this.right && hi > this.key) {
+		this.right.getRange(lo, hi, result);
+	}
+}
+
 avltree.prototype.balance = function() {
 	return (this.left ? this.left.depth : 0) - (this.right ? this.right.depth : 0);
 }

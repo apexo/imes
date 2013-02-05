@@ -14,7 +14,7 @@ function ajax_get(url, cb, error) {
 		if (xhr.readyState === 4) {
 			if (xhr.status === 200) {
 				cb(xhr.responseText);
-			} else {
+			} else if (!xhr.aborted) {
 				error(url, xhr);
 			}
 		}
@@ -99,6 +99,10 @@ function ViewProxy(url, startkey, endkey) {
 			callback(rows, done);
 		}
 
+		if (this.endkey === this.currentstartkey) {
+			return cb('{"rows": []}');
+		}
+
 		ajax_get(url, cb);
 	}
 }
@@ -132,7 +136,23 @@ function ViewIterator(proxy, filter) {
 }
 
 function plkey(plid, idx) {
-	return plid + "\0" + idx.toString();
+	return plid + (16 + idx).toString(16);
+}
+
+function plkey_plid(plkey) {
+	return plkey.substring(0, plkey.length - 2);
+}
+
+function plkey_idx(plkey) {
+	return parseInt(plkey.substring(plkey.length - 2), 16) - 16;
+}
+
+function plid_range_low(plid) {
+	return plid + "10";
+}
+
+function plid_range_high(plid) {
+	return plid + "FF";
 }
 
 function PlaylistIterator(proxy, skip, reverse) {
@@ -169,7 +189,6 @@ function PlaylistIterator(proxy, skip, reverse) {
 			}
 		}
 		function cb(rows, done) {
-			console.log("CB", rows, done);
 			for (var i = 0; i < rows.length; i++) {
 				var items = rows[i].doc.items;
 				if (reverse) {
@@ -293,15 +312,17 @@ function Remote() {
 	}
 }
 
-function Subscribe(readyCb, changesCb, config) {
+function Subscription(config) {
 	// http://localhost:5984/file/_changes?limit=1&since=60868&feed=longpoll
-	var url = DB_URL + DB_NAME + "/_changes";
-	var mode = "failed";
-	var seq = null;
-	var me = this;
-	var xhr = null;
-
+	this.url = DB_URL + DB_NAME + "/_changes";
+	this.state = "failed";
+	this.seq = null;
+	this.xhr = null;
 	this.args = {};
+	this.ready = false;
+	this.onready = new Event();
+	this.onchange = new Event();
+	this.config = config;
 
 	/*
 		initial state: preparing
@@ -319,121 +340,115 @@ function Subscribe(readyCb, changesCb, config) {
 		waiting    ---[ok]----> processing
 	*/
 
-	function ready(data) {
-		var data = JSON.parse(data);
-		seq = data.last_seq;
-		mode = "pending";
-		url += "?feed=longpoll";
-		if (config.filter) {
-			url += "&filter=" + config.filter;
-		}
-		if (config.timeout) {
-			url += "&timeout=" + config.timeout;
-		}
-		if (config.heartbeat) {
-			url += "&heartbeat=" + config.heartbeat;
-		}
-		if (config.limit) {
-			url += "&limit=" + config.limit;
-		}
-		if (config.include_docs) {
-			url += "&include_docs=" + config.include_docs;
-		}
-		if (readyCb(me) !== false) {
-			me.start();
-		}
-	}
-
-	function readyError(url, xhr) {
-		console.log("readyError", mode, url, xhr);
-		if (mode !== "preparing") {
-			return;
-		}
-		mode = "cancelled";
-		if (config.readyErrorCb && config.readyErrorCb(me, xhr) === true) {
-			prepare();
-		}
-	}
-
-	function changes(data) {
-		if (mode !== "waiting") {
-			return;
-		}
-		mode = "processing";
-		var data = JSON.parse(data);
-		seq = data.last_seq;
-		if (changesCb(data.results) === false) {
-			mode = "pending";
-		} else {
-			poll();
-		}
-	}
-
-	function changesError(url, xhr) {
-		console.log("changesError", mode, url, xhr);
-		if (mode !== "waiting") {
-			return;
-		}
-		mode = "pending";
-		if (config.errorCb && config.errorCb(me, xhr) === true) {
-			mode = "processing";
-			poll();
-		}
-	}
-
-	function getArguments() {
-		var result = "";
-		for (k in me.args) {
-			if (me.args.hasOwnProperty(k)) {
-				result += "&" + k + "=" + encodeURIComponent(me.args[k]);
-			}
-		}
-		return result;
-	}
-
-	function poll() {
-		if (mode !== "processing") {
-			throw ["illegal state (poll)", mode];
-		}
-		mode = "waiting";
-		xhr = ajax_get(url + "&since=" + seq + getArguments(), changes, changesError);
-	}
-
-	this.cancel = function() {
-		if (mode === "preparing") {
-			mode = "failed";
-		} else if (mode === "processing" || mode === "waiting") {
-			mode = "pending";
-		}
-	}
-
-	this.start = function() {
-		if (mode !== "pending") {
-			throw ["illegal state (start)", mode];
-		}
-		mode = "processing";
-		poll();
-	}
-
-	this.updateArguments = function() {
-		if (mode === "pending") {
-			xhr.abort();
-			mode = "processing";
-			me.poll();
-		}
-	}
-
-	this.prepare = function() {
-		if (mode !== "failed") {
-			throw ["illegal state (prepare)", mode];
-		}
-		mode = "preparing";
-		ajax_get(url + "?descending=true&limit=1", ready, readyError);
-	}
-
-	this.getMode = function() {
-		return mode;
-	}
-
 	this.prepare();
+}
+
+Subscription.prototype.onReady = function(data) {
+	var data = JSON.parse(data), config = this.config;
+	this.seq = data.last_seq;
+	this.state = "pending";
+	this.ready = true;
+	this.url += "?feed=longpoll";
+	if (config.filter) {
+		this.url += "&filter=" + config.filter;
+	}
+	if (config.timeout) {
+		this.url += "&timeout=" + config.timeout;
+	}
+	if (config.heartbeat) {
+		this.url += "&heartbeat=" + config.heartbeat;
+	}
+	if (config.limit) {
+		this.url += "&limit=" + config.limit;
+	}
+	if (config.include_docs) {
+		this.url += "&include_docs=" + config.include_docs;
+	}
+	this.onready.fire(null, this);
+	this.start();
+}
+
+Subscription.prototype.onReadyError = function(url, xhr) {
+	console.log("onReadyError", this.state, url, xhr);
+	if (this.state !== "preparing") {
+		return;
+	}
+	this.state = "failed";
+	setTimeout(this.prepare.bind(this), 5000);
+}
+
+Subscription.prototype.onChange = function(data) {
+	if (this.state !== "waiting") {
+		return;
+	}
+	this.state = "processing";
+	this.xhr = null;
+	var data = JSON.parse(data);
+	this.seq = data.last_seq;
+	this.onchange.fire(data.results, this);
+	this.poll();
+}
+
+Subscription.prototype.onChangeError = function(url, xhr) {
+	console.log("onChangeError", this, this.state, url, xhr);
+	if (this.state !== "waiting") {
+		return;
+	}
+	this.state = "pending";
+	this.xhr = null;
+	setTimeout(this.poll.bind(this), 5000);
+}
+
+Subscription.prototype.getArguments = function() {
+	var result = "";
+	for (k in this.args) {
+		if (this.args.hasOwnProperty(k)) {
+			result += "&" + k + "=" + encodeURIComponent(this.args[k]);
+		}
+	}
+	return result;
+}
+
+Subscription.prototype.poll = function() {
+	if (this.state !== "processing") {
+		console.log("???", this, this.state);
+		//console.trace();
+		throw ["illegal state (poll)", this.state];
+	}
+	this.state = "waiting";
+	this.xhr = ajax_get(this.url + "&since=" + this.seq + this.getArguments(), this.onChange.bind(this), this.onChangeError.bind(this));
+}
+
+
+Subscription.prototype.cancel = function() {
+	if (this.state === "preparing") {
+		this.state = "failed";
+	} else if (this.state === "processing" || this.state === "waiting") {
+		this.state = "pending";
+	}
+}
+
+Subscription.prototype.start = function() {
+	if (this.state !== "pending") {
+		throw ["illegal state (start)", this.state];
+	}
+	this.state = "processing";
+	this.poll();
+}
+
+Subscription.prototype.updateArguments = function() {
+	if (this.state === "waiting") {
+		this.xhr.aborted = true;
+		this.xhr.abort();
+		this.state = "processing";
+		this.poll();
+	}
+}
+
+Subscription.prototype.prepare = function() {
+	if (this.state !== "failed") {
+		throw ["illegal state (prepare)", this.state];
+	}
+	this.state = "preparing";
+	ajax_get(this.url + "?descending=true&limit=1", this.onReady.bind(this), this.onReadyError.bind(this));
 }

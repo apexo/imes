@@ -8,6 +8,7 @@ import errno
 import select
 import urlparse
 import json
+import traceback
 
 from fade import SoxDecoder
 from lame import Encoder
@@ -106,6 +107,7 @@ class Connection(object):
 				return
 
 		except Exception as e:
+			traceback.print_exc();
 			callback(e)
 			return
 
@@ -140,6 +142,7 @@ class Connection(object):
 			elif request == "POST":
 				data = json.loads(body)
 				self.handler.state.play(user, data["plid"], data["idx"], data["fid"])
+				return ok("{}")
 			else:
 				raise Exception("not authorized")
 		else:
@@ -252,7 +255,12 @@ a=rtpmap:14 mpa/90000/2
 			return self.close()
 		if events != select.EPOLLIN:
 			raise Exception(events)
-		n = self.sock.recv_into(self.view[self.write:])
+		try:
+			n = self.sock.recv_into(self.view[self.write:])
+		except socket.error as e:
+			if e.errno == errno.EAGAIN:
+				return
+			raise
 		if not n:
 			# HUP?
 			self.reactor.unregister(self.sock.fileno())
@@ -268,6 +276,7 @@ a=rtpmap:14 mpa/90000/2
 				while True:
 					n, done = self.body.feed(self.view, self.read, self.write-self.read)
 					if done:
+						self.read += n
 						self._complete()
 						break
 					assert n > 0
@@ -292,8 +301,8 @@ a=rtpmap:14 mpa/90000/2
 
 
 class RTSPHandler(object):
-	def __init__(self, addr, db, userDb, reactor):
-		self.dbHost = "http://localhost:5984"
+	def __init__(self, addr, dbHost, db, userDb, reactor):
+		self.dbHost = dbHost
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.bind(addr)
@@ -424,7 +433,12 @@ class RTSPHandler(object):
 	def _connection(self, events):
 		if events != select.EPOLLIN:
 			raise Exception(events)
-		sock, addr = self.sock.accept()
+		try:
+			sock, addr = self.sock.accept()
+		except socket.error as e:
+			if e.errno == errno.EAGAIN:
+				return
+			raise
 		Connection(addr, sock, self.reactor, self)
 
 
@@ -437,7 +451,7 @@ def test():
 	userDb = _db["_users"]
 
 	reactor = Reactor()
-	handler = RTSPHandler(("0.0.0.0", 9997), db, userDb, reactor)
+	handler = RTSPHandler(("0.0.0.0", 9997), "http://localhost:5984", db, userDb, reactor)
 	try:
 		reactor.run()
 	except KeyboardInterrupt:
