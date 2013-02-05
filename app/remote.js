@@ -163,6 +163,7 @@ function PlaylistIterator(proxy, skip, reverse) {
 		proxy._url += "&descending=true";
 		if (skip === 0) {
 			proxy.skip = 1;
+			skip = null;
 		}
 	}
 	this.fetch = function(callback, limit) {
