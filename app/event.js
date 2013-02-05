@@ -13,11 +13,11 @@ Event.prototype.removeListener = function(fn) {
 	delete this.listeners[fn.id];
 }
 
-Event.prototype.fire = function(evt, scope) {
+Event.prototype.fire = function(scope) {
 	for (var id in this.listeners) {
 		if (this.listeners.hasOwnProperty(id)) {
 			var c = this.listeners[id];
-			c.fn.call(c.scope || scope, evt);
+			c.fn.apply(c.scope || scope, Array.prototype.slice.call(arguments, 1));
 		}
 	}
 }

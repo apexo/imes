@@ -474,41 +474,14 @@ function setSearchTerms(terms, source) {
 	doSearch(terms);
 }
 
-var currentUserName = null;
-var currentUserAuthToken = null;
 var currentStatus = null;
 var currentChannel = null;
 var targetPlaylist = null;
-
-function queryUser() {
-	ajax_get(DB_URL + "_session", function(result) {
-		var userInfo = JSON.parse(result);
-		console.log(userInfo);
-		if (!userInfo.userCtx || !userInfo.userCtx.name) {
-			alert("could not retrieve user info");
-			return;
-		}
-
-		currentUserName = userInfo.userCtx.name;
-
-		ajax_get(DB_URL + "_users/org.couchdb.user:" + currentUserName, function(result) {
-			var userInfo = JSON.parse(result);
-			console.log(userInfo);
-
-			if (!userInfo.imes || !userInfo.imes.authToken) {
-				alert("could not retrieve auth token");
-				return;
-			}
-			currentUserAuthToken = userInfo.imes.authToken;
-
-			queryStatus();
-		});
-	});
-}
+var userStatus = null;
 
 function updatePlaylists() {
 	var
-		base = "playlist:user:" + currentUserName,
+		base = "playlist:user:" + userStatus.userName,
 		vp = new ViewProxy(DB_URL + DB_NAME + "/_all_docs", base + "/", base + "/ZZZZZZZZ");
 	vp.fetch(function(data) {
 		console.log(data);
@@ -523,7 +496,7 @@ function updatePlaylists() {
 
 		for (var i = 0; i < data.length; i++) {
 			var pl = document.createElement("option");
-			pl.setAttribute("value", "playlist:user:" + currentUserName + "/" + data[i].id);
+			pl.setAttribute("value", "playlist:user:" + userStatus.userName + "/" + data[i].id);
 			pl.appendChild(document.createTextNode(data[i].name));
 			target.appendChild(pl);
 		}
@@ -641,7 +614,7 @@ function queryStatus() {
 	}
 	statusUpdatePending = true;
 
-	ajax_get(BACKEND + "user/" + currentUserName + "/" + currentUserAuthToken + "/status", function(result) {
+	ajax_get(userStatus.backendUrl() + "status", function(result) {
 		statusUpdatePending = false;
 
 		var s = JSON.parse(result);
@@ -942,7 +915,7 @@ function playNow(track) {
 		key = track.dataset.key,
 		fid = track.dataset.id;
 
-	ajax_post(BACKEND + "user/" + currentUserName + "/" + currentUserAuthToken + "/play", {
+	ajax_post(userStatus.backendUrl() + "play", {
 		"plid": plkey_plid(key),
 		"idx": plkey_idx(key),
 		"fid": fid
@@ -996,6 +969,8 @@ function onLoad() {
 		"limit": 10,
 		"filter": "file/all"
 	})
+	userStatus = new UserStatus();
+	userStatus.onready.addListener(queryStatus);
 	subscription.onchange.addListener(function(changes) {
 		for (var i = 0; i < changes.length; i++) {
 			var change = changes[i];
@@ -1103,7 +1078,5 @@ function onLoad() {
 			}
 			setSearchTerms(terms.value + String.fromCharCode(event.keyCode));
 		});
-
-		queryUser();
 	}, 0);
 }

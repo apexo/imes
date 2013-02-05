@@ -369,7 +369,7 @@ Subscription.prototype.onReady = function(data) {
 	if (config.include_docs) {
 		this.url += "&include_docs=" + config.include_docs;
 	}
-	this.onready.fire(null, this);
+	this.onready.fire(this, this);
 	this.start();
 }
 
@@ -390,7 +390,7 @@ Subscription.prototype.onChange = function(data) {
 	this.xhr = null;
 	var data = JSON.parse(data);
 	this.seq = data.last_seq;
-	this.onchange.fire(data.results, this);
+	this.onchange.fire(this, data.results);
 	this.poll();
 }
 
