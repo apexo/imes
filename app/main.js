@@ -257,7 +257,7 @@ function albumKey(i) {
 
 function deleteTrack(track, albumCache) {
 	if (track.classList.contains("single-track")) {
-		target.parentElement.removeChild(track);
+		track.parentElement.removeChild(track);
 	} else {
 		var tracklist = track.parentElement;
 		tracklist.removeChild(track);
@@ -1002,32 +1002,6 @@ function onLoad() {
 		});
 		installClickHandler(document.getElementById("search-result"), SearchResult);
 		installClickHandler(document.getElementById("playlist"), Playlist);
-
-		document.querySelector("#playlist").addEventListener("click", function(event) {
-			var target = event.target;
-			var cl = target.classList;
-			if (cl.contains("album-track")) {
-				playNow(target);
-			} else if (cl.contains("album-label")) {
-				var tracks = target.parentElement.querySelectorAll(".album-track");
-				playNow(tracks[0]);
-			} else if (cl.contains("single-track")) {
-				playNow(target);
-			} else if (cl.contains("album-link")) {
-				setSearchTerms("album2:" + encodeURI(target.firstChild.textContent));
-				// TODO: navigate to search results
-			} else if (cl.contains("artist-link")) {
-				setSearchTerms("artist2:" + encodeURI(target.firstChild.textContent));
-				// TODO: navigate to search results
-			} else if (cl.contains("title-link")) {
-				setSearchTerms("title2:" + encodeURI(target.firstChild.textContent));
-				// TODO: navigate to search results
-			} else {
-				return;
-			}
-			event.stopPropagation();
-			event.preventDefault();
-		}, false);
 
 		var navTargets = {}, navLinks = document.querySelectorAll("#nav a");
 		for (var i = 0; i < navLinks.length; i++) {
