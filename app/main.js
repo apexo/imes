@@ -4,6 +4,18 @@ var remote = null;
 var subscription = null;
 var playlist = new avltree();
 
+var SearchResult = {};
+SearchResult.createSingleTrackButtons = SearchResult.createAlbumButtons = SearchResult.createAlbumTrackButtons = function(target) {
+	createButton(target, "play");
+}
+
+
+var Playlist = {};
+Playlist.createSingleTrackButtons = Playlist.createAlbumButtons = Playlist.createAlbumTrackButtons = function(target) {
+	createButton(target, "play");
+	createButton(target, "remove");
+}
+
 function makeLink(data, target, cls, sep, instead) {
 	var n = 0;
 	if (data) {
@@ -39,7 +51,7 @@ function titleLink(i, target) {
 	makeLink(i.title, target, "title-link", ", ", "Unknown Title [" + instead + "]");
 }
 
-function formatAlbumTrack(i, tracklist, position) {
+function formatAlbumTrack(i, tracklist, position, btns) {
 	var t, tracknumber;
 	if (i.tracknumber !== undefined) {
 		tracknumber = parseInt(i.tracknumber);
@@ -80,10 +92,11 @@ function formatAlbumTrack(i, tracklist, position) {
 	}
 	tracklist.insertBefore(track, insertAfter ? insertAfter.nextElementSibling : tracklist.firstElementChild);
 
+	btns.createAlbumTrackButtons(track);
 	return track;
 }
 
-function formatSingleTrack(i) {
+function formatSingleTrack(i, btns) {
 	var t = document.createElement("div");
 	t.classList.add("single-track");
 	if (i.album && i.album.length) {
@@ -97,7 +110,16 @@ function formatSingleTrack(i) {
 	t.appendChild(createLengthIndicator(formatLength(i.info.length)));
 	t.dataset.id = i._id;
 	t.dataset.length = i.info.length;
+
+	btns.createSingleTrackButtons(t);
 	return t;
+}
+
+function createButton(target, type) {
+	var button = document.createElement("div");
+	button.classList.add(type + "-button");
+	button.appendChild(document.createTextNode("\xa0"));
+	target.appendChild(button);
 }
 
 function formatAlbumName(i, target) {
@@ -154,7 +176,7 @@ function addCover(target, info) {
 	target.insertBefore(cover, target.querySelector(".album-tracklist"));
 }
 
-function makeAlbum(i, key) {
+function makeAlbum(i, key, btns) {
 	var c = document.createElement("div");
 	c.classList.add("album");
 	var label = document.createElement("div");
@@ -167,6 +189,7 @@ function makeAlbum(i, key) {
 	c.appendChild(tracklist);
 	c.dataset.key = key;
 
+	btns.createAlbumButtons(label);
 	return c;
 }
 
@@ -233,7 +256,7 @@ function doSearch(terms) {
 		var cachedAlbum = key ? albumCache[key] : null;
 
 		if (!cachedAlbum) {
-			var t = formatSingleTrack(i);
+			var t = formatSingleTrack(i, SearchResult);
 			idCache[i._id] = t;
 
 			if (key) {
@@ -246,10 +269,10 @@ function doSearch(terms) {
 		var tracklist;
 
 		if (!cachedAlbum.container) {
-			cachedAlbum.container = makeAlbum(i, key);
+			cachedAlbum.container = makeAlbum(i, key, SearchResult);
 			tracklist = cachedAlbum.container.getElementsByClassName("album-tracklist")[0];
 
-			idCache[cachedAlbum.i._id] = formatAlbumTrack(cachedAlbum.i, tracklist);
+			idCache[cachedAlbum.i._id] = formatAlbumTrack(cachedAlbum.i, tracklist, 0, SearchResult);
 			target.removeChild(cachedAlbum.t);
 			delete cachedAlbum.t;
 			delete cachedAlbum.i;
@@ -260,7 +283,7 @@ function doSearch(terms) {
 		}
 
 
-		idCache[i._id] = formatAlbumTrack(i, tracklist);
+		idCache[i._id] = formatAlbumTrack(i, tracklist, 0, SearchResult);
 		target.insertBefore(cachedAlbum.container, placeHolder);
 	}
 
@@ -461,7 +484,7 @@ function updateProgressBar(pb, offset, length, t0) {
 		total = length ? Math.floor(length * 44100 + 0.5) : 0,
 		pos = offset + Math.floor((Date.now() - t0) * 44.1 + 0.5);
 
-	pb.previousElementSibling.firstChild.textContent = formatLength(length, pos / 44100);
+	pb.parentElement.getElementsByClassName("length-indicator")[0].firstChild.textContent = formatLength(length, pos / 44100);
 
 	if (pos >= total) {
 		pb.style.backgroundColor = "red";
@@ -482,6 +505,7 @@ function initProgressBar(el) {
 	}
 
 	RAF.register("playlist", update);
+	el.scrollIntoViewIfNeeded();
 }
 
 function removeProgressBar(element) {
@@ -667,10 +691,10 @@ function updatePlaylist() {
 		var plid = currentStatus && currentStatus.currentlyPlaying ? plkey(currentStatus.currentlyPlaying.plid, currentStatus.currentlyPlaying.idx) : "";
 		if (last && last.key && last.key === key) {
 			if (!last.container) {
-				last.container = makeAlbum(last.i, key);
+				last.container = makeAlbum(last.i, key, Playlist);
 				target.insertBefore(last.container, last.t);
 				target.removeChild(last.t);
-				el = formatAlbumTrack(last.i, last.container.getElementsByClassName("album-tracklist")[0]);
+				el = formatAlbumTrack(last.i, last.container.getElementsByClassName("album-tracklist")[0], 0, Playlist);
 				el.dataset.key = last.t.dataset.key;
 				playlist = playlist.insert(last.t.dataset.key, el);
 				if (last.t.dataset.key === plid) {
@@ -679,7 +703,7 @@ function updatePlaylist() {
 				delete last.t;
 				delete last.i;
 			}
-			el = formatAlbumTrack(item.value, last.container.getElementsByClassName("album-tracklist")[0], p);
+			el = formatAlbumTrack(item.value, last.container.getElementsByClassName("album-tracklist")[0], p, Playlist);
 			el.dataset.key = item.key;
 			playlist = playlist.insert(item.key, el);
 			if (item.key === plid) {
@@ -688,7 +712,7 @@ function updatePlaylist() {
 			return last;
 		}
 		last = {
-			t: formatSingleTrack(item.value),
+			t: formatSingleTrack(item.value, Playlist),
 			i: item.value,
 			key: key
 		};

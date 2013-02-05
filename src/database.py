@@ -42,6 +42,7 @@ CTYPE_MAP = {
 	".js": "text/javascript; charset=UTF-8",
 	".html": "text/html; charset=UTF-8",
 	".css": "text/css; charset=UTF-8",
+	".svg": "image/svg+xml",
 }
 
 CRE_REPLACE = re.compile("^.*%%%([A-Z_]+)%%%$")

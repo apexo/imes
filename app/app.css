@@ -25,9 +25,6 @@
 	background-image: -webkit-linear-gradient(top, #bbe, #ddf);
 	background-image: -moz-linear-gradient(top, #bbe, #ddf);
 }
-.album-label, .album-track, .single-track {
-	cursor: pointer;
-}
 .album-label:hover, .album-track:hover, .single-track:hover {
 	background-image: none;
 	background-color: #8080ff;
@@ -107,6 +104,22 @@ body {
 }
 .length-indicator {
 	position: absolute;
-	right: 1em;
+	right: 3em;
 	top: 0px;
+}
+.play-button, .remove-button {
+	position: absolute;
+	top: 0;
+	width: 1em;
+	background-position-y: center;
+	background-repeat: no-repeat;
+	cursor: pointer;
+}
+.play-button {
+	background-image: url(play.svg);
+	right: 0.5em;
+}
+.remove-button {
+	background-image: url(remove.svg);
+	right: 1.75em;
 }
