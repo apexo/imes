@@ -132,6 +132,21 @@ PlaylistSelector.prototype.handleSelect = function() {
 	this.update(this.target.value);
 }
 
-PlaylistSelector.prototype.handleAdd = function() {
-	alert("not implemented yet");
+PlaylistSelector.prototype.handleAdd = function(event) {
+	event.preventDefault();
+	var name = prompt("Enter name of new playlist");
+	if (name) {
+		if (!/^[a-z][-a-z0-9]*$/.test(name)) {
+			alert("Illegal name: must start with a small letter (a-z) and may only contain small letters (a-z), digits (0-9) and hypens (-) after that");
+			return;
+		}
+		var qname = "playlist:user:" + this.userStatus.userName + ":" + name;
+		if (this.locallyCreatedPlaylists.indexOf(qname) >= 0 || this.playlists.indexOf(qname) >= 0) {
+			alert("A playlist with that name already exists.");
+			return;
+		}
+		this.locallyCreatedPlaylists.push(qname);
+		this.update(qname);
+		this.updateMaybe();
+	}
 }
