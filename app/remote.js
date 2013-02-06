@@ -1,7 +1,11 @@
 var DB_URL = '/';
 var DB_NAME = 'imes'; // %%%DB_NAME%%%
-var BACKEND = 'http://127.0.0.1:9997/';
+var BACKEND = 'http://127.0.0.1:9997'; /// %%%BACKEND%%%
 var COUCH_SUFFIX = '\ufff0';
+
+if (BACKEND.substring(BACKEND.length - 1) !== "/") {
+	BACKEND += "/";
+}
 
 function _default_error_cb(url, xhr) {
 	console.log("XHR error", xhr.status, xhr, url);

@@ -57,7 +57,7 @@ def sha1_id(data):
 	return _id(hashlib.sha1(data).digest())
 
 class Database(object):
-	def __init__(self, url, db_name):
+	def __init__(self, url, db_name, backend):
 		self.scanner = {
 			mutagen.flac.FLAC: self.updateFLAC,
 			mutagen.mp3.MP3: self.updateMP3,
@@ -73,6 +73,7 @@ class Database(object):
 		self._replace = {
 			"DB_URL": url,
 			"DB_NAME": db_name,
+			"BACKEND": backend,
 		}
 
 		try:

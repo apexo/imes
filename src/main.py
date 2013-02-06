@@ -118,7 +118,11 @@ def main():
 		pprint.pprint(config)
 		return
 
-	db = database.Database(config["database"]["url"], config["database"]["name"])
+	db = database.Database(
+		config["database"]["url"],
+		config["database"]["name"],
+		config["backend_uri"],
+	)
 
 	db.update_data(".")
 	if args.update:
