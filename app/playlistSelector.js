@@ -26,12 +26,16 @@ PlaylistSelector.prototype.updatePlaylists = function() {
 	this.playlistUpdatePending = true;
 	var
 		base = "playlist:user:" + this.userStatus.userName,
-		view = DB_URL + DB_NAME +  "/_design/playlist/_view/all?group=true&startkey=" + encodeURIComponent(JSON.stringify(base + ":")) + "&endkey=" + encodeURIComponent(JSON.stringify(base + ":~"));
+		view = DB_URL + DB_NAME +  "/_design/playlist/_view/all?group=true&startkey=" + encodeURIComponent(JSON.stringify(base + ":")) + "&endkey=" + encodeURIComponent(JSON.stringify(base + ":" + COUCH_SUFFIX));
 	ajax_get(view, this.processPlaylists.bind(this));
 }
 
 PlaylistSelector.prototype.processPlaylists = function(result) {
-	this.playlists = JSON.parse(result).rows;
+	this.playlists = [];
+	var rows = JSON.parse(result).rows;
+	for (var i = 0; i < rows.length; i++) {
+		this.playlists.push(rows[i].key);
+	}
 	this.playlistUpdatePending = false;
 }
 

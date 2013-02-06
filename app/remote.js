@@ -1,6 +1,7 @@
 var DB_URL = '/';
 var DB_NAME = 'imes'; // %%%DB_NAME%%%
 var BACKEND = 'http://127.0.0.1:9997/';
+var COUCH_SUFFIX = '\ufff0';
 
 function _default_error_cb(url, xhr) {
 	console.log("XHR error", xhr.status, xhr, url);
@@ -256,14 +257,14 @@ function Remote() {
 		return v;
 	}
 	var prefixes = {
-		"artist": {view: "artist", transform: lc, range: "ZZZZZ", mod: 3},
-		"album": {view: "album", transform: lc, range: "ZZZZZ", mod: 2},
-		"title": {view: "title", transform: lc, range: "ZZZZZ", mod: 1},
+		"artist": {view: "artist", transform: lc, range: COUCH_SUFFIX, mod: 3},
+		"album": {view: "album", transform: lc, range: COUCH_SUFFIX, mod: 2},
+		"title": {view: "title", transform: lc, range: COUCH_SUFFIX, mod: 1},
 		"artist2": {view: "artist2", transform: eq, range: "", mod: 13},
 		"album2": {view: "album2", transform: eq, range: "", mod: 12},
 		"title2": {view: "title2", transform: eq, range: "", mod: 11},
-		"all": {view: "search", transform: lc, range: "ZZZZZ", mod: 0},
-		"*": {view: "search", transform: lc, range: "ZZZZZ", mod: 0}
+		"all": {view: "search", transform: lc, range: COUCH_SUFFIX, mod: 0},
+		"*": {view: "search", transform: lc, range: COUCH_SUFFIX, mod: 0}
 	}
 
 	function normalizeTerm(term) {
