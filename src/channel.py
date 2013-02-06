@@ -414,7 +414,8 @@ class Worker(object):
 		raise SystemExit()
 
 	def play(self, plid, idx, fid, pos=0, callback=None):
-		self.psrc.pause(False)
+		if self.status["paused"]:
+			self.setPaused(False)
 		result = self._play(None, plid, idx, fid, pos)
 		if callback is not None:
 			callback(result)
