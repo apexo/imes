@@ -20,11 +20,31 @@ UserStatus.prototype.sessionLoaded = function (result) {
 	ajax_get(DB_URL + "_users/org.couchdb.user:" + this.userName, this.userLoaded.bind(this));
 }
 
+UserStatus.prototype.generateAuthToken = function() {
+	var result = "", chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-.";
+	for (var i = 0; i < 40; i++) {
+		result += chars.charAt(Math.floor(Math.random() * 64));
+	}
+	return result;
+}
+
+UserStatus.prototype.userSaved = function() {
+	ajax_get(DB_URL + "_users/org.couchdb.user:" + this.userName, this.userLoaded.bind(this));
+}
+
+UserStatus.prototype.userSavedError = function() {
+	alert("error storing auth token");
+}
+
 UserStatus.prototype.userLoaded = function(result) {
 	var user = JSON.parse(result);
 
-	if (!user.imes || !user.imes.authToken) {
-		alert("could not retrieve auth token");
+	if (!user.imes) {
+		user.imes = {};
+	}
+	if (!user.imes.authToken) {
+		user.imes.authToken = this.generateAuthToken();
+		ajax_post(DB_URL + "_users/org.couchdb.user:" + this.userName, user, this.userSaved.bind(this), this.userSavedError.bind(this), "PUT");
 		return;
 	}
 
@@ -32,7 +52,6 @@ UserStatus.prototype.userLoaded = function(result) {
 
 	this.ready = true;
 	this.onready.fire(this, this);
-	queryStatus();
 }
 
 UserStatus.prototype.backendUrl = function() {
