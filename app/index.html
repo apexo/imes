@@ -12,13 +12,14 @@
 	<script type="text/javascript" src="avltree.js"></script>
 	<script type="text/javascript" src="user.js"></script>
 	<script type="text/javascript" src="settings.js"></script>
+	<script type="text/javascript" src="playlistSelector.js"></script>
 	<script type="text/javascript" src="main.js"></script>
 </head>
 <body onload="onLoad()">
 	<div id="header">
 		<div id="nav">
-			<a href="" class="active" data-targets="search-result,filter,playlist-select">Search</a>
-			<a href="" data-targets="playlist,playlist-select">Playlist</a>
+			<a href="" class="active" data-targets="search-result,filter,playlist-select,playlist-add">Search</a>
+			<a href="" data-targets="playlist,playlist-select,playlist-add">Playlist</a>
 			<a href="" data-targets="settings">Settings</a>
 		</div>
 		<div id="top">
@@ -30,9 +31,12 @@
 					<img height="20" width="20" />
 				</div>
 			</div>
-			<div id="playlist-select">
-				<select name="playlist">
-				</select>
+			<select id="playlist-select" name="playlist">
+				<option>&nbsp;</option>
+			</select>
+			<div id="playlist-add" class="add-button">
+			</div>
+			<div id="spacer">
 			</div>
 		</div>
 	</div>

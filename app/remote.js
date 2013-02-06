@@ -49,13 +49,16 @@ function get_file_info(name, callback) {
 	ajax_get(DB_URL + DB_NAME + "/" + encodeURIComponent(name), cb);
 }
 
-function ViewProxy(url, startkey, endkey) {
+function ViewProxy(url, startkey, endkey, descending) {
 	this.url = url;
 	this.startkey = startkey;
 	this.endkey = endkey;
 	this.currentstartkey = startkey;
 	this.skip = 0;
 	this._url = url + "?include_docs=true&endkey=" + encodeURIComponent(JSON.stringify(this.endkey));
+	if (descending) {
+		this._url += "&descending=true";
+	}
 
 	this.clone = function() {
 		return new ViewProxy(this.url, this.startkey, this.endkey);
@@ -99,7 +102,7 @@ function ViewProxy(url, startkey, endkey) {
 			callback(rows, done);
 		}
 
-		if (this.endkey === this.currentstartkey) {
+		if (descending && this.endkey === this.currentstartkey) {
 			return cb('{"rows": []}');
 		}
 
@@ -160,7 +163,6 @@ function PlaylistIterator(proxy, skip, reverse) {
 	this.done = false;
 	this.proxy = proxy;
 	if (reverse) {
-		proxy._url += "&descending=true";
 		if (skip === 0) {
 			proxy.skip = 1;
 			skip = null;
@@ -239,7 +241,7 @@ function PlaylistView(playlist, plid, idx) {
 	}
 
 	this.getReverseIterator = function() {
-		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, reverseEndkey);
+		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, reverseEndkey, true);
 		return new PlaylistIterator(proxy, idx, true);
 	}
 }

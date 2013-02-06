@@ -3,11 +3,12 @@ function Settings(userStatus) {
 	this.lists = {};
 	this.pending = [];
 	this.onupdate = new Event();
+	this.ready = false;
 
 	if (this.userStatus.ready) {
 		this.userReady();
 	} else {
-		this.userStatus.onready.addListener(this.userReady.bind(this));
+		this.userStatus.onready.addListener(this.userReady, this);
 	}
 }
 
@@ -80,6 +81,8 @@ Settings.prototype.categories = {
 				}
 				option.appendChild(document.createTextNode(channels[i]));
 			}
+
+			this.aggregates[item] = {"channel": data.channel || ""};
 		},
 		"trigger": "device"
 	},
@@ -150,7 +153,8 @@ Settings.prototype.categories = {
 }
 
 Settings.prototype.userReady = function() {
-	subscription.onchange.addListener(this.onChange.bind(this));
+	this.userStatus.onready.removeListener(this.userReady);
+	subscription.onchange.addListener(this.onChange, this);
 	this.doUpdateAll();
 }
 
@@ -167,6 +171,8 @@ Settings.prototype.doUpdateCategory = function(category) {
 }
 
 Settings.prototype.doUpdateAll = function() {
+	this.aggregates = {};
+	this.ready = false;
 	for (var k in this.categories) {
 		if (this.categories.hasOwnProperty(k) && this.categories[k].initial) {
 			this.doUpdateCategory(k);
@@ -223,6 +229,7 @@ Settings.prototype.updateList = function(category, items, target) {
 	if (idx >= 0) {
 		this.pending.splice(idx, 1);
 		if (!this.pending.length) {
+			this.ready = true;
 			this.onupdate.fire(this, this);
 		}
 	}

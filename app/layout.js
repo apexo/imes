@@ -60,6 +60,9 @@ function LayoutManager() {
 	}
 
 	this.calculateLayout = function(element, width, height) {
+		if (element.style.display === "none") {
+			return;
+		}
 		if (!this.registry.hasOwnProperty(element.id)) {
 			if (!isNaN(width) && !isNaN(height)) {
 				return {width: width, height: height};
@@ -354,8 +357,10 @@ function HBoxLayout(element) {
 		for (var i = 0; i < children.length; i++) {
 			if (!this.weights[i]) {
 				var childSize = layoutManager.calculateLayout(children[i], NaN, ih - this.childBoxes[i].external.topBottom);
-				unmanagedWidth += childSize.width;
-				childSizes[i] = childSize;
+				if (childSize) {
+					unmanagedWidth += childSize.width;
+					childSizes[i] = childSize;
+				}
 			}
 		}
 
@@ -373,16 +378,23 @@ function HBoxLayout(element) {
 				weightSum += this.weights[i];
 				var nmx = Math.round(weightSum * managedF);
 				childSize = layoutManager.calculateLayout(children[i], nmx - managedX, ih - this.childBoxes[i].external.topBottom);
-				childSize.left = managedX + unmanagedX + this.childBoxes[i].margin.left;
-				childSizes[i] = childSize;
+				if (childSize) {
+					childSize.left = managedX + unmanagedX + this.childBoxes[i].margin.left;
+					childSize.setWidth = true;
+					childSizes[i] = childSize;
+				}
 				managedX = nmx;
 			} else {
 				childSize = childSizes[i];
-				childSize.left = managedX + unmanagedX + this.childBoxes[i].margin.left;
-				unmanagedX += childSize.width;
+				if (childSize) {
+					childSize.left = managedX + unmanagedX + this.childBoxes[i].margin.left;
+					unmanagedX += childSize.width;
+				}
 			}
 			unmanagedX += this.childBoxes[i].external.leftRight + this.spacing;
-			maxHeight = Math.max(maxHeight, childSize.height + this.childBoxes[i].external.topBottom);
+			if (childSize) {
+				maxHeight = Math.max(maxHeight, childSize.height + this.childBoxes[i].external.topBottom);
+			}
 		}
 		unmanagedX -= this.spacing;
 		
@@ -391,23 +403,30 @@ function HBoxLayout(element) {
 
 		return {
 			width: managedX + unmanagedX - this.box.padding.left + this.box.internal.leftRight,
-			height: maxHeight + this.box.internal.topBottom
+			height: maxHeight + this.box.internal.topBottom,
+			setHeight: true,
+			setWidth: true
 		}
 	}
 
 	this.applyLayout = function() {
 		var children = this.element.children;
 		for (var i = 0; i < children.length; i++) {
-			var child = children[i];
 			var cs = this.childSizes[i];
+			if (!cs) {
+				continue;
+			}
+			var child = children[i];
 			var cb = this.childBoxes[i];
 			
 			child.style.left = cs.left + "px";
 			child.style.top = (Math.floor((this.maxHeight - cs.height - cb.external.topBottom) / 2) + this.box.padding.top + cb.margin.top) + "px";
-			if (this.weights[i]) {
+			if (cs.setWidth || this.weights[i]) {
 				child.style.width = cs.width + "px";
 			}
-			child.style.height = cs.height + "px";
+			if (cs.setHeight) {
+				child.style.height = cs.height + "px";
+			}
 			child.style.position = "absolute";
 
 			layoutManager.applyLayout(child);
@@ -471,8 +490,10 @@ function VBoxLayout(element) {
 		for (var i = 0; i < children.length; i++) {
 			if (!this.weights[i]) {
 				var childSize = layoutManager.calculateLayout(children[i], iw - this.childBoxes[i].external.leftRight, NaN);
-				unmanagedHeight += childSize.height;
-				childSizes[i] = childSize;
+				if (childSize) {
+					unmanagedHeight += childSize.height;
+					childSizes[i] = childSize;
+				}
 			}
 		}
 
@@ -490,16 +511,23 @@ function VBoxLayout(element) {
 				weightSum += this.weights[i];
 				var nmy = Math.round(weightSum * managedF);
 				childSize = layoutManager.calculateLayout(children[i], iw - this.childBoxes[i].external.leftRight, nmy - managedY);
-				childSize.top = managedY + unmanagedY + this.childBoxes[i].margin.top;
-				childSizes[i] = childSize;
+				if (childSize) {
+					childSize.top = managedY + unmanagedY + this.childBoxes[i].margin.top;
+					childSize.setHeight = true;
+					childSizes[i] = childSize;
+				}
 				managedY = nmy;
 			} else {
 				childSize = childSizes[i];
-				childSize.top = managedY + unmanagedY + this.childBoxes[i].margin.top;
-				unmanagedY += childSize.height;
+				if (childSize) {
+					childSize.top = managedY + unmanagedY + this.childBoxes[i].margin.top;
+					unmanagedY += childSize.height;
+				}
 			}
 			unmanagedY += this.childBoxes[i].external.topBottom + this.spacing;
-			maxWidth = Math.max(maxWidth, childSize.width + this.childBoxes[i].external.leftRight);
+			if (childSize) {
+				maxWidth = Math.max(maxWidth, childSize.width + this.childBoxes[i].external.leftRight);
+			}
 		}
 		unmanagedY -= this.spacing;
 		
@@ -508,21 +536,28 @@ function VBoxLayout(element) {
 
 		return {
 			width: maxWidth + this.padding.leftRight,
-			height: managedY + unmanagedY - this.box.padding.top + this.box.internal.topBottom
+			height: managedY + unmanagedY - this.box.padding.top + this.box.internal.topBottom,
+			setHeight: true,
+			setWidth: true
 		}
 	}
 
 	this.applyLayout = function() {
 		var children = this.element.children;
 		for (var i = 0; i < children.length; i++) {
-			var child = children[i];
 			var cs = this.childSizes[i];
+			if (!cs) {
+				continue;
+			}
+			var child = children[i];
 			var cb = this.childBoxes[i];
 			
 			child.style.left = (Math.floor((this.maxWidth - cs.width - cb.external.leftRight) / 2) + this.box.padding.left + cb.margin.left) + "px";
 			child.style.top = cs.top + "px";
-			child.style.width = cs.width + "px";
-			if (this.weights[i]) {
+			if (cs.setWidth) {
+				child.style.width = cs.width + "px";
+			}
+			if (cs.setHeight || this.weights[i]) {
 				child.style.height = cs.height + "px";
 			}
 			child.style.position = "absolute";
@@ -553,7 +588,9 @@ function HeaderLayout(element) {
 		var children = this.element.children;
 		for (var i = 0; i < children.length; i++) {
 			childSizes[i] = layoutManager.calculateLayout(children[i], iw - this.childBoxes[i].external.leftRight, NaN);
-			ih += childSizes[i].height;
+			if (childSizes[i]) {
+				ih += childSizes[i].height;
+			}
 		}
 
 		this.childSizes = childSizes;
@@ -567,8 +604,11 @@ function HeaderLayout(element) {
 	this.applyLayout = function() {
 		var children = this.element.children;
 		for (var i = 0; i < children.length; i++) {
-			var child = children[i];
 			var cs = this.childSizes[i];
+			if (!cs) {
+				continue;
+			}
+			var child = children[i];
 			var cb = this.childBoxes[i];
 
 			if (i === 0) {

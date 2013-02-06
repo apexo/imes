@@ -451,11 +451,11 @@ function deleteFromPlaylist(plid, idxs) {
 }
 
 function enqueueTracks(ids) {
-	if (!targetPlaylist) {
-		return alert("You must select a playlist first.");
+	if (!playlistSelector.targetPlaylist) {
+		return alert("No playlist selected.");
 	}
 	var
-		tpl = targetPlaylist,
+		tpl = playlistSelector.targetPlaylist,
 		date = new Date().toISOString().replace(/[-:.TZ]/g, ""),
 		rnd = Math.floor(Math.random() * 4294967296).toString(16);
 	while (rnd.length < 8) {
@@ -479,36 +479,13 @@ function setSearchTerms(terms, source) {
 }
 
 var currentStatus = null;
-var currentChannel = null;
-var targetPlaylist = null;
 var userStatus = null;
 
-function updatePlaylists() {
-	var
-		base = "playlist:user:" + userStatus.userName,
-		vp = new ViewProxy(DB_URL + DB_NAME + "/_all_docs", base + "/", base + "/ZZZZZZZZ");
-	vp.fetch(function(data) {
-		console.log(data);
-		var target = document.querySelector("#playlist-select select");
-		while (target.firstElementChild) {
-			target.removeChild(target.firstElementChild);
-		}
-		var cpl = document.createElement("option");
-		cpl.setAttribute("value", "playlist:channel:" + currentChannel);
-		cpl.appendChild(document.createTextNode("[Channel " + currentChannel + "]"));
-		target.appendChild(cpl);
-
-		for (var i = 0; i < data.length; i++) {
-			var pl = document.createElement("option");
-			pl.setAttribute("value", "playlist:user:" + userStatus.userName + "/" + data[i].id);
-			pl.appendChild(document.createTextNode(data[i].name));
-			target.appendChild(pl);
-		}
-
-		if (!targetPlaylist) {
-			targetPlaylist = target.value;
-		}
-	});
+function addOption(select, name, value) {
+	var option = select.appendChild(document.createElement("option"));
+	option.appendChild(document.createTextNode(name));
+	option.value = value;
+	return option;
 }
 
 function createProgressBar() {
@@ -598,13 +575,6 @@ function removeProgressBar(element) {
 function statusUpdated(s) {
 	currentStatus = s;
 
-	if (s.channel !== currentChannel) {
-		currentChannel = s.channel;
-		subscription.args.channel = s.channel;
-		updatePlaylists();
-		updatePlaylist();
-	}
-
 	var target = document.querySelector("#playlist");
 	var cp = target.getElementsByClassName("currently-playing")
 
@@ -660,26 +630,32 @@ function updatePlaylist() {
 
 	var target = document.querySelector("#playlist");
 	target.innerHTML = "";
-	if (!targetPlaylist) {
+	if (!playlistSelector.targetPlaylist) {
 		return;
 	}
 
-	subscription.args.playlist = targetPlaylist.substring(9);
-	subscription.updateArguments();
+	subscription.args.playlist = playlistSelector.targetPlaylist.substring(9);
 
+	if (playlistSelector.userPlaylist) {
+		delete subscription.args.channel;
+	} else {
+		subscription.args.channel = playlistSelector.targetPlaylist.substring(17);
+	}
+	subscription.updateArguments();
+	
 	var plid, idx, pos;
 	pos = currentStatus ? (currentStatus.currentlyPlaying ? currentStatus.currentlyPlaying : currentStatus.savedPosition) : null;
-	if (pos && targetPlaylist === "playlist:channel:" + currentStatus.channel) {
+	if (pos && playlistSelector.targetPlaylist === "playlist:channel:" + currentStatus.channel) {
 		plid = pos.plid;
 		idx = pos.idx;
 	} else {
-		plid = targetPlaylist + "/";
+		plid = playlistSelector.targetPlaylist + "/";
 		idx = 0;
 	}
 
 	var forwardPlaceHolder = document.createElement("div");
 	var backwardPlaceHolder = document.createElement("div");
-	var view = new PlaylistView(targetPlaylist, plid, idx);
+	var view = new PlaylistView(playlistSelector.targetPlaylist, plid, idx);
 	forwardPlaceHolder.style.visibility = "hidden";
 	backwardPlaceHolder.style.visibility = "hidden";
 	var scrollParent = document.body;
@@ -929,11 +905,26 @@ function installClickHandler(target, handler) {
 	}, false);
 }
 
+var scrollBarWidth;
+var settings;
+var playlistSelector;
+
 function onLoad() {
 	if (subscription) {
 		alert("???");
 		return;
 	}
+
+	var temp = document.createElement("div");
+	temp.style.width = "200px"
+	temp.style.overflowY = "scroll";
+	document.body.appendChild(temp);
+	scrollBarWidth = 200 - temp.scrollWidth;
+	document.body.removeChild(temp);
+	temp = null;
+
+	document.getElementById("spacer").style.width = scrollBarWidth + "px";
+
 	subscription = new Subscription({
 		"include_docs": "true",
 		"limit": 10,
@@ -941,7 +932,15 @@ function onLoad() {
 	})
 	userStatus = new UserStatus();
 	userStatus.onupdate.addListener(statusUpdated);
-	var settings = new Settings(userStatus);
+	settings = new Settings(userStatus);
+
+	var playlistTarget = document.getElementById("playlist-select");
+	var playlistAdd = document.getElementById("playlist-add");
+	playlistSelector = new PlaylistSelector(playlistTarget, playlistAdd, settings, userStatus);
+
+	playlistSelector.onplaylistselect.addListener(function() {
+		updatePlaylist();
+	});
 
 	subscription.onchange.addListener(function(changes) {
 		for (var i = 0; i < changes.length; i++) {
@@ -1024,16 +1023,16 @@ function onLoad() {
 			if (event.target === terms) {
 				return;
 			}
-			if (event.keyCode === 0x46 && event.ctrlKey) {
+			if (event.keyCode === 0x46 && event.ctrlKey) { // ctrl+f
 				terms.focus();
-			} else if (event.keyCode === 191 && event.shiftKey || event.keyCode === 111) {
+			} else if (event.keyCode === 191 && event.shiftKey || event.keyCode === 111) { // "/"
 				terms.value = "";
 				terms.focus();
 			} else if (event.keyCode === 8) {
 				if (terms.value) {
-					if (event.ctrlKey) {
+					if (event.ctrlKey) { // ctrl+backspace
 						setSearchTerms("")
-					} else {
+					} else { // backspace
 						setSearchTerms(terms.value.substring(0, terms.value.length - 1));
 					}
 				}

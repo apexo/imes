@@ -36,7 +36,8 @@
 	padding-left:160px
 }
 .album, .single-track, .filter {
-	margin-right:4px;
+	margin-right:2px;
+	margin-left:2px;
 }
 .album, .single-track {
 	clear: left;
@@ -49,7 +50,7 @@
 .currently-playing {
 	font-weight: bold;
 }
-.filter {
+#top {
 	padding:2px;
 	padding-left: 8px;
 	line-height:150%;
@@ -122,6 +123,12 @@ body {
 .remove-button {
 	background-image: url(remove.svg);
 	right: 1.75em;
+}
+.add-button {
+	background-image: url(add.svg);
+	width: 1em;
+	height: 1em;
+	cursor: pointer;
 }
 #settings {
 	margin: 0.5em;

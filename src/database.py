@@ -107,7 +107,7 @@ class Database(object):
 			if not name.startswith("_") and os.path.isfile(path):
 				if name.endswith(".map.js"):
 					views.setdefault(name[:-7], {})["map"] = open(path, "rb").read().decode("UTF-8")
-				elif name.endswitgh(".reduce.js"):
+				elif name.endswith(".reduce.js"):
 					views.setdefault(name[:-10], {})["reduce"] = open(path, "rb").read().decode("UTF-8")
 
 		if not views:
@@ -118,10 +118,14 @@ class Database(object):
 	def _update_filters(self, d, basepath):
 		filters = {}
 
-		for name in os.listdir(basepath):
-			path = os.path.join(basepath, name)
-			if not name.startswith("_") and name.endswith(".js") and os.path.isfile(path):
-				filters[name[:-3]] = open(path, "rb").read().decode("UTF-8")
+		try:
+			for name in os.listdir(basepath):
+				path = os.path.join(basepath, name)
+				if not name.startswith("_") and name.endswith(".js") and os.path.isfile(path):
+					filters[name[:-3]] = open(path, "rb").read().decode("UTF-8")
+		except OSError as e:
+			if e.errno != errno.ENOENT:
+				raise
 
 		if not filters:
 			d.pop("filters", None)

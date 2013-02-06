@@ -4,6 +4,7 @@ function UserStatus() {
 	this.ready = false;
 	this.userName = null;
 	this.authToken = null;
+	this.status = null;
 
 	this.pending = false;
 	this.scheduled = false;
@@ -93,4 +94,8 @@ UserStatus.prototype.schedule = function(timeout) {
 		this.scheduled = true;
 		setTimeout(this.triggerScheduledUpdate.bind(this), timeout || 5000);
 	}
+}
+
+UserStatus.prototype.setUserAggregate = function(aggregate) {
+	ajax_post(userStatus.backendUrl() + "status", {"aggregate": aggregate}, function() {});
 }

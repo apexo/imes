@@ -154,7 +154,9 @@ class Connection(object):
 				raise Exception("not authorized")
 			def cb(value):
 				callback(self._ok(json.dumps(value)))
-			if request == "GET":
+			if request == "OPTIONS":
+				return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nAccess-Control-Allow-Methods: GET, POST\r\nAccess-Control-Allow-Headers: content-type\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" % (self.handler.dbHost,)
+			elif request == "GET":
 				self.handler.state.getUserStatus(user, cb)
 			elif request == "POST":
 				data = json.loads(body)
