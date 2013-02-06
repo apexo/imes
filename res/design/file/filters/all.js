@@ -1,4 +1,7 @@
 function (doc, req) {
+	if (doc._id === "imes:state") {
+		return true;
+	}
 	if (doc._id.substring(0, 9) === "playlist:") {
 		return req.query.playlist && doc._id.substring(9, 10 + req.query.playlist.length) === req.query.playlist + "/";
 	}

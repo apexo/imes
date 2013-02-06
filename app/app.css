@@ -123,3 +123,9 @@ body {
 	background-image: url(remove.svg);
 	right: 1.75em;
 }
+#settings {
+	margin: 0.5em;
+}
+h1 {
+	font-size: 1em;
+}

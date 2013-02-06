@@ -63,7 +63,7 @@ class Connection(object):
 			self.close()
 			return
 		if self.body is None:
-			if request == "POST":
+			if request in ("POST", "PUT") or request in ("DELETE", "OPTIONS") and "transfer-encoding" in self.data or "content-length" in self.data:
 				self.body = self._bodyDecoder(self.data)
 				return
 		self.queue.append((request, uri, version, self.data, None if self.body is None else self.body.value))
@@ -133,6 +133,11 @@ class Connection(object):
 			if len(args) == 1:
 				delete(args[0])
 				return self._ok("")
+			else:
+				raise Exception("not authorized")
+		elif request == "OPTIONS":
+			if len(args) == 1:
+				return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nAccess-Control-Allow-Methods: GET, PUT, DELETE, POST\r\nAccess-Control-Allow-Headers: content-type\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" % (self.handler.dbHost,)
 			else:
 				raise Exception("not authorized")
 		else:
@@ -222,7 +227,7 @@ class Connection(object):
 				lambda aggregate: {
 					"devices": sorted([device.name for device in aggregate.devices]),
 					"users": sorted([user.name for user in aggregate.users]),
-					"devices": sorted([device.name for device in aggregate.devices]),
+					"channel": "" if aggregate.channel is None else aggregate.channel.name,
 				}
 			)
 		else:
@@ -251,7 +256,7 @@ class Connection(object):
 			raise Exception("not authorized")
 
 	def _doHttp(self, request, uri, path, data, body, callback):
-		if request not in ("GET", "POST", "OPTIONS"):
+		if request not in ("GET", "POST", "OPTIONS", "PUT", "DELETE"):
 			raise Exception("not authorized")
 		if len(path) < 4:
 			raise Exception("not authorized")

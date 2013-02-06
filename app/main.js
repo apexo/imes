@@ -975,6 +975,8 @@ function onLoad() {
 	})
 	userStatus = new UserStatus();
 	userStatus.onready.addListener(queryStatus);
+	var settings = new Settings(userStatus);
+
 	subscription.onchange.addListener(function(changes) {
 		for (var i = 0; i < changes.length; i++) {
 			var change = changes[i];
