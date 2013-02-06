@@ -595,76 +595,42 @@ function removeProgressBar(element) {
 	RAF.unregister("playlist");
 }
 
-var statusUpdatePending = false;
-var statusUpdateScheduled = false;
+function statusUpdated(s) {
+	currentStatus = s;
 
-function doScheduledStatusUpdate() {
-	statusUpdateScheduled = false;
-	queryStatus();
-}
-
-function scheduleStatusUpdate(timeout) {
-	if (statusUpdateScheduled) {
-		return;
+	if (s.channel !== currentChannel) {
+		currentChannel = s.channel;
+		subscription.args.channel = s.channel;
+		updatePlaylists();
+		updatePlaylist();
 	}
-	statusUpdateScheduled = true;
 
-	setTimeout(doScheduledStatusUpdate, timeout);
-}
+	var target = document.querySelector("#playlist");
+	var cp = target.getElementsByClassName("currently-playing")
 
-function queryStatus() {
-	if (statusUpdatePending) {
-		return;
+	var pos = s.currentlyPlaying ? s.currentlyPlaying : s.savedPosition;
+	if (s.currentlyPlaying) {
+		s.currentlyPlaying.t0 = Date.now();
 	}
-	statusUpdatePending = true;
 
-	ajax_get(userStatus.backendUrl() + "status", function(result) {
-		statusUpdatePending = false;
+	var found = false, key = pos ? plkey(pos.plid, pos.idx) : "";
 
-		var s = JSON.parse(result);
-
-		currentStatus = s;
-
-		if (s.channel !== currentChannel) {
-			currentChannel = s.channel;
-			subscription.args.channel = s.channel;
-			updatePlaylists();
-			updatePlaylist();
+	for (var i = 0; i < cp.length; i++) {
+		if (cp[i].dataset.key === key) {
+			found = true;
+		} else {
+			removeProgressBar(cp[i]);
+			i -= 1;
 		}
+	}
 
-		var target = document.querySelector("#playlist");
-		var cp = target.getElementsByClassName("currently-playing")
+	if (!found) {
+		var entry = playlist.lookupGte(key);
 
-		var pos = s.currentlyPlaying ? s.currentlyPlaying : s.savedPosition;
-		if (s.currentlyPlaying) {
-			s.currentlyPlaying.t0 = Date.now();
+		if (entry && entry.key == key) {
+			initProgressBar(entry.value);
 		}
-
-		var found = false, key = plkey(pos.plid, pos.idx);
-
-		for (var i = 0; i < cp.length; i++) {
-			if (cp[i].dataset.key === key) {
-				found = true;
-			} else {
-				removeProgressBar(cp[i]);
-				i -= 1;
-			}
-		}
-
-		if (!found) {
-			var entry = playlist.lookupGte(key);
-
-			if (entry && entry.key == key) {
-				initProgressBar(entry.value);
-			}
-		}
-
-		scheduleStatusUpdate(5000);
-	}, function() {
-		statusUpdatePending = false;
-
-		scheduleStatusUpdate(30000);
-	});
+	}
 }
 
 function isVisible(element, within) {
@@ -974,7 +940,7 @@ function onLoad() {
 		"filter": "file/all"
 	})
 	userStatus = new UserStatus();
-	userStatus.onready.addListener(queryStatus);
+	userStatus.onupdate.addListener(statusUpdated);
 	var settings = new Settings(userStatus);
 
 	subscription.onchange.addListener(function(changes) {
@@ -982,7 +948,7 @@ function onLoad() {
 			var change = changes[i];
 			if (!change.deleted && change.doc.type === "imes:channel") {
 				console.log(change.doc);
-				queryStatus();
+				userStatus.trigger();
 			}
 		}
 	});
