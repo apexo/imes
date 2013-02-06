@@ -6,7 +6,7 @@ var playlist = new avltree();
 
 var SearchResult = {};
 SearchResult.createSingleTrackButtons = SearchResult.createAlbumButtons = SearchResult.createAlbumTrackButtons = function(target) {
-	createButton(target, "play");
+	createButton(target, "play", "Add this album/track to the target playlist.");
 }
 
 SearchResult.handleAlbumTrack = SearchResult.handleSingleTrack = function(button, target) {
@@ -31,12 +31,12 @@ SearchResult.handleSearch = function(value) {
 
 var Playlist = {};
 Playlist.createSingleTrackButtons = Playlist.createAlbumTrackButtons = function(target) {
-	createButton(target, "play");
-	createButton(target, "remove");
+	createButton(target, "play", "Play this track now.");
+	createButton(target, "remove", "Remove this track from the playlist.");
 }
 
 Playlist.createAlbumButtons = function(target) {
-	createButton(target, "remove");
+	createButton(target, "remove", "Remove this album from the playlist.");
 }
 
 Playlist.handleAlbumTrack = Playlist.handleSingleTrack = function(button, target) {
@@ -173,10 +173,11 @@ function formatSingleTrack(i, btns) {
 	return t;
 }
 
-function createButton(target, type) {
+function createButton(target, type, title) {
 	var button = document.createElement("div");
 	button.classList.add(type + "-button");
 	button.appendChild(document.createTextNode("\xa0"));
+	button.title = title;
 	target.appendChild(button);
 }
 
