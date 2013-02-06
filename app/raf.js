@@ -1,48 +1,48 @@
-var RAF = new (function() {
-	var n = 0;
-	var running = false;
+function RequestAnimationFrame() {
+	this.n = 0;
+	this.running = false;
 	this.map = {};
+}
 
-	this.run = function() {
-		for (k in this.map) {
-			if (this.map.hasOwnProperty(k)) {
-				this.map[k]();
-			}
-		}
-
-		if (n) {
-			this.start();
-		} else {
-			running = false;
-		}
-
-	}
-
-	this.start = function() {
-		running = true;
-		if (window.requestAnimationFrame) {
-			window.requestAnimationFrame(this.run.bind(this));
-		} else {
-			setTimeout(this.run.bind(this), 1000);
+RequestAnimationFrame.prototype.run = function() {
+	for (var k in this.map) {
+		if (this.map.hasOwnProperty(k)) {
+			this.map[k]();
 		}
 	}
 
-	this.register = function(name, func) {
-		if (!this.map.hasOwnProperty(name)) {
-			n++;
-		}
-		this.map[name] = func;
-		if (!running) {
-			this.start();
-		}
+	if (this.n) {
+		this.start();
+	} else {
+		this.running = false;
 	}
-	this.unregister = function(name) {
-		if (this.map.hasOwnProperty(name)) {
-			delete this.map[name];
-			n -= 1;
-		}
+}
+
+RequestAnimationFrame.prototype.start = function() {
+	this.running = true;
+
+	if (window.requestAnimationFrame) {
+		window.requestAnimationFrame(this.run.bind(this));
+	} else {
+		setTimeout(this.run.bind(this), 1000);
 	}
-	this.status = function() {
-		return {n: n, running: running}
+}
+
+RequestAnimationFrame.prototype.register = function(name, func) {
+	if (!this.map.hasOwnProperty(name)) {
+		this.n++;
 	}
-})();
+	this.map[name] = func;
+	if (!this.running) {
+		this.start();
+	}
+}
+
+RequestAnimationFrame.prototype.unregister = function(name) {
+	if (this.map.hasOwnProperty(name)) {
+		delete this.map[name];
+		this.n --;
+	}
+}
+
+var RAF = new RequestAnimationFrame();
