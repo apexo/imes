@@ -289,8 +289,9 @@ class Worker(object):
 		self.temp = bytearray("\x00" * 2048)
 		self.view = memoryview(self.temp)
 
-		self.status = self.db.get(self.key, {"paused": False})
+		self.status = self.db.get(self.key, {})
 		self.status.setdefault("type", "imes:channel")
+		self.status.setdefault("paused", False)
 		self.playlist = u"playlist:channel:" + self.name
 		if "current" not in self.status:
 			self.status["current"] = {
@@ -342,8 +343,10 @@ class Worker(object):
 			self._pausedCb.pop(0)(None)
 
 	def _autoStart(self, t):
-		if self.src.src is EOF and not self.status.get("paused", False):
+		if self.src.src is EOF and not self.status["paused"]:
 			self._enqueueNext(None)
+		else:
+			self.reactor.scheduleMonotonic(t + 5, self._autoStart)
 
 	def getChannelApi(self):
 		return {
@@ -380,7 +383,7 @@ class Worker(object):
 
 	def setAutoPaused(self, autoPaused, callback=None):
 		self.autoPaused = autoPaused
-		self.psrc.pause(self.autoPaused or self.status.get("paused", False))
+		self.psrc.pause(self.autoPaused or self.status["paused"])
 		if callback is not None:
 			assert autoPaused
 			if self.psrc.state == "paused":
@@ -399,7 +402,7 @@ class Worker(object):
 		}
 
 	def getReplayGainMode(self, callback):
-		callback(self.status.get("replayGain", "album"))
+		callback(self.status["replayGain"])
 
 	def setReplayGainMode(self, mode):
 		self.replayGain = REPLAY_GAIN[mode]
