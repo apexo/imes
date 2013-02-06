@@ -1,9 +1,15 @@
+import os
 import yaml
 import pprint
 import argparse
+import signal
+import errno
 
 import database
 import monitor
+import reactor
+import select
+import rtp
 
 class Adapter(monitor.Monitor):
 	def __init__(self, db):
@@ -100,15 +106,125 @@ demote(name): remove imes_user role from user named `name`
 	#		print u"%-40s %-40s %-40s" % (row.get("album", [""])[0], row.get("artist", [""])[0], row.get("title", [""])[0])
 	#		print row
 
+def runScanner(db, config):
+	adapter = Adapter(db)
+
+	for path in config["media"]:
+		adapter.addRoot(path)
+	adapter.deferCleanup()
+
+	db.prepare()
+	adapter.run()
+
+def runBackend(db, config):
+	r = reactor.Reactor()
+	handler = rtp.RTSPHandler((config["backend"]["bind_host"], config["backend"]["bind_port"]), config["database"]["origin"], db.db, db._db["_users"], r)
+	try:
+		r.run()
+	except KeyboardInterrupt:
+		pass
+
+def runAll(db, config, args):
+	processes = set()
+	unwell = [False]
+
+	if args.scan:
+		pid = os.fork()
+		if not pid:
+			runScanner(db, config)
+			raise SystemExit()
+		processes.add(pid)
+	if args.backend:
+		pid = os.fork()
+		if not pid:
+			runBackend(db, config)
+			raise SystemExit()
+		processes.add(pid)
+
+	def childExited(signo=None, frame=None):
+		pid, status = os.waitpid(-1, os.WNOHANG)
+		if not pid:
+			return
+		assert pid in processes
+		processes.discard(pid)
+		unwell[0] = True
+
+	signal.signal(signal.SIGCHLD, childExited)
+
+	if not processes:
+		print "nothing to do"
+		return
+
+	p = select.epoll()
+	while not unwell[0]:
+		try:
+			p.poll()
+		except KeyboardInterrupt:
+			break
+		except IOError as e:
+			if e.errno != errno.EINTR:
+				raise
+
+	if unwell[0]:
+		print "child exited, stopping"
+	else:
+		print "exiting"
+
+	for pid in processes:
+		os.kill(pid, signal.SIGTERM)
+
+	while processes:
+		try:
+			p.poll(5000)
+		except KeyboardInterrupt:
+			break
+		except IOError as e:
+			if e.errno != errno.EINTR:
+				raise
+
+	if processes:
+		print "killing remaining processes"
+
+	for pid in processes:
+		os.kill(pid, signal.SIGKILL)
+
+def runDaemon(db, config, args):
+	p = args.pid_file
+	f = open(p, "wb") if p else None
+	pid = os.fork()
+	if not pid:
+		if f:
+			f.close()
+		try:
+			runAll(db, config, args)
+		finally:
+			if p:
+				os.unlink(p)
+		return
+	if f:
+		f.write("%d\n" % pid)
+		f.close()
+
+def run(db, config, args):
+	if args.daemon:
+		runDaemon(db, config, args)
+	else:
+		runAll(db, config, args)
+
 def main():
 	p = argparse.ArgumentParser()
 	p.add_argument("--config", "-c", type=argparse.FileType(), default="config.yaml")
 
 	action = p.add_mutually_exclusive_group()
-	action.add_argument("--scan", "-S", action="store_true", help="(default)")
 	action.add_argument("--check-config", "-C", action="store_true")
-	action.add_argument("--update", "-U", action="store_true")
 	action.add_argument("--interactive", "-I", action="store_true")
+	action.add_argument("--update", "-U", action="store_true")
+	action.add_argument("--start", "-S", action="store_true", help="(default)")
+
+	p.add_argument("--no-scan", dest="scan", default=True, action="store_false", help="(default: scan enabled)")
+	p.add_argument("--no-backend", dest="backend", default=True, action="store_false", help="(default: backend enabled)")
+	p.add_argument("--daemon", "-D", action="store_true")
+	p.add_argument("--pid-file", "-P")
 
 	args = p.parse_args()
 
@@ -121,25 +237,18 @@ def main():
 	db = database.Database(
 		config["database"]["url"],
 		config["database"]["name"],
-		config["backend_uri"],
+		config["backend"]["public"],
 	)
-
-	db.update_data(".")
-	if args.update:
-		return
 
 	if args.interactive:
 		interact(db)
 		return
 
-	adapter = Adapter(db)
+	db.update_data(".")
+	if args.update:
+		return
 
-	for path in config["media"]:
-		adapter.addRoot(path)
-	adapter.deferCleanup()
-
-	db.prepare()
-	adapter.run()
+	run(db, config, args)
 
 if __name__ == '__main__':
 	main()
