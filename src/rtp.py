@@ -408,29 +408,6 @@ class RTSPHandler(object):
 		self.server_port = "%d-%d" % (sn[1], sn[1] + 1)
 
 		self.state = State(userDb, db, self.rtp, reactor)
-		try:
-			d = self.state.createDevice("test")
-		except KeyError:
-			d = self.state.getDevice("test")
-		try:
-			a = self.state.createAggregate("test")
-		except KeyError:
-			a = self.state.getAggregate("test")
-		self.state.setDeviceAggregate(d, "test")
-		try:
-			c = self.state.createChannel("test")
-		except KeyError:
-			c = self.state.getChannel("test")
-		self.state.setAggregateChannel(a, "test")
-		print "device/%s/%s" % (d.name, d.authToken)
-		u = self.state.getUser("el")
-		self.state.setUserAggregate(u, "test")
-		try:
-			de = self.state.createDelegate("test")
-		except KeyError:
-			de = self.state.getDelegate("test")
-		self.state.setDelegateDevices(de, ["test"])
-		print "delegate/%s/%s" % (de.name, de.authToken)
 
 		self.reactor = reactor
 		self.reactor.register(self.sock.fileno(), select.EPOLLIN, self._connection)

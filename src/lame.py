@@ -3,9 +3,6 @@ from fade import SoxDecoder, EOF, BUFFER_SIZE, SAMPLE_RATE, SAMPLE_TYPE, Stable,
 import numpy
 import threading
 
-from libp.attic.threading.ContentionDebugLock import DeadlockDebugLock
-
-threading.Lock = DeadlockDebugLock
 # depends:
 # - debian:
 #     libmp3lame0 (>=1:3.99.5)
