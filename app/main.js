@@ -70,8 +70,8 @@ Playlist.handleAlbum = function(button, target) {
 }
 
 Playlist.handleSearch = function(value) {
-	// TODO: navigate to search results
 	setSearchTerms(value);
+	navigation.triggerNavigation(document.getElementById("nav-search"));
 }
 
 function makeLink(data, target, cls, sep, instead) {
@@ -360,6 +360,7 @@ function doSearch(terms) {
 			placeHolder = null;
 			window.removeEventListener("scroll", update);
 			window.removeEventListener("resize", update);
+			navigation.onnavigate.removeListener(update);
 			state = "done";
 			return;
 		}
@@ -386,6 +387,7 @@ function doSearch(terms) {
 	function readyCb() {
 		window.addEventListener("scroll", update);
 		window.addEventListener("resize", update);
+		navigation.onnavigate.addListener(update);
 		update();
 	}
 
@@ -413,6 +415,7 @@ function doSearch(terms) {
 		manager.destroy();
 		window.removeEventListener("scroll", update);
 		window.removeEventListener("resize", update);
+		navigation.onnavigate.removeListener(update);
 	}
 
 	if (subscription.ready) {
@@ -800,6 +803,7 @@ function updatePlaylist() {
 		if (forwardDone && backwardDone) {
 			window.removeEventListener("scroll", update);
 			window.removeEventListener("resize", update);
+			navigation.onnavigate.removeListener(update);
 		}
 	}
 
@@ -807,6 +811,7 @@ function updatePlaylist() {
 		if (forwardDone && backwardDone) {
 			window.addEventListener("scroll", update);
 			window.addEventListener("resize", update);
+			navigation.onnavigate.addListener(update);
 		}
 		if (forwardDone) {
 			target.appendChild(forwardPlaceHolder);
@@ -822,6 +827,7 @@ function updatePlaylist() {
 	function readyCb() {
 		window.addEventListener("scroll", update);
 		window.addEventListener("resize", update);
+		navigation.onnavigate.addListener(update);
 		update();
 	}
 
@@ -829,6 +835,7 @@ function updatePlaylist() {
 		manager.destroy();
 		window.removeEventListener("scroll", update);
 		window.removeEventListener("resize", update);
+		navigation.onnavigate.removeListener(update);
 	}
 
 	function changesCb(changes) {
@@ -909,6 +916,7 @@ function installClickHandler(target, handler) {
 var scrollBarWidth;
 var settings;
 var playlistSelector;
+var navigation;
 
 function onLoad() {
 	if (subscription) {
@@ -953,8 +961,9 @@ function onLoad() {
 		}
 	});
 
+	navigation = new Navigation(document.getElementById("nav"), layoutManager);
+
 	setTimeout(function() {
-		//new ViewportLayout(document.body, new VBoxLayout(document.body));
 		new HeaderLayout(document.body);
 		new HBoxLayout(document.querySelector("#header"));
 		new VBoxLayout(document.querySelector("#header-inner"));
@@ -967,45 +976,6 @@ function onLoad() {
 		});
 		installClickHandler(document.getElementById("search-result"), SearchResult);
 		installClickHandler(document.getElementById("playlist"), Playlist);
-
-		var navTargets = {}, navLinks = document.querySelectorAll("#nav a");
-		for (var i = 0; i < navLinks.length; i++) {
-			var navLink = navLinks[i];
-			if (navLink.dataset.targets) {
-				var targets = navLink.dataset.targets.split(",");
-				for (var j = 0; j < targets.length; j++) {
-					navTargets[targets[j]] = true;
-				}
-			}
-			navLink.addEventListener("click", function(event) {
-				event.stopPropagation();
-				event.preventDefault();
-				var
-					target = event.target,
-					targets = target.dataset.targets.split(",");
-				for (var k in navTargets) {
-					if (navTargets.hasOwnProperty(k)) {
-						if (targets.indexOf(k) >= 0) {
-							document.getElementById(k).style.display = "";
-						} else {
-							document.getElementById(k).style.display = "none";
-						}
-					}
-				}
-				for (var i = 0; i < navLinks.length; i++) {
-					var navLink = navLinks[i];
-					if (navLink === target) {
-						navLink.classList.add("active");
-					} else {
-						navLink.classList.remove("active");
-					}
-				}
-				layoutManager.layout();
-				var e = document.createEvent("HTMLEvents");
-				e.initEvent("scroll", true, true);
-				window.dispatchEvent(e);
-			});
-		}
 
 		setTimeout(function() {
 			if (document.location.hash) {
