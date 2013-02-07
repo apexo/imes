@@ -654,7 +654,7 @@ function updatePlaylist() {
 		plid = pos.plid;
 		idx = pos.idx;
 	} else {
-		plid = playlistSelector.targetPlaylist + "/";
+		plid = "";
 		idx = 0;
 	}
 
