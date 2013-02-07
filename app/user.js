@@ -80,7 +80,7 @@ UserStatus.prototype.statusLoadedError = function() {
 UserStatus.prototype.trigger = function() {
 	if (!this.pending) {
 		this.pending = true;
-		ajax_get(userStatus.backendUrl() + "status", this.statusLoaded.bind(this), this.statusLoadedError.bind(this));
+		ajax_get(this.backendUrl() + "status", this.statusLoaded.bind(this), this.statusLoadedError.bind(this));
 	}
 }
 
@@ -97,5 +97,5 @@ UserStatus.prototype.schedule = function(timeout) {
 }
 
 UserStatus.prototype.setUserAggregate = function(aggregate) {
-	ajax_post(userStatus.backendUrl() + "status", {"aggregate": aggregate}, function() {});
+	ajax_post(this.backendUrl() + "status", {"aggregate": aggregate}, function() {});
 }

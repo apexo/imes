@@ -952,6 +952,8 @@ function onLoad() {
 		updatePlaylist();
 	});
 
+	new ChannelControl(document.getElementById("channel-control"), userStatus);
+
 	subscription.onchange.addListener(function(changes) {
 		for (var i = 0; i < changes.length; i++) {
 			var change = changes[i];
