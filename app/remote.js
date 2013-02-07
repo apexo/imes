@@ -8,6 +8,10 @@ if (BACKEND.substring(BACKEND.length - 1) !== "/") {
 	BACKEND += "/";
 }
 
+if (RTSP_BACKEND.substring(RTSP_BACKEND.length - 1) !== "/") {
+	RTSP_BACKEND += "/";
+}
+
 function _default_error_cb(url, xhr) {
 	console.log("XHR error", xhr.status, xhr, url);
 }
