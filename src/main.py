@@ -128,6 +128,8 @@ def runAll(db, config, args):
 	processes = set()
 	unwell = [False]
 
+	db.cleanConnCache()
+
 	if args.scan:
 		pid = os.fork()
 		if not pid:

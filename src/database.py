@@ -65,7 +65,8 @@ class Database(object):
 			mutagen.mp4.MP4: self.updateMP4,
 			mutagen.asf.ASF: self.updateASF,
 		}
-		self._db = couchdb.Server(url)
+		self._session = couchdb.http.Session()
+		self._db = couchdb.Server(url, session=self._session)
 		self.db = self._create(db_name)
 		self._temp = None
 		self._well_known = set()
@@ -84,6 +85,9 @@ class Database(object):
 			# but since _security is not versioned, this will fail;
 			# however, update should succeed
 			pass
+
+	def cleanConnCache(self):
+		self._session.conns.clear()
 
 	def _update_designs(self, basepath="res/design"):
 		for name in os.listdir(basepath):
