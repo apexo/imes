@@ -1,20 +1,14 @@
 #header {
-	background-color: white;
+	background-color: #cdf;
+	margin: 1px;
 	z-index: 1;
-}
-#middle {
-	/*overflow-y: scroll;
-	overflow-x: hidden;*/
-}
-#search-result {
-	/*overflow: hidden;*/
 }
 .album-track {
 	padding:2px;
 	padding-left:2em;
 	background-color:#ddf;
-	background-image: -webkit-linear-gradient(top, #ddf, #eef);
-	background-image: -moz-linear-gradient(top, #ddf, #eef);
+	background-image: -webkit-linear-gradient(top, #cdf, #def);
+	background-image: -moz-linear-gradient(top, #cdf, #def);
 	position: relative;
 }
 .album-label, .single-track {
@@ -22,8 +16,8 @@
 	background-color:#ddf;
 	line-height:150%;
 	padding-left: 8px;
-	background-image: -webkit-linear-gradient(top, #bbe, #ddf);
-	background-image: -moz-linear-gradient(top, #bbe, #ddf);
+	background-image: -webkit-linear-gradient(top, #abe, #cdf);
+	background-image: -moz-linear-gradient(top, #abe, #cdf);
 }
 .album-label:hover, .album-track:hover, .single-track:hover {
 	background-image: none;
@@ -54,42 +48,27 @@
 	padding:2px;
 	padding-left: 8px;
 	line-height:150%;
-	background-image: -webkit-linear-gradient(top, #bbe, #ddf);
-	background-image: -moz-linear-gradient(top, #bbe, #ddf);
+	margin-bottom: 1px;
 }
 #nav {
-	padding:0px 8px 0px 2px;
 	line-height:150%;
+	background-color: white;
 }
 #nav a {
-	padding-top: 2px;
-	padding-bottom: 2px;
+	padding: 4px;
+	margin: 0px 1px 1px;
 	text-shadow:1px 1px 5px #FFFFFF;
 	color:black;
 	text-decoration:none;
-	background-color: #ddf;
+	display: inline-block;
 }
 #nav a.active {
-	background-image: -webkit-linear-gradient(top, #bbe, #ddf);
-	background-image: -moz-linear-gradient(top, #bbe, #ddf);
+	background-image: -webkit-linear-gradient(top, #abe, #cdf);
+	background-image: -moz-linear-gradient(top, #abe, #cdf);
 }
 .filter input {
 	border:0;
 	padding:2px;
-}
-#controls {
-	display:inline-block;
-	padding:2px;
-	vertical-align:middle;
-	padding-right:6px;
-}
-#controls img {
-	margin: 0;
-	padding: 0;
-	border: 0;
-	display: block;
-	float: left;
-	
 }
 body {
 	margin: 0;
@@ -124,11 +103,22 @@ body {
 	background-image: url(remove.svg);
 	right: 1.75em;
 }
-.add-button {
-	background-image: url(add.svg);
+.add-button, .append-button, .pause-button, .resume-button {
 	width: 1em;
 	height: 1em;
 	cursor: pointer;
+}
+.add-button {
+	background-image: url(add.svg);
+}
+.append-button {
+	background-image: url(append.svg);
+}
+.pause-button {
+	background-image: url(pause.svg);
+}
+.resume-button {
+	background-image: url(play.svg);
 }
 #settings {
 	margin: 0.5em;

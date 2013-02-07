@@ -238,6 +238,7 @@ def main():
 		config["database"]["url"],
 		config["database"]["name"],
 		config["backend"]["public"],
+		config["backend"]["public_rtsp"],
 	)
 
 	if args.interactive:

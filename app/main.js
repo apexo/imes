@@ -956,7 +956,8 @@ function onLoad() {
 	setTimeout(function() {
 		//new ViewportLayout(document.body, new VBoxLayout(document.body));
 		new HeaderLayout(document.body);
-		new VBoxLayout(document.querySelector("#header"));
+		new HBoxLayout(document.querySelector("#header"));
+		new VBoxLayout(document.querySelector("#header-inner"));
 		new HBoxLayout(document.querySelector("#top"));
 		new HBoxLayout(document.querySelector("#top .filter"));
 	
@@ -977,6 +978,8 @@ function onLoad() {
 				}
 			}
 			navLink.addEventListener("click", function(event) {
+				event.stopPropagation();
+				event.preventDefault();
 				var
 					target = event.target,
 					targets = target.dataset.targets.split(",");
@@ -1001,8 +1004,6 @@ function onLoad() {
 				var e = document.createEvent("HTMLEvents");
 				e.initEvent("scroll", true, true);
 				window.dispatchEvent(e);
-				event.stopPropagation();
-				event.preventDefault();
 			});
 		}
 
@@ -1022,6 +1023,9 @@ function onLoad() {
 		window.addEventListener("keydown", function(event) {
 			var terms = document.getElementById("search-terms");
 			if (event.target === terms) {
+				if (event.keyCode == 27) { // ESC
+					terms.blur();
+				}
 				return;
 			}
 			if (event.keyCode === 0x46 && event.ctrlKey) { // ctrl+f

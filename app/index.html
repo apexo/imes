@@ -17,34 +17,31 @@
 </head>
 <body onload="onLoad()">
 	<div id="header">
-		<div id="nav">
-			<a href="" class="active" data-targets="search-result,filter,playlist-select,playlist-add">Search</a>
-			<a href="" data-targets="playlist,playlist-select,playlist-add">Playlist</a>
-			<a href="" data-targets="settings">Settings</a>
-		</div>
-		<div id="top">
-			<div class="filter" id="filter" data-weight="1">
-				<label for="search-terms" accesskey="F">Filter</label>
-				<input class="search" id="search-terms" name="search-terms" data-weight="1" onInput="setSearchTerms(this.value, 'user')"></input>
-				<div id="controls">
-					<img height="20" width="20" />
-					<img height="20" width="20" />
+		<div id="header-inner" data-weight="1">
+			<div id="nav">
+				<a href="" class="active" data-targets="search-result,filter,playlist-select,playlist-add">Search</a>
+				<a href="" data-targets="playlist,playlist-select,playlist-add,playlist-append">Playlist</a>
+				<a href="" data-targets="settings">Settings</a>
+			</div>
+			<div id="top">
+				<div class="filter" id="filter" data-weight="1">
+					<label for="search-terms" accesskey="F">Filter</label>
+					<input class="search" id="search-terms" name="search-terms" data-weight="1" onInput="setSearchTerms(this.value, 'user')"></input>
 				</div>
-			</div>
-			<select id="playlist-select" name="playlist">
-				<option>&nbsp;</option>
-			</select>
-			<div id="playlist-add" class="add-button" title="Create a new, user-defined playlist.">
-			</div>
-			<div id="spacer">
+				<select id="playlist-select" name="playlist">
+					<option>&nbsp;</option>
+				</select>
+				<div id="playlist-add" class="add-button" title="Create a new, user-defined playlist."></div>
+				<div id="playlist-append" class="append-button" title="Append contents of this playlist to another one." style="display:none"></div>
+				<div id="channel-control" class="pause-button" title="Pause/unpause current channel."></div>
 			</div>
 		</div>
+		<div id="spacer"></div>
 	</div>
 	<div id="middle" data-weight="1">
 		<div id="search-result">
 		</div>
 		<div id="playlist" style="display:none">
-			playlist
 		</div>
 		<div id="settings" style="display:none">
 			<h1>Channels</h1>

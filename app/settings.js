@@ -89,7 +89,7 @@ Settings.prototype.categories = {
 	"device": {
 		"target": "devices",
 		"format": function(item, target, data) {
-			var url = "rtsp" + BACKEND.substring(4) + "device/" + item + "/" + data.authToken;
+			var url = RTSP_BACKEND + "device/" + item + "/" + data.authToken;
 			var ul = document.createElement("ul");
 			var li = ul.appendChild(document.createElement("li"));
 			li.appendChild(document.createTextNode(url));

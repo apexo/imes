@@ -1,6 +1,7 @@
 var DB_URL = '/';
 var DB_NAME = 'imes'; // %%%DB_NAME%%%
 var BACKEND = 'http://127.0.0.1:9997'; /// %%%BACKEND%%%
+var RTSP_BACKEND = 'rttp://127.0.0.1:9997'; /// %%%RTSP_BACKEND%%%
 var COUCH_SUFFIX = '\ufff0';
 
 if (BACKEND.substring(BACKEND.length - 1) !== "/") {
