@@ -31,8 +31,8 @@ SearchResult.handleSearch = function(value) {
 
 var Playlist = {};
 Playlist.createSingleTrackButtons = Playlist.createAlbumTrackButtons = function(target) {
-	createButton(target, "play", "Play this track now.");
 	createButton(target, "remove", "Remove this track from the playlist.");
+	createButton(target, "play", "Play this track now.");
 }
 
 Playlist.createAlbumButtons = function(target) {
@@ -135,7 +135,6 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 	artistLink(i, track);
 	track.appendChild(document.createTextNode(" - "));
 	titleLink(i, track);
-	track.appendChild(createLengthIndicator(formatLength(i.info.length)));
 
 	var insertAfter;
 	if (!position) {
@@ -151,6 +150,7 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 	tracklist.insertBefore(track, insertAfter ? insertAfter.nextElementSibling : tracklist.firstElementChild);
 
 	btns.createAlbumTrackButtons(track);
+	track.appendChild(createLengthIndicator(formatLength(i.info.length)));
 	return track;
 }
 
@@ -165,11 +165,11 @@ function formatSingleTrack(i, btns) {
 	artistLink(i, t);
 	t.appendChild(document.createTextNode(" - "));
 	titleLink(i, t);
-	t.appendChild(createLengthIndicator(formatLength(i.info.length)));
 	t.dataset.id = i._id;
 	t.dataset.length = i.info.length;
 
 	btns.createSingleTrackButtons(t);
+	t.appendChild(createLengthIndicator(formatLength(i.info.length)));
 	return t;
 }
 
