@@ -94,7 +94,7 @@ body {
 	cursor: pointer;
 }
 .single-track .play-button, .single-track .remove-button, .single-track .length-indicator,
-.album-track .play-button, .album-track .play-button, .album-track .length-indicator {
+.album-track .play-button, .album-track .remove-button, .album-track .length-indicator {
 	bottom: 2px;
 }
 .album-label .play-button, .album-label .remove-button, .album-label .length-indicator {
