@@ -390,24 +390,26 @@ a=rtpmap:14 mpa/90000/2
 
 
 class RTSPHandler(object):
-	def __init__(self, addr, dbHost, db, userDb, reactor):
+	def __init__(self, addr, rtpPort, dbHost, db, userDb, reactor):
 		self.dbHost = dbHost
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.bind(addr)
 		self.sock.listen(4)
 
+		sn_rtp = (addr[0], rtpPort) + addr[2:]
+
 		self.rtp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.rtp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.rtp.bind(("0.0.0.0", 0))
+		self.rtp.bind(sn_rtp)
 
-		sn = self.rtp.getsockname()
+		sn_rtp = sn_rtp if rtpPort else self.rtp.getsockname()
 
 		self.rtcp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.rtcp.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.rtcp.bind((sn[0], sn[1] + 1) + sn[2:])
+		self.rtcp.bind((sn_rtp[0], sn_rtp[1] + 1) + sn_rtp[2:])
 
-		self.server_port = "%d-%d" % (sn[1], sn[1] + 1)
+		self.server_port = "%d-%d" % (sn_rtp[1], sn_rtp[1] + 1)
 
 		self.state = State(userDb, db, self.rtp, reactor)
 

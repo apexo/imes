@@ -118,7 +118,7 @@ def runScanner(db, config):
 
 def runBackend(db, config):
 	r = reactor.Reactor()
-	handler = rtp.RTSPHandler((config["backend"]["bind_host"], config["backend"]["bind_port"]), config["database"]["origin"], db.db, db._db["_users"], r)
+	handler = rtp.RTSPHandler((config["backend"]["bind_host"], config["backend"]["bind_port"]), config["backend"]["rtp_port"], config["database"]["origin"], db.db, db._db["_users"], r)
 	try:
 		r.run()
 	except KeyboardInterrupt:
