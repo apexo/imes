@@ -95,6 +95,9 @@ body {
 	background-repeat: no-repeat;
 	cursor: pointer;
 }
+.album-label .play-button, .album-label .remove-button, .album-label .length-indicator {
+	top: 2px;
+}
 .play-button {
 	background-image: url(play.svg);
 	right: 0.5em;
