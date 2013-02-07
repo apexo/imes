@@ -115,7 +115,7 @@ Settings.prototype.categories = {
 	"delegate": {
 		"target": "delegates",
 		"format": function(item, target, data) {
-			var url = BACKEND + "delegate/" + item + "/" + data.authToken;
+			var url = DELEGATE_BACKEND + "delegate/" + item + "/" + data.authToken;
 			var ul = target.appendChild(document.createElement("ul"));
 			ul.appendChild(document.createElement("li")).appendChild(document.createTextNode(url + "/pause"));
 			ul.appendChild(document.createElement("li")).appendChild(document.createTextNode(url + "/pause/$SECONDS"));

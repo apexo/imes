@@ -76,6 +76,7 @@ class Database(object):
 			"DB_NAME": db_name,
 			"BACKEND": backend,
 			"RTSP_BACKEND": rtsp_backend,
+			"DELEGATE_BACKEND": delegate_backend,
 		}
 
 		try:

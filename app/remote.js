@@ -1,7 +1,8 @@
 var DB_URL = '/';
 var DB_NAME = 'imes'; // %%%DB_NAME%%%
 var BACKEND = 'http://127.0.0.1:9997'; /// %%%BACKEND%%%
-var RTSP_BACKEND = 'rttp://127.0.0.1:9997'; /// %%%RTSP_BACKEND%%%
+var RTSP_BACKEND = 'rtsp://127.0.0.1:9997'; /// %%%RTSP_BACKEND%%%
+var DELEGATE_BACKEND = 'http://127.0.0.1:9997'; /// %%%DELEGATE_BACKEND%%%
 var COUCH_SUFFIX = '\ufff0';
 
 if (BACKEND.substring(BACKEND.length - 1) !== "/") {
@@ -10,6 +11,10 @@ if (BACKEND.substring(BACKEND.length - 1) !== "/") {
 
 if (RTSP_BACKEND.substring(RTSP_BACKEND.length - 1) !== "/") {
 	RTSP_BACKEND += "/";
+}
+
+if (DELEGATE_BACKEND.substring(DELEGATE_BACKEND.length - 1) !== "/") {
+	DELEGATE_BACKEND += "/";
 }
 
 function _default_error_cb(url, xhr) {

@@ -241,6 +241,7 @@ def main():
 		config["database"]["name"],
 		config["backend"]["public"],
 		config["backend"]["public_rtsp"],
+		config["backend"]["public_delegate"],
 	)
 
 	if args.interactive:
