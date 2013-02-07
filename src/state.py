@@ -583,7 +583,7 @@ class State(object):
 			info = self.db.get(u"channel:" + channel.name, {})
 			result["currentlyPlaying"] = None
 			result["savedPosition"] = info.get("current", {
-				"plid": u"playlist:channel:" + channel.name,
+				"plid": u"playlist:channel:" + channel.name + "/",
 				"idx": 0,
 				"fid": "",
 				"pos": 0,
