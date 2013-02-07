@@ -295,7 +295,7 @@ class Worker(object):
 		self.playlist = u"playlist:channel:" + self.name
 		if "current" not in self.status:
 			self.status["current"] = {
-				"plid": self.playlist + "/",
+				"plid": self.playlist + ":",
 				"idx": 0,
 				"fid": "",
 				"pos": 0,
@@ -522,7 +522,7 @@ class Worker(object):
 
 		for entry in v[key:]:
 			entry = entry.doc
-			if not entry["_id"].startswith(self.playlist + "/"):
+			if not entry["_id"].startswith(self.playlist + ":"):
 				return
 			for id_ in entry["items"][idx:]:
 				if id_ is None or id_ == skip:

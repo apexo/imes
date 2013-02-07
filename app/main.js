@@ -465,7 +465,7 @@ function enqueueTracks(ids) {
 	while (rnd.length < 8) {
 		rnd = "0" + rnd;
 	}
-	var id = encodeURIComponent(tpl + "/" + date + "/" + rnd);
+	var id = encodeURIComponent(tpl + ":" + date + ":" + rnd);
 	ajax_post(DB_URL + DB_NAME + "/" + id, {
 		"type": "playlist",
 		"items": ids

@@ -241,9 +241,9 @@ function PlaylistIterator(proxy, skip, reverse) {
 function PlaylistView(playlist, plid, idx) {
 	var viewPrefix = DB_NAME + "/_all_docs/";
 
-	var reverseEndkey = playlist + "/";
-	var startkey = plid ? plid : playlist + "/";
-	var endkey = playlist + "/z";
+	var reverseEndkey = playlist + ":";
+	var startkey = plid ? plid : playlist + ":";
+	var endkey = playlist + ":z";
 
 	this.getForwardIterator = function() {
 		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, endkey);
