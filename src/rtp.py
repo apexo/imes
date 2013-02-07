@@ -87,6 +87,8 @@ class Connection(object):
 			else:
 				self.sock.send(response)
 				self.queue.pop(0)
+				if data.get("connection") == "close":
+					self.close()
 				if self.queue:
 					self.reactor.defer(self._processNext)
 
