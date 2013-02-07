@@ -102,7 +102,7 @@ Settings.prototype.categories = {
 	"scrobbler": {
 		"target": "scrobblers",
 		"format": function(item, target, data) {
-			if (data.auth_token) {
+			if (data && data.auth_token) {
 				target.appendChild(document.createTextNode(": "));
 				this.createLink(target, "auth", this.authScrobbler.bind(this, item));
 
@@ -111,7 +111,7 @@ Settings.prototype.categories = {
 
 				target.appendChild(document.createTextNode(", "));
 				this.createLink(target, "remove", this.removeScrobbler.bind(this, item));
-			} else if (data.session_token) {
+			} else if (data && data.session_token) {
 				target.appendChild(document.createTextNode(": "));
 				this.createLink(target, "remove", this.removeScrobbler.bind(this, item));
 			} else {
