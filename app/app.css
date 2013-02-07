@@ -85,15 +85,17 @@ body {
 .length-indicator {
 	position: absolute;
 	right: 3em;
-	bottom: 2px;
 }
 .play-button, .remove-button {
 	position: absolute;
-	bottom: 2px;
 	width: 1em;
 	background-position-y: center;
 	background-repeat: no-repeat;
 	cursor: pointer;
+}
+.single-track .play-button, .single-track .remove-button, .single-track .length-indicator,
+.album-track .play-button, .album-track .play-button, .album-track .length-indicator {
+	bottom: 2px;
 }
 .album-label .play-button, .album-label .remove-button, .album-label .length-indicator {
 	top: 2px;
