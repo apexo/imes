@@ -174,7 +174,8 @@ function formatSingleTrack(i, btns) {
 }
 
 function createButton(target, type, title) {
-	var button = document.createElement("div");
+	var button = document.createElement("a");
+	button.href = "";
 	button.classList.add(type + "-button");
 	button.appendChild(document.createTextNode("\xa0"));
 	button.title = title;

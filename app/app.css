@@ -97,6 +97,10 @@ body {
 	float: right;
 	margin-right: 0.5em;
 }
+a.play-button, a.remove-button, a.append-button, a.add-button, a.resume-button, a.pause-button {
+	display: block;
+	text-decoration: none;
+}
 .play-button {
 	background-image: url(play.svg);
 }
