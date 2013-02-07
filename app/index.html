@@ -46,6 +46,8 @@
 		<div id="playlist" style="display:none">
 		</div>
 		<div id="settings" style="display:none">
+			<h1>Scrobblers</h1>
+			<p id="scrobblers"></p>
 			<h1>Channels</h1>
 			<p id="channels"></p>
 			<h1>Aggregates</h1>
@@ -55,6 +57,10 @@
 			<h1>Delegates</h1>
 			<p id="delegates"></p>
 		</div>
+	</div>
+	<div id="auth-link-popup" style="display:none">
+		<p>Please open the following link, login there and authenticate the application there. Then come back here and confirm.</p>
+		<p><a onclick="document.getElementById('auth-link-popup').style.display='none';" href="" id="auth-link" target="_blank"></a></p>
 	</div>
 </body>
 </html>

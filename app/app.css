@@ -133,3 +133,12 @@ a.play-button, a.remove-button, a.append-button, a.add-button, a.resume-button, 
 h1 {
 	font-size: 1em;
 }
+#auth-link-popup {
+	position: fixed;
+	border: 1px solid black;
+	background-color: white;
+	padding: 1em;
+	top: 5%;
+	left: 5%;
+	z-index: 2;
+}

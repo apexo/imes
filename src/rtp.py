@@ -150,6 +150,7 @@ class Connection(object):
 
 	def _doHttpUser(self, request, uri, data, body, user, cmd, args, callback):
 		state = self.handler.state
+		scrobbler = self.handler.scrobbler
 
 		if cmd == "status":
 			if args:
@@ -234,6 +235,20 @@ class Connection(object):
 					"channel": "" if aggregate.channel is None else aggregate.channel.name,
 				}
 			)
+		elif cmd == "scrobbler":
+			if request == "OPTIONS":
+				return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nAccess-Control-Allow-Methods: GET, POST\r\nAccess-Control-Allow-Headers: content-type\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" % (self.handler.dbHost,)
+			if not args and request == "GET":
+				return self._ok(json.dumps(scrobbler.getNetworks(user.name)))
+			elif len(args) == 2 and request == "POST":
+				if args[0] in scrobbler.getNetworks(user.name):
+					if args[1] == "auth":
+						return self._ok(json.dumps(scrobbler.getWebAuthUrl(user.name, args[0])))
+					elif args[1] == "validate":
+						return self._ok(json.dumps(scrobbler.verifyNetworkConfiguration(user.name, args[0])))
+					elif args[1] == "remove":
+						return self._ok(json.dumps(scrobbler.removeNetworkConfiguration(user.name, args[0])))
+			raise Exception("not authorized")
 		else:
 			raise ValueError()
 
@@ -390,7 +405,7 @@ a=rtpmap:14 mpa/90000/2
 
 
 class RTSPHandler(object):
-	def __init__(self, addr, rtpPort, dbHost, db, userDb, reactor):
+	def __init__(self, addr, rtpPort, dbHost, db, userDb, reactor, scrobbler):
 		self.dbHost = dbHost
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -411,13 +426,15 @@ class RTSPHandler(object):
 
 		self.server_port = "%d-%d" % (sn_rtp[1], sn_rtp[1] + 1)
 
-		self.state = State(userDb, db, self.rtp, reactor)
+		self.state = State(userDb, db, self.rtp, reactor, scrobbler)
 
 		self.reactor = reactor
 		self.reactor.register(self.sock.fileno(), select.EPOLLIN, self._connection)
 		self.reactor.register(self.rtcp.fileno(), select.EPOLLIN, self._onRtcp)
 
 		self.sessions = {}
+
+		self.scrobbler = scrobbler
 
 	HDR = struct.Struct("!BBH")
 	RR = struct.Struct("!I")

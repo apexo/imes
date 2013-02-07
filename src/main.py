@@ -10,6 +10,7 @@ import monitor
 import reactor
 import select
 import rtp
+import scrobbler
 
 class Adapter(monitor.Monitor):
 	def __init__(self, db):
@@ -118,7 +119,9 @@ def runScanner(db, config):
 
 def runBackend(db, config):
 	r = reactor.Reactor()
-	handler = rtp.RTSPHandler((config["backend"]["bind_host"], config["backend"]["bind_port"]), config["backend"]["rtp_port"], config["database"]["origin"], db.db, db._db["_users"], r)
+	userDb = db._db["_users"]
+	scrobbler_ = scrobbler.Scrobbler(db.db, userDb, r, config["scrobbler"])
+	handler = rtp.RTSPHandler((config["backend"]["bind_host"], config["backend"]["bind_port"]), config["backend"]["rtp_port"], config["database"]["origin"], db.db, userDb, r, scrobbler_)
 	try:
 		r.run()
 	except KeyboardInterrupt:

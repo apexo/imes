@@ -266,7 +266,7 @@ class User(_Session):
 		state._users.pop(self.name)
 
 class State(object):
-	def __init__(self, userDb, db, rtpSocket, reactor):
+	def __init__(self, userDb, db, rtpSocket, reactor, scrobbler):
 		self.userDb = userDb
 		self.db = db
 		self.rtpSocket = rtpSocket
@@ -283,6 +283,8 @@ class State(object):
 
 		self._collectGarbage(clock())
 		self._loadState()
+
+		self.scrobbler = scrobbler
 
 	def _saveState(self):
 		state = self.db.get("imes:state", {})
@@ -407,7 +409,11 @@ class State(object):
 
 	def getWorkerApi(self, channel):
 		def scrobble(info):
-			pass
+			userNames = set()
+			for aggregate in channel.aggregates:
+				for user in aggregate.users:
+					userNames.add(user.name)
+			self.scrobbler.scrobble(list(userNames), info)
 		return {"scrobble": scrobble}
 
 	def createMediaStream(self, session, device):

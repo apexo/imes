@@ -179,7 +179,7 @@ class Database(object):
 	def prepare(self):
 		temp = set()
 		for row in self.db.view("_all_docs"):
-			if row.id.startswith("playlist:") or row.id.startswith("imes:") or row.id.startswith("channel:"):
+			if row.id.startswith("playlist:") or row.id.startswith("imes:") or row.id.startswith("channel:") or row.id.startswith("history:"):
 				continue
 			temp.add(row.id)
 		self._temp = temp - self._well_known
