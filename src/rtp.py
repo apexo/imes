@@ -27,6 +27,62 @@ class FixedLengthBodyDecoder(object):
 		self.remaining -= n
 		return n, not self.remaining
 
+CORS_ORIGIN = "Access-Control-Allow-Origin"
+CORS_METHODS = "Access-Control-Allow-Methods"
+CORS_HEADERS = "Access-Control-Allow-Headers"
+CORS_MAXAGE = "Access-Control-Max-Age"
+CTYPE = "Content-Type"
+MAXAGE = 3600
+
+class Response(object):
+	def __init__(self, version):
+		self.headers = {}
+		self.version = version
+		self.code = 200
+		self.msg = "OK"
+		self.body = None
+
+	def addHeader(self, name, value):
+		if name in self.headers:
+			self.headers[name] += ","+value
+		else:
+			self.headers[name] = value
+
+	def setHeader(self, name, value):
+		self.headers[name] = value
+
+	def allowOrigin(self, *origins):
+		for origin in origins:
+			self.addHeader(CORS_ORIGIN, origin)
+
+	def allowMethod(self, *methods):
+		for method in methods:
+			self.addHeader(CORS_METHODS, method)
+
+	def allowHeader(self, *headers):
+		for header in headers:
+			self.addHeader(CORS_HEADERS, header)
+
+	def setResponse(self, cod, msg):
+		self.code = code
+		self.msg = msg
+
+	def setBody(self, body):
+		if body is not None:
+			self.setHeader("Content-Length", len(body))
+		else:
+			self.headers.pop("Content-Length", None)
+		self.body = body
+
+	def assemble(self):
+		result = "%s %d %s\r\n" % (self.version, self.code, self.msg)
+		for hdr, value in self.headers.iteritems():
+			result += "%s: %s\r\n" % (hdr, value)
+		result += "\r\n"
+		if self.body is not None:
+			result += self.body
+		return result
+
 class Connection(object):
 	def __init__(self, addr, sock, reactor, handler):
 		self.addr = addr
@@ -53,7 +109,6 @@ class Connection(object):
 		raise ValueError()
 
 	def _complete(self):
-		print repr(self.firstLine), self.data
 		if not self.firstLine:
 			self.close()
 
@@ -81,8 +136,15 @@ class Connection(object):
 		path = p.path.strip("/").split("/")
 
 		def callback(response):
+			if isinstance(response, Response):
+				response = response.assemble()
 			if isinstance(response, Exception):
-				self.sock.send(version + " 500 Internal Server Error\r\n\r\n" + str(e) + "\r\n")
+				resp = Respones("HTTP/1.1")
+				resp.setResponse(500, "Internal Server Error")
+				resp.setHeader(CTYPE, "text/plain")
+				resp.setHeader("Connection", "close")
+				resp.setBody(str(response))
+				self.sock.send(resp.assemble())
 				self.close()
 			else:
 				self.sock.send(response)
@@ -117,36 +179,48 @@ class Connection(object):
 			callback(response)
 			return
 
+	def _makeResponse(self, value=None, methods=(), is_options=False):
+		r = Response("HTTP/1.1")
+		r.allowOrigin(self.handler.dbHost)
+		r.allowMethod(*methods)
+		if "POST" in methods or "PUT" in methods:
+			r.allowHeader(CTYPE)
+		if is_options:
+			r.setHeader(CORS_MAXAGE, MAXAGE)
+			r.setHeader(CTYPE, "text/plain")
+			r.setBody("")
+		else:
+			r.setHeader(CTYPE, "application/json")
+			r.setBody(json.dumps(value))
+		return r
+
 	def _httpModel(self, request, uri, data, body, user, cmd, args, callback, create, delete, list_, get, transform):
 		if request == "GET":
 			if not args:
-				return self._ok(json.dumps(list_()))
+				return self._makeResponse(list_(), methods=("PUT", "DELETE", "POST"))
 			elif len(args) == 1:
-				return self._ok(json.dumps(transform(get(args[0]))))
+				return self._makeResponse(transform(get(args[0])), methods=("PUT", "DELETE", "POST"))
 			else:
 				raise Exception("not authorized")
 		elif request == "PUT":
 			if len(args) == 1:
 				create(args[0])
-				return self._ok("")
+				return self._makeResponse({}, methods=("PUT", "DELETE", "POST"))
 			else:
 				raise Exception("not authorized")
 		elif request == "DELETE":
 			if len(args) == 1:
 				delete(args[0])
-				return self._ok("")
+				return self._makeResponse({}, methods=("PUT", "DELETE", "POST"))
 			else:
 				raise Exception("not authorized")
 		elif request == "OPTIONS":
 			if len(args) == 1:
-				return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nAccess-Control-Allow-Methods: GET, PUT, DELETE, POST\r\nAccess-Control-Allow-Headers: content-type\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" % (self.handler.dbHost,)
+				return self._makeResponse(methods=("PUT", "DELETE", "POST"), is_options=True)
 			else:
 				raise Exception("not authorized")
 		else:
 			raise Exception("not authorized")
-
-	def _ok(self, response, ctype="application/json"):
-		return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nContent-Length: %d\r\nContent-Type: %s\r\n\r\n%s\r\n" % (self.handler.dbHost, len(response), ctype, response)
 
 	def _doHttpUser(self, request, uri, data, body, user, cmd, args, callback):
 		state = self.handler.state
@@ -156,9 +230,9 @@ class Connection(object):
 			if args:
 				raise Exception("not authorized")
 			def cb(value):
-				callback(self._ok(json.dumps(value)))
+				callback(self._makeResponse(value, methods=("POST",)))
 			if request == "OPTIONS":
-				return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nAccess-Control-Allow-Methods: GET, POST\r\nAccess-Control-Allow-Headers: content-type\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" % (self.handler.dbHost,)
+				return self._makeResponse(methods=("POST",), is_options=True)
 			elif request == "GET":
 				self.handler.state.getUserStatus(user, cb)
 			elif request == "POST":
@@ -174,11 +248,11 @@ class Connection(object):
 			if args:
 				raise Exception("not authorized")
 			if request == "OPTIONS":
-				return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nAccess-Control-Allow-Methods: POST\r\nAccess-Control-Allow-Headers: content-type\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" % (self.handler.dbHost,)
+				return self._makeResponse(methods=("POST",), is_options=True)
 			elif request == "POST":
 				data = json.loads(body)
 				self.handler.state.play(user, data["plid"], data["idx"], data["fid"])
-				return self._ok("{}")
+				return self._makeResponse({}, methods=("POST",))
 			else:
 				raise Exception("not authorized")
 		elif cmd == "channel":
@@ -186,7 +260,7 @@ class Connection(object):
 				data = json.loads(body)
 				if "paused" in data:
 					state.setChannelPaused(state.getChannel(args[0]), data["paused"])
-				return self._ok("{}")
+				return self._makeResponse({}, methods=("PUT", "DELETE", "POST"))
 			return self._httpModel(request, uri, data, body, user, cmd, args, callback,
 				state.createChannel, state.deleteChannel, state.listChannels, state.getChannel,
 				lambda channel: {
@@ -198,7 +272,7 @@ class Connection(object):
 				data = json.loads(body)
 				if "aggregate" in data:
 					state.setDeviceAggregate(state.getDevice(args[0]), data["aggregate"])
-				return self._ok("{}")
+				return self._makeResponse({}, methods=("PUT", "DELETE", "POST"))
 			return self._httpModel(request, uri, data, body, user, cmd, args, callback,
 				state.createDevice, state.deleteDevice, state.listDevices, state.getDevice,
 				lambda device: {
@@ -212,7 +286,7 @@ class Connection(object):
 				data = json.loads(body)
 				if "devices" in data:
 					state.setDelegateDevices(state.getDelegate(args[0]), data["devices"])
-				return self._ok("{}")
+				return self._makeResponse({}, methods=("PUT", "DELETE", "POST"))
 			return self._httpModel(request, uri, data, body, user, cmd, args, callback,
 				state.createDelegate, state.deleteDelegate, state.listDelegates, state.getDelegate,
 				lambda delegate: {
@@ -226,7 +300,7 @@ class Connection(object):
 				data = json.loads(body)
 				if "channel" in data:
 					state.setAggregateChannel(state.getAggregate(args[0]), data["channel"])
-				return self._ok("{}")
+				return self._makeResponse({}, methods=("PUT", "DELETE", "POST"))
 			return self._httpModel(request, uri, data, body, user, cmd, args, callback,
 				state.createAggregate, state.deleteAggregate, state.listAggregates, state.getAggregate,
 				lambda aggregate: {
@@ -237,17 +311,17 @@ class Connection(object):
 			)
 		elif cmd == "scrobbler":
 			if request == "OPTIONS":
-				return "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: %s\r\nAccess-Control-Allow-Methods: GET, POST\r\nAccess-Control-Allow-Headers: content-type\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n" % (self.handler.dbHost,)
+				return self._makeResponse(methods=("POST",), is_options=True)
 			if not args and request == "GET":
-				return self._ok(json.dumps(scrobbler.getNetworks(user.name)))
+				return self._makeResponse(scrobbler.getNetworks(user.name), methods=("POST",))
 			elif len(args) == 2 and request == "POST":
 				if args[0] in scrobbler.getNetworks(user.name):
 					if args[1] == "auth":
-						return self._ok(json.dumps(scrobbler.getWebAuthUrl(user.name, args[0])))
+						return self._makeResponse(scrobbler.getWebAuthUrl(user.name, args[0]), methods=("POST",))
 					elif args[1] == "validate":
-						return self._ok(json.dumps(scrobbler.verifyNetworkConfiguration(user.name, args[0])))
+						return self._makeResponse(scrobbler.verifyNetworkConfiguration(user.name, args[0]), methods=("POST",))
 					elif args[1] == "remove":
-						return self._ok(json.dumps(scrobbler.removeNetworkConfiguration(user.name, args[0])))
+						return self._makeResponse(scrobbler.removeNetworkConfiguration(user.name, args[0]), methods=("POST",))
 			raise Exception("not authorized")
 		else:
 			raise ValueError()

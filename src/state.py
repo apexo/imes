@@ -402,7 +402,10 @@ class State(object):
 			device.update(self, self.reactor)
 
 	def setChannelPaused(self, channel, paused):
-		channel.worker.setPaused(paused)
+		if channel.worker is not None:
+			channel.worker.setPaused(paused)
+		else:
+			print "TODO: cannot change paused state of offline channel"
 
 	def getChannelApi(self, channel):
 		return {}
