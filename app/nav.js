@@ -42,5 +42,5 @@ Navigation.prototype.triggerNavigation = function(target) {
 		}
 	}
 	this.layoutManager.layout();
-	this.onnavigate.fire(this, this);
+	this.onnavigate.fire(this, target);
 }

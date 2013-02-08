@@ -991,6 +991,14 @@ function onLoad() {
 	});
 
 	navigation = new Navigation(document.getElementById("nav"), layoutManager);
+	navigation.onnavigate.addListener(function(target) {
+		if (target.id === "nav-playlist") {
+			var cp = document.querySelector("#playlist").getElementsByClassName("currently-playing");
+			if (cp && cp.length) {
+				cp[0].scrollIntoViewIfNeeded();
+			}
+		}
+	});
 
 	setTimeout(function() {
 		new HeaderLayout(document.body);
