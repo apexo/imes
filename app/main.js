@@ -962,7 +962,8 @@ function onLoad() {
 	subscription = new Subscription({
 		"include_docs": "true",
 		"limit": 10,
-		"filter": "file/all"
+		"filter": "file/all",
+		"timeout": 59000,
 	})
 	userStatus = new UserStatus();
 	userStatus.onupdate.addListener(statusUpdated);
