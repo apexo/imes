@@ -32,7 +32,7 @@ PlaylistSelector.prototype.updatePlaylists = function() {
 
 PlaylistSelector.prototype.processPlaylists = function(result) {
 	this.playlists = [];
-	var rows = JSON.parse(result).rows;
+	var rows = result.rows;
 	for (var i = 0; i < rows.length; i++) {
 		this.playlists.push(rows[i].key);
 	}

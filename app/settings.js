@@ -15,31 +15,31 @@ function Settings(userStatus) {
 Settings.prototype.setDelegateDevices = function(delegate, devices, event) {
 	event.preventDefault();
 	var url = this.userStatus.backendUrl() + "delegate/" + delegate;
-	ajax_post(url, {"devices": devices}, function() {});
+	ajax_post(url, {"devices": devices});
 }
 
 Settings.prototype.addDelegateDevice = function(delegate, devices, select, event) {
 	event.preventDefault();
 	var url = this.userStatus.backendUrl() + "delegate/" + delegate;
-	ajax_post(url, {"devices": devices.concat([select.value])}, function() {});
+	ajax_post(url, {"devices": devices.concat([select.value])});
 }
 
 Settings.prototype.setAggregateChannel = function(aggregate, select, event) {
 	event.preventDefault();
 	var url = this.userStatus.backendUrl() + "aggregate/" + aggregate;
-	ajax_post(url, {"channel": select.value}, function() {});
+	ajax_post(url, {"channel": select.value});
 }
 
 Settings.prototype.setDeviceAggregate = function(device, select, event) {
 	event.preventDefault();
 	var url = this.userStatus.backendUrl() + "device/" + device;
-	ajax_post(url, {"aggregate": select.value}, function() {});
+	ajax_post(url, {"aggregate": select.value});
 }
 
 Settings.prototype.setChannelPaused = function(channel, paused, event) {
 	event.preventDefault();
 	var url = this.userStatus.backendUrl() + "channel/" + channel;
-	ajax_post(url, {"paused": paused}, function() {});
+	ajax_post(url, {"paused": paused});
 }
 
 Settings.prototype.createLink = function(target, text, handler) {
@@ -52,8 +52,6 @@ Settings.prototype.createLink = function(target, text, handler) {
 
 Settings.prototype.authResult = function(result) {
 	this.doUpdateCategory("scrobbler");
-
-	var result = JSON.parse(result);
 
 	if (result.substring(0, 6) === "error:") {
 		alert(result);
@@ -237,10 +235,8 @@ Settings.prototype.userReady = function() {
 	this.doUpdateAll();
 }
 
-Settings.prototype.processResultList = function(category, result) {
-	var
-		list = JSON.parse(result),
-		target = document.getElementById(this.categories[category].target);
+Settings.prototype.processResultList = function(category, list) {
+	var target = this.categories[category].target ? document.getElementById(this.categories[category].target) : null;
 	this.updateList(category, list, target);
 }
 
@@ -270,7 +266,7 @@ Settings.prototype.onChange = function(changes) {
 
 Settings.prototype.removeElement = function(category, item, event) {
 	event.preventDefault();
-	ajax_post(this.userStatus.backendUrl() + category + "/" + item, "", function() {}, null, "DELETE");
+	ajax_get(this.userStatus.backendUrl() + category + "/" + item, null, {"method": "DELETE"});
 }
 
 Settings.prototype.updateItem = function(category, item, target, result) {
@@ -280,7 +276,7 @@ Settings.prototype.updateItem = function(category, item, target, result) {
 	remove.addEventListener("click", this.removeElement.bind(this, category, item), false);
 	remove.appendChild(document.createTextNode("delete"));
 	target.appendChild(remove);
-	this.categories[category].format.call(this, item, target, JSON.parse(result));
+	this.categories[category].format.call(this, item, target, result);
 }
 
 Settings.prototype.queryItem = function(category, item, target) {
@@ -295,7 +291,7 @@ Settings.prototype.createElement = function(category, event) {
 			alert("Illegal name: must start with a small letter (a-z) and may only contain small letters (a-z), digits (0-9) and hypens (-) after that");
 			return;
 		}
-		ajax_post(this.userStatus.backendUrl() + category + "/" + name, "", function() {}, null, "PUT")
+		ajax_post(this.userStatus.backendUrl() + category + "/" + name, "", null, {"method": "PUT"});
 	}
 }
 

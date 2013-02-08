@@ -12,9 +12,7 @@ function UserStatus() {
 	ajax_get(DB_URL + "_session", this.sessionLoaded.bind(this));
 }
 
-UserStatus.prototype.sessionLoaded = function (result) {
-	var session = JSON.parse(result);
-
+UserStatus.prototype.sessionLoaded = function (session) {
 	if (!session.userCtx || !session.userCtx.name) {
 		alert("could not retrieve user info");
 		return;
@@ -41,15 +39,13 @@ UserStatus.prototype.userSavedError = function() {
 	alert("error storing auth token");
 }
 
-UserStatus.prototype.userLoaded = function(result) {
-	var user = JSON.parse(result);
-
+UserStatus.prototype.userLoaded = function(user) {
 	if (!user.imes) {
 		user.imes = {};
 	}
 	if (!user.imes.authToken) {
 		user.imes.authToken = this.generateAuthToken();
-		ajax_post(DB_URL + "_users/org.couchdb.user:" + this.userName, user, this.userSaved.bind(this), this.userSavedError.bind(this), "PUT");
+		ajax_post(DB_URL + "_users/org.couchdb.user:" + this.userName, user, this.userSaved.bind(this), {"method": "PUT"});
 		return;
 	}
 
@@ -64,9 +60,8 @@ UserStatus.prototype.backendUrl = function() {
 	return BACKEND + "user/" + this.userName + "/" + this.authToken + "/";
 }
 
-UserStatus.prototype.statusLoaded = function(result) {
+UserStatus.prototype.statusLoaded = function(s) {
 	this.pending = false;
-	var s = JSON.parse(result);
 	this.status = s;
 	this.onupdate.fire(this, s);
 	this.schedule(5000);
@@ -80,7 +75,7 @@ UserStatus.prototype.statusLoadedError = function() {
 UserStatus.prototype.trigger = function() {
 	if (!this.pending) {
 		this.pending = true;
-		ajax_get(this.backendUrl() + "status", this.statusLoaded.bind(this), this.statusLoadedError.bind(this));
+		ajax_get(this.backendUrl() + "status", this.statusLoaded.bind(this));
 	}
 }
 
@@ -97,5 +92,5 @@ UserStatus.prototype.schedule = function(timeout) {
 }
 
 UserStatus.prototype.setUserAggregate = function(aggregate) {
-	ajax_post(this.backendUrl() + "status", {"aggregate": aggregate}, function() {});
+	ajax_post(this.backendUrl() + "status", {"aggregate": aggregate});
 }

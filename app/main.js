@@ -428,14 +428,8 @@ function doSearch(terms) {
 }
 
 function deleteFromPlaylist(plid, idxs) {
-	function ok() {
-	}
-	function error() {
-		console.log("deletion failed", arguments);
-	}
 	var url = DB_URL + DB_NAME + "/" + encodeURIComponent(plid);
 	function doDelete(value) {
-		value = JSON.parse(value);
 		for (var i = 0; i < idxs.length; i++) {
 			value.items[idxs[i]] = null;
 		}
@@ -447,9 +441,9 @@ function deleteFromPlaylist(plid, idxs) {
 			}
 		}
 		if (not_empty) {
-			ajax_post(url, value, ok, error, "PUT");
+			ajax_post(url, value, null, {"method": "PUT"});
 		} else {
-			ajax_post(url + "?rev=" + value._rev, null, ok, error, "DELETE");
+			ajax_get(url + "?rev=" + value._rev, null, {"method": "DELETE"});
 		}
 	}
 	ajax_get(url, doDelete);
@@ -470,7 +464,7 @@ function enqueueTracks(ids) {
 	ajax_post(DB_URL + DB_NAME + "/" + id, {
 		"type": "playlist",
 		"items": ids
-	}, function() {}, null, "PUT");
+	}, null, {"method": "PUT"});
 }
 
 function setSearchTerms(terms, source) {
@@ -874,7 +868,7 @@ function playNow(track) {
 		"plid": plkey_plid(key),
 		"idx": plkey_idx(key),
 		"fid": fid
-	}, function() {}, null, "POST");
+	});
 }
 
 function installClickHandler(target, handler) {

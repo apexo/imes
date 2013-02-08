@@ -21,45 +21,133 @@ function _default_error_cb(url, xhr) {
 	console.log("XHR error", xhr.status, xhr, url);
 }
 
-function ajax_get(url, cb, error) {
-	error = error || _default_error_cb;
-	var xhr = new XMLHttpRequest();
-	xhr.open("GET", url, true);
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState === 4) {
-			if (xhr.status === 200) {
-				cb(xhr.responseText);
-			} else if (!xhr.aborted) {
-				error(url, xhr);
+function _ajax_retry(url, config, response) {
+	console.log("XHR error for request on", url, ": ", response, "; config: ", config);
+	if (config.retryDelay && config.retry !== false) {
+		console.log("retrying in ", config.retryDelay);
+		setTimeout(function() {
+			if (xhr.aborted) {
+				console.log("request for ", url, "aborted before retry");
+			} else {
+				_ajax_common(url, config._rawData, config._cb, config);
 			}
+		}, config.retryDelay);
+	}
+}
+
+var AJAX_GET_DEFAULT_CONFIG = {
+	"method": "GET",
+	"error": _ajax_retry,
+	"jsonResponse": true,
+	"headers": {},
+	"retryDelay": 10000
+}
+
+var AJAX_POST_DEFAULT_CONFIG = {
+	"method": "POST",
+	"error": _ajax_retry,
+	"jsonResponse": true,
+	"jsonRequest": true,
+	"headers": {
+		"Content-Type": "application/json"
+	},
+	"retryDelay": 10000
+}
+
+function apply_defaults(defaults, config) {
+	var result = {};
+	for (var k in defaults) {
+		if (defaults.hasOwnProperty(k)) {
+			result[k] = defaults[k];
 		}
 	}
-	xhr.send(null);
+	if (!config) {
+		return result;
+	}
+	for (var k in config) {
+		if (config.hasOwnProperty(k)) {
+			result[k] = config[k];
+		}
+	}
+	return result;
+}
+
+function _ajax_common(url, rawData, cb, config) {
+	if (config._rawData === undefined) {
+		config._rawData = rawData;
+		config._cb = cb;
+	}
+
+	var xhr = new XMLHttpRequest();
+	xhr.open(config.method, url, true);
+	for (var k in config.headers) {
+		if (config.headers.hasOwnProperty(k)) {
+			xhr.setRequestHeader(k, config.headers[k]);
+		}
+	}
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState !== 4) {
+			return;
+		}
+		if (xhr.status === 200) {
+			var response;
+			if (config.jsonResponse) {
+				try {
+					response = JSON.parse(xhr.responseText);
+				}
+				catch (e) {
+					console.trace();
+					console.log("JSON parse error", e, typeof e);
+					config.error(url, config, xhr);
+					return;
+				}
+			} else {
+				response = xhr.responseText;
+			}
+			if (cb) {
+				cb(response);
+			}
+		} else if (!xhr.aborted) {
+			config.error(url, config, xhr);
+		}
+	}
+	xhr.send(rawData);
+	if (config._origXhr === undefined) {
+		config._origXhr = xhr;
+	} else {
+		config._origXhr._retry = xhr;
+	}
 	return xhr;
 }
 
-function ajax_post(url, data, cb, error, method) {
-	error = error || _default_error_cb;
-	var xhr = new XMLHttpRequest();
-	xhr.open(method || "POST", url, true);
-	xhr.setRequestHeader("Content-Type", "application/json")
-	xhr.onreadystatechange = function() {
-		if (xhr.readyState === 4) {
-			if (xhr.status === 200 || xhr.status === 201) {
-				cb(xhr.responseText);
-			} else {
-				error(url, xhr);
-			}
-		}
+function ajax_get(url, cb, config) {
+	config = apply_defaults(AJAX_GET_DEFAULT_CONFIG, config);
+
+	return _ajax_common(url, null, cb, config);
+}
+
+function ajax_post(url, data, cb, config) {
+	config = apply_defaults(AJAX_POST_DEFAULT_CONFIG, config);
+
+	data = config.jsonRequest ? JSON.stringify(data) : data;
+
+	return _ajax_common(url, data, cb, config);
+}
+
+function ajax_abort(xhr) {
+	if (xhr._retry) {
+		xhr._retry.aborted = true;
+		xhr._retry.abort();
+	} else {
+		xhr.aborted = true;
+		xhr.abort();
 	}
-	xhr.send(JSON.stringify(data));
-	return xhr;
 }
 
 function get_file_info(name, callback) {
 	var extraArguments = Array.prototype.slice.call(arguments, 2);
 	function cb(data) {
-		callback.apply(this, extraArguments.concat([JSON.parse(data)]));
+		callback.apply(this, extraArguments.concat([data]));
 	}
 	ajax_get(DB_URL + DB_NAME + "/" + encodeURIComponent(name), cb);
 }
@@ -97,8 +185,7 @@ function ViewProxy(url, startkey, endkey, descending) {
 			url += "&limit=" + limit;
 		}
 
-		function cb(data) {
-			var result = JSON.parse(data);
+		function cb(result) {
 			var rows = result.rows;
 			var skip = me.skip;
 			var currentkey = me.currentstartkey;
@@ -366,7 +453,7 @@ function Subscription(config) {
 }
 
 Subscription.prototype.onReady = function(data) {
-	var data = JSON.parse(data), config = this.config;
+	var config = this.config;
 	this.seq = data.last_seq;
 	this.state = "pending";
 	this.ready = true;
@@ -405,7 +492,6 @@ Subscription.prototype.onChange = function(data) {
 	}
 	this.state = "processing";
 	this.xhr = null;
-	var data = JSON.parse(data);
 	this.seq = data.last_seq;
 	this.onchange.fire(this, data.results);
 	this.poll();
@@ -460,8 +546,7 @@ Subscription.prototype.start = function() {
 
 Subscription.prototype.updateArguments = function() {
 	if (this.state === "waiting") {
-		this.xhr.aborted = true;
-		this.xhr.abort();
+		ajax_abort(this.xhr);
 		this.state = "processing";
 		this.poll();
 	}
