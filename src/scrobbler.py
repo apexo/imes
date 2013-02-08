@@ -6,6 +6,8 @@ from reactor import clock
 SCROBBLING_DELAY = 1
 SCROBBLING_LIMIT = 20
 
+STATUS_INTERNAL_ERROR = 16
+
 def u(n):
 	return u"org.couchdb.user:%s" % (n,)
 
@@ -153,6 +155,10 @@ class Scrobbler(object):
 			try:
 				result = result and session.scrobbleSome()
 			except pylast.WSError as e:
+				if int(e.status) == pylast.STATUS_INTERNAL_ERROR:
+					# "There was an internal error. Please retry your request."
+					result = False
+					continue
 				if int(e.status) == pylast.STATUS_INVALID_SK:
 					user = self.userDb.get(u(userName))
 					if user:
