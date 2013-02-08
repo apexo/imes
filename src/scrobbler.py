@@ -232,7 +232,7 @@ class Scrobbler(object):
 		self.userDb[u(userName)] = user
 
 		network = self.networkFactory[networkName](result)
-		self.sessions.setdefault(userName, {})[networkName] = Session(self.db, self.userDb, networkConfig, network, userName, networkConfig.get("head"))
+		self.sessions.setdefault(userName, {})[networkName] = Session(self.db, self.userDb, networkName, network, userName, networkConfig.get("head"))
 		self.pending.add(userName)
 		self._catchupLater()
 
