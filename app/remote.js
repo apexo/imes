@@ -205,7 +205,7 @@ function ViewProxy(url, startkey, endkey, descending) {
 		}
 
 		if (descending && this.endkey === this.currentstartkey) {
-			return cb('{"rows": []}');
+			return cb({"rows": []});
 		}
 
 		ajax_get(url, cb);
