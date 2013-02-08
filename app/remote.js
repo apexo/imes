@@ -21,8 +21,8 @@ function _default_error_cb(url, xhr) {
 	console.log("XHR error", xhr.status, xhr, url);
 }
 
-function _ajax_retry(url, config, response) {
-	console.log("XHR error for request on", url, ": ", response, "; config: ", config);
+function _ajax_retry(url, config, xhr) {
+	console.log("XHR error for request on", url, ": ", xhr, "; config: ", config);
 	if (config.retryDelay && config.retry !== false) {
 		console.log("retrying in ", config.retryDelay);
 		setTimeout(function() {
