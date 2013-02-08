@@ -155,7 +155,7 @@ class Scrobbler(object):
 			try:
 				result = result and session.scrobbleSome()
 			except pylast.WSError as e:
-				if int(e.status) == pylast.STATUS_INTERNAL_ERROR:
+				if int(e.status) == STATUS_INTERNAL_ERROR:
 					# "There was an internal error. Please retry your request."
 					result = False
 					continue
