@@ -15,6 +15,7 @@
 	<script type="text/javascript" src="playlistSelector.js"></script>
 	<script type="text/javascript" src="nav.js"></script>
 	<script type="text/javascript" src="channelControl.js"></script>
+	<script type="text/javascript" src="notification.js"></script>
 	<script type="text/javascript" src="main.js"></script>
 </head>
 <body onload="onLoad()">
@@ -46,6 +47,8 @@
 		<div id="playlist" style="display:none">
 		</div>
 		<div id="settings" style="display:none">
+			<h1>Notifications</h1>
+			<p id="notifications"><a href onclick="notification.requestPermission(); event.preventDefault();">request permission</a></p>
 			<h1>Scrobblers</h1>
 			<p id="scrobblers"></p>
 			<h1>Channels</h1>

@@ -564,6 +564,28 @@ function initProgressBar(el) {
 	el.scrollIntoViewIfNeeded();
 }
 
+var lastPlaying = {plid: "", idx: 0};
+
+function updateNowPlaying(s) {
+	if (!s || !s.currentlyPlaying || s.paused) {
+		// not playing (except autoPaused) -> reset lastPlaying
+		lastPlaying.plid = "";
+		lastPlaying.idx = 0;
+		return;
+	}
+	if (s.currentlyPlaying.plid === lastPlaying.plid && s.currentlyPlaying.idx === lastPlaying.idx) {
+		// still playing same as before -> no chance
+		return;
+	}
+
+	lastPlaying.plid = s.currentlyPlaying.plid;
+	lastPlaying.idx = s.currentlyPlaying.idx;
+
+	get_file_info(s.currentlyPlaying.fid, function(result) {
+		notification.nowPlaying(result);
+	});
+}
+
 function removeProgressBar(element) {
 	element.removeChild(element.getElementsByClassName("progress-bar")[0]);
 	element.getElementsByClassName("length-indicator")[0].firstChild.textContent = formatLength(element.dataset.length);
@@ -912,6 +934,7 @@ var scrollBarWidth;
 var settings;
 var playlistSelector;
 var navigation;
+var notification;
 
 function onLoad() {
 	if (subscription) {
@@ -929,6 +952,11 @@ function onLoad() {
 
 	document.getElementById("spacer").style.width = scrollBarWidth + "px";
 
+	notification = new DOMNotification();
+	notification.onready.addListener(function(result) {
+		document.getElementById("notifications").innerHTML = result;
+	});
+
 	subscription = new Subscription({
 		"include_docs": "true",
 		"limit": 10,
@@ -936,6 +964,7 @@ function onLoad() {
 	})
 	userStatus = new UserStatus();
 	userStatus.onupdate.addListener(statusUpdated);
+	userStatus.onupdate.addListener(updateNowPlaying);
 	settings = new Settings(userStatus);
 
 	var playlistTarget = document.getElementById("playlist-select");
