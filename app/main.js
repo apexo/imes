@@ -620,6 +620,8 @@ function statusUpdated(s) {
 
 		if (entry && entry.key == key) {
 			initProgressBar(entry.value);
+		} else {
+			updatePlaylist();
 		}
 	}
 }
