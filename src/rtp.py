@@ -100,8 +100,11 @@ class Connection(object):
 		self.body = None
 
 	def close(self):
+		if self.sock is None:
+			return
 		self.reactor.unregister(self.sock.fileno())
 		self.sock.close()
+		self.sock = None
 
 	def _bodyDecoder(self, data):
 		if "content-length" in data:
@@ -136,6 +139,8 @@ class Connection(object):
 		path = p.path.strip("/").split("/")
 
 		def callback(response):
+			if self.sock is None:
+				return
 			if isinstance(response, Response):
 				response = response.assemble()
 			if isinstance(response, Exception):
