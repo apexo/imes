@@ -472,7 +472,10 @@ function setSearchTerms(terms, source) {
 		document.location.href = "#" + encodeURI(terms);
 	}
 	if (source !== "user") {
-		document.querySelector("#search-terms").value = terms;
+		var target = document.querySelector("#search-terms");
+		if (target.value !== terms) {
+			target.value = terms;
+		}
 	}
 	doSearch(terms);
 }
@@ -627,11 +630,13 @@ function statusUpdated(s) {
 }
 
 function isVisible(element, within) {
-	if (element.offsetTop + element.clientHeight - within.scrollTop <= 0) {
-		return false;
-	}
-	if (element.offsetTop - within.scrollTop >= within.parentElement.clientHeight) {
-		return false;
+	if (within) {
+		if (element.offsetTop + element.clientHeight - within.scrollTop <= 0) {
+			return false;
+		}
+		if (element.offsetTop - within.scrollTop >= within.parentElement.clientHeight) {
+			return false;
+		}
 	}
 	if (element.style.display === "none") {
 		return false;
@@ -1035,6 +1040,9 @@ function onLoad() {
 				}
 				return;
 			}
+			if (!isVisible(terms)) {
+				return;
+			}
 			if (event.keyCode === 0x46 && event.ctrlKey) { // ctrl+f
 				terms.focus();
 			} else if (event.keyCode === 191 && event.shiftKey || event.keyCode === 111) { // "/"
@@ -1057,6 +1065,9 @@ function onLoad() {
 		window.addEventListener("keypress", function(event) {
 			var terms = document.getElementById("search-terms");
 			if (event.target === terms) {
+				return;
+			}
+			if (!isVisible(terms)) {
 				return;
 			}
 			setSearchTerms(terms.value + String.fromCharCode(event.keyCode));
