@@ -31,8 +31,8 @@ SearchResult.handleSearch = function(value) {
 
 var Playlist = {};
 Playlist.createSingleTrackButtons = Playlist.createAlbumTrackButtons = function(target) {
-	createButton(target, "remove", "Remove this track from the playlist.");
 	createButton(target, "play", "Play this track now.");
+	createButton(target, "remove", "Remove this track from the playlist.");
 }
 
 Playlist.createAlbumButtons = function(target) {
@@ -109,6 +109,16 @@ function titleLink(i, target) {
 	makeLink(i.title, target, "title-link", ", ", "Unknown Title [" + instead + "]");
 }
 
+function createButtonContainer(target) {
+	var ra = document.createElement("div");
+	ra.classList.add("right-align");
+	var cr = document.createElement("div");
+	cr.classList.add("clear-right");
+	target.appendChild(ra);
+	target.appendChild(cr);
+	return ra;
+}
+
 function formatAlbumTrack(i, tracklist, position, btns) {
 	var t, tracknumber;
 	if (i.tracknumber !== undefined) {
@@ -149,28 +159,30 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 	}
 	tracklist.insertBefore(track, insertAfter ? insertAfter.nextElementSibling : tracklist.firstElementChild);
 
-	btns.createAlbumTrackButtons(track);
-	track.appendChild(createLengthIndicator(formatLength(i.info.length)));
+	var bc = createButtonContainer(track);
+	bc.appendChild(createLengthIndicator(formatLength(i.info.length)));
+	btns.createAlbumTrackButtons(bc);
 	return track;
 }
 
 function formatSingleTrack(i, btns) {
-	var t = document.createElement("div");
-	t.classList.add("single-track");
+	var track = document.createElement("div");
+	track.classList.add("single-track");
 	if (i.album && i.album.length) {
-		t.appendChild(document.createTextNode("["));
-		albumLink(i, t);
-		t.appendChild(document.createTextNode("] "));
+		track.appendChild(document.createTextNode("["));
+		albumLink(i, track);
+		track.appendChild(document.createTextNode("] "));
 	}
-	artistLink(i, t);
-	t.appendChild(document.createTextNode(" - "));
-	titleLink(i, t);
-	t.dataset.id = i._id;
-	t.dataset.length = i.info.length;
+	artistLink(i, track);
+	track.appendChild(document.createTextNode(" - "));
+	titleLink(i, track);
+	track.dataset.id = i._id;
+	track.dataset.length = i.info.length;
 
-	btns.createSingleTrackButtons(t);
-	t.appendChild(createLengthIndicator(formatLength(i.info.length)));
-	return t;
+	var bc = createButtonContainer(track);
+	bc.appendChild(createLengthIndicator(formatLength(i.info.length)));
+	btns.createSingleTrackButtons(bc);
+	return track;
 }
 
 function createButton(target, type, title) {
@@ -249,7 +261,9 @@ function makeAlbum(i, key, btns) {
 	c.appendChild(tracklist);
 	c.dataset.key = key;
 
-	btns.createAlbumButtons(label);
+	var bc = createButtonContainer(label);
+	btns.createAlbumButtons(bc);
+	c.appendChild(document.createElement("div")).classList.add("clear-left");
 	return c;
 }
 

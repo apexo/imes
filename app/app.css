@@ -10,7 +10,6 @@
 	background-image: -webkit-linear-gradient(top, #cdf, #def);
 	background-image: -moz-linear-gradient(top, #cdf, #def);
 	position: relative;
-	clear: right;
 }
 .album-label, .single-track {
 	padding:2px;
@@ -19,7 +18,6 @@
 	padding-left: 8px;
 	background-image: -webkit-linear-gradient(top, #abe, #cdf);
 	background-image: -moz-linear-gradient(top, #abe, #cdf);
-	clear: right;
 }
 .album-label:hover, .album-track:hover, .single-track:hover {
 	background-image: none;
@@ -36,7 +34,6 @@
 	margin-left:2px;
 }
 .album, .single-track {
-	clear: left;
 	position: relative;
 }
 .album {
@@ -85,8 +82,8 @@ body {
 	left: 0px;
 }
 .length-indicator {
-	float: right;
 	margin-right: 0.5em;
+	display: inline;
 }
 .play-button, .remove-button {
 	width: 1.5em;
@@ -94,7 +91,6 @@ body {
 	background-position-y: center;
 	background-repeat: no-repeat;
 	cursor: pointer;
-	float: right;
 	margin-right: 0.5em;
 }
 a.play-button, a.remove-button, a.append-button, a.add-button, a.resume-button, a.pause-button {
@@ -141,4 +137,10 @@ h1 {
 	top: 5%;
 	left: 5%;
 	z-index: 2;
+}
+.clear-right {
+	clear: right;
+}
+.clear-left {
+	clear: left;
 }
