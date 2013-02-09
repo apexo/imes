@@ -46,6 +46,11 @@ if (window.Notification) {
 			title = "[Unknown Title]";
 		}
 
+		var cover = selectPicture(info, NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT, THUMB_TYPE);
+		if (cover) {
+			options.iconUrl = window.location.protocol + "//" + window.location.host + cover.src;
+		}
+
 		var notification = new Notification(title, options);
 		this._nowPlaying = notification;
 
