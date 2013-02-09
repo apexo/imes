@@ -1073,7 +1073,7 @@ function onLoad() {
 		if (target.id === "nav-playlist") {
 			var cp = document.querySelector("#playlist").getElementsByClassName("currently-playing");
 			if (cp && cp.length) {
-				cp[0].scrollIntoView();
+				cp[0].scrollIntoViewIfNeeded();
 			}
 		}
 	});
