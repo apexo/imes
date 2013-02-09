@@ -6,6 +6,10 @@ if (window.Notification) {
 		this.pending = false;
 		this.timeout = 5000;
 		this._nowPlaying = null;
+
+		// chrome actually seems to display only 32x32 :-(
+		this.iconWidth = 64;
+		this.iconHeight = 64;
 	}
 
 	DOMNotification.prototype.requestPermission = function() {
@@ -46,9 +50,9 @@ if (window.Notification) {
 			title = "[Unknown Title]";
 		}
 
-		var cover = selectPicture(info, NOTIFICATION_WIDTH, NOTIFICATION_HEIGHT, THUMB_TYPE);
+		var cover = selectPicture(info, this.iconWidth, this.iconHeight, THUMB_TYPE);
 		if (cover) {
-			options.iconUrl = window.location.protocol + "//" + window.location.host + cover.src;
+			options.icon = window.location.protocol + "//" + window.location.host + cover.src;
 		}
 
 		var notification = new Notification(title, options);
