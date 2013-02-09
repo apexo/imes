@@ -267,7 +267,6 @@ class Database(object):
 				img = img.convert("RGB")
 
 			doc = {"formats": formats, "inprogress": True, "version": version, "type": "picture"}
-			self.db[k] = doc
 
 			for s in COVER_ART_SIZES:
 				key, mw, mh = str(s), s, s
@@ -280,6 +279,8 @@ class Database(object):
 				del i2
 				attach.append((key + ".jpeg", sio.getvalue(), "image/jpeg"))
 				del sio
+
+			self.db[k] = doc
 		except IOError:
 			return None, None
 
