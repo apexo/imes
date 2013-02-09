@@ -233,8 +233,6 @@ function scaledSize(img, max_width, max_height) {
 var THUMB_WIDTH = 160;
 var THUMB_HEIGHT = 160;
 var THUMB_TYPE = 3; // front
-var NOTIFICATION_WIDTH = 80;
-var NOTIFICATION_HEIGHT = 80;
 
 function selectPicture(info, width, height, type) {
 	if (!info.pictures || !info.pictures.length) {
