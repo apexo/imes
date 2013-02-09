@@ -1,3 +1,12 @@
+(function() {
+	var d = document.createElement("div");
+	if (!d.scrollIntoViewIfNeeded) {
+		d.constructor.prototype.scrollIntoViewIfNeeded = function() {
+			this.scrollIntoView();
+		}
+	}
+})();
+
 var currentSearchToken = 0;
 var currentPlaylistToken = 0;
 var remote = null;
@@ -1040,7 +1049,7 @@ function onLoad() {
 		if (target.id === "nav-playlist") {
 			var cp = document.querySelector("#playlist").getElementsByClassName("currently-playing");
 			if (cp && cp.length) {
-				cp[0].scrollIntoViewIfNeeded();
+				cp[0].scrollIntoView();
 			}
 		}
 	});
