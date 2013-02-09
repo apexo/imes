@@ -925,7 +925,7 @@ function installClickHandler(target, handler) {
 			button = "remove";
 		}
 		if (button) {
-			target = target.parentElement;
+			target = target.parentElement.parentElement;
 			cl = target.classList;
 
 			if (cl.contains("album-track")) {
