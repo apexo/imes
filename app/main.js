@@ -796,7 +796,7 @@ function updatePlaylist() {
 			t.dataset.key = item.key;
 			playlist = playlist.insert(item.key, t);
 			if (item.key === plid) {
-				initProgressBar(.t);
+				initProgressBar(t);
 			}
 			target.insertBefore(.t, insertBefore);
 			return null;
