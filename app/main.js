@@ -174,6 +174,19 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 	return track;
 }
 
+function formatErrorTrack(id, btns) {
+	var track = document.createElement("div");
+	track.classList.add("single-track");
+	track.appendChild("deleted track: " + id);
+	track.dataset.id = id;
+	track.dataset.length = 0;
+
+	var bc = createButtonContainer(track);
+	bc.appendChild(createLengthIndicator(formatLength(0)));
+	btns.createSingleTrackButtons(bc);
+	return track;
+}
+
 function formatSingleTrack(i, btns) {
 	var track = document.createElement("div");
 	track.classList.add("single-track");
@@ -777,8 +790,16 @@ function updatePlaylist() {
 	}
 
 	function add(item, last, insertBefore, p) {
-		if (!item.value) {
-			return last; // file associated with playlist entry does not exist (anymore)
+		if (item.value._deleted) {
+			// file associated with playlist entry does not exist (anymore)
+			var t = formatErrorTrack(item.value._id, Playlist);
+			t.dataset.key = item.key;
+			playlist = playlist.insert(item.key, t);
+			if (item.key === plid) {
+				initProgressBar(.t);
+			}
+			target.insertBefore(.t, insertBefore);
+			return null;
 		}
 		var key = albumKey(item.value), el;
 		var pos = currentStatus ? (currentStatus.currentlyPlaying ? currentStatus.currentlyPlaying : currentStatus.savedPosition) : null;

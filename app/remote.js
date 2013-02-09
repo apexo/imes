@@ -150,6 +150,9 @@ function ajax_abort(xhr) {
 function get_file_info(name, callback) {
 	var extraArguments = Array.prototype.slice.call(arguments, 2);
 	function cb(data) {
+		if (!data) {
+			data = {"_deleted": true, "_id": name};
+		}
 		callback.apply(this, extraArguments.concat([data]));
 	}
 	ajax_get(DB_URL + DB_NAME + "/" + encodeURIComponent(name), cb);
