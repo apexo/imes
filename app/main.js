@@ -177,7 +177,7 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 function formatErrorTrack(id, btns) {
 	var track = document.createElement("div");
 	track.classList.add("single-track");
-	track.appendChild("deleted track: " + id);
+	track.appendChild(document.createTextNode("deleted track: " + id));
 	track.dataset.id = id;
 	track.dataset.length = 0;
 
