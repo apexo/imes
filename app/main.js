@@ -798,7 +798,7 @@ function updatePlaylist() {
 			if (item.key === plid) {
 				initProgressBar(t);
 			}
-			target.insertBefore(.t, insertBefore);
+			target.insertBefore(t, insertBefore);
 			return null;
 		}
 		var key = albumKey(item.value), el;
