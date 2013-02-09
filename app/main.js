@@ -777,6 +777,9 @@ function updatePlaylist() {
 	}
 
 	function add(item, last, insertBefore, p) {
+		if (!item.value) {
+			return last; // file associated with playlist entry does not exist (anymore)
+		}
 		var key = albumKey(item.value), el;
 		var pos = currentStatus ? (currentStatus.currentlyPlaying ? currentStatus.currentlyPlaying : currentStatus.savedPosition) : null;
 		var plid = pos ? plkey(pos.plid, pos.idx) : "";
