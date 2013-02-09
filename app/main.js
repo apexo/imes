@@ -632,7 +632,9 @@ function updateNowPlaying(s) {
 	lastPlaying.idx = s.currentlyPlaying.idx;
 
 	get_file_info(s.currentlyPlaying.fid, function(result) {
-		notification.nowPlaying(result);
+		if (result) {
+			notification.nowPlaying(result);
+		}
 	});
 }
 

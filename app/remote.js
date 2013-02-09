@@ -89,7 +89,10 @@ function _ajax_common(url, rawData, cb, config) {
 		if (xhr.readyState !== 4) {
 			return;
 		}
-		if (xhr.status === 200 || xhr.status === 201) {
+		if (xhr.status === 404) {
+			cb(null);
+		}
+		else if (xhr.status === 200 || xhr.status === 201) {
 			var response;
 			if (config.jsonResponse) {
 				try {
