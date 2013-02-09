@@ -215,37 +215,63 @@ function scaledSize(img, max_width, max_height) {
 		nw = max_width;
 		nh = max_height;
 	}
-	return {w: nw, h: nh};
+	return {
+		w: Math.floor(nw),
+		h: Math.floor(nh)
+	};
 }
 
 var THUMB_WIDTH = 160;
 var THUMB_HEIGHT = 160;
+var THUMB_TYPE = 3; // front
+var NOTIFICATION_WIDTH = 80;
+var NOTIFICATION_HEIGHT = 80;
 
-function addCover(target, info) {
-	if (!info.pictures || !info.pictures.length || target.querySelector(".album-cover")) {
+function selectPicture(info, width, height, type) {
+	if (!info.pictures || !info.pictures.length) {
 		return;
 	}
-	var front = info.pictures.filter(function(p) {return p.type === 3;});
-	var p = front.length ? front[0] : info.pictures[0];
+	var pictureWithProperType = info.pictures.filter(function(p) {return p.type === type;});
+	var selectedPicture = pictureWithProperType.length ? pictureWithProperType[0] : info.pictures[0];
 	var formats = [];
-	//console.log(p);
-	for (var key in p.formats) {
-		if (p.formats.hasOwnProperty(key)) {
-			var f = p.formats[key];
-			var ss = scaledSize(f, THUMB_WIDTH, THUMB_HEIGHT);
-			formats.push([!(f.w > ss.w && f.h > ss.h), f.w*f.h, f, ss]);
+
+	for (var key in selectedPicture.formats) {
+		if (selectedPicture.formats.hasOwnProperty(key)) {
+			var format = selectedPicture.formats[key];
+			var size = scaledSize(format, width, height);
+			formats.push([!(format.w > size.w && format.h > size.h), format.w*format.h, format, size]);
 		}
 	}
-	formats.sort();
-	var f = formats[0][2];
-	var ss = formats[0][3];
-	//console.log(f);
-	var cover = document.createElement("img");
-	cover.classList.add("album-cover");
-	cover.width = ss.w;
-	cover.height = ss.h;
-	cover.src = DB_URL + DB_NAME + "/" + p.key + "/" + f.f;
-	target.insertBefore(cover, target.querySelector(".album-tracklist"));
+
+	formats.sort(function(a, b) {
+		if (a[0] != b[0]) {
+			return a[0] - b[0];
+		}
+		return a[1] - b[1];
+	});
+	var format = formats[0][2];
+	var size = formats[0][3];
+
+	return {
+		width: size.w,
+		height: size.h,
+		src: DB_URL + DB_NAME + "/" + selectedPicture.key + "/" + format.f
+	}
+}
+
+function addCover(target, info) {
+	if (target.querySelector(".album-cover")) {
+		return;
+	}
+	var p = selectPicture(info, THUMB_WIDTH, THUMB_HEIGHT, THUMB_TYPE);
+	if (p) {
+		var cover = document.createElement("img");
+		cover.classList.add("album-cover");
+		cover.width = p.width;
+		cover.height = p.height;
+		cover.src = p.src;
+		target.insertBefore(cover, target.querySelector(".album-tracklist"));
+	}
 }
 
 function makeAlbum(i, key, btns) {
