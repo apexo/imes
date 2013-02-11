@@ -279,9 +279,7 @@ Playlist.prototype.onupdate = function(doc) {
 				deleteTrack(entry.value);
 			}
 		} else {
-			console.log("playlist add", this.playlist.count, key, this.playlist.max().key);
 			if (!this.playlist.count || key > this.playlist.max().key) {
-				console.log("playlist resume");
 				this.resumeForward();
 			}
 		}
@@ -341,7 +339,6 @@ Playlist.prototype.add = function(item, last, insertBefore, p) {
 }
 
 Playlist.prototype.addForward = function(items, done) {
-	console.log("addForward", items, items.length, done);
 	for (var i = 0; i < items.length; i++) {
 		this.forwardLast = this.add(items[i], this.forwardLast, this.forwardPlaceHolder, 1);
 		if (!this.backwardLast) {
@@ -359,7 +356,6 @@ Playlist.prototype.addForward = function(items, done) {
 }
 
 Playlist.prototype.addBackward = function(items, done) {
-	console.log("addBackward", items, items.length, done);
 	var oldHeight = this.target.clientHeight;
 
 	for (var i = 0; i < items.length; i++) {
