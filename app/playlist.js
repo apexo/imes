@@ -1,5 +1,6 @@
 var PlaylistDisplay = {};
 PlaylistDisplay.createSingleTrackButtons = PlaylistDisplay.createAlbumTrackButtons = function(target) {
+	createButton(target, "info", "Query track information.");
 	createButton(target, "play", "Play this track now.");
 	createButton(target, "remove", "Remove this track from the playlist.");
 }
@@ -8,12 +9,14 @@ PlaylistDisplay.createAlbumButtons = function(target) {
 	createButton(target, "remove", "Remove this album from the playlist.");
 }
 
-PlaylistDisplay.handleAlbumTrack = PlaylistDisplay.handleSingleTrack = function(button, target) {
+PlaylistDisplay.handleAlbumTrack = PlaylistDisplay.handleSingleTrack = function(button, target, event) {
 	if (button === "play") {
 		playNow(target);
 	} else if (button === "remove") {
 		var plkey = target.dataset.key;
 		deleteFromPlaylist(plkey_plid(plkey), [plkey_idx(plkey)]);
+	} else if (button === "info") {
+		displayTrackInfo(target.dataset.id, event);
 	}
 }
 

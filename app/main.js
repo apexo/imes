@@ -7,6 +7,148 @@
 	}
 })();
 
+function displayTrackInfo(fid, event) {
+	var target = document.getElementById("track-info-popup");
+
+	function click(event) {
+		if (event.target.localName === "a") {
+			return;
+		}
+		target.style.display = "none";
+		target.onclick = null;
+	}
+
+	function labeledValue(label, value) {
+		var result = document.createElement("div");
+		var b = result.appendChild(document.createElement("b"));
+		b.appendChild(document.createTextNode(label + " "));
+		result.appendChild(document.createTextNode(value));
+		return result;
+	}
+	function labeledLink(label, value, href) {
+		var result = document.createElement("div");
+		var b = result.appendChild(document.createElement("b"));
+		b.appendChild(document.createTextNode(label + " "));
+		var a = document.createElement("a");
+		a.href = href;
+		a.appendChild(document.createTextNode(value));
+		result.appendChild(a);
+		return result;
+	}
+	function showTrackInfoPopup(info) {
+		var el = event.target, x = event.offsetX, y = event.offsetY - document.body.scrollTop;
+		while (el && el !== document.body) {
+			x += el.offsetLeft;
+			y += el.offsetTop;
+			el = el.offsetParent;
+		}
+
+		target.innerHTML = "";
+
+		target.appendChild(labeledValue("path", info.path));
+		target.appendChild(labeledValue("id", info._id));
+		target.appendChild(labeledValue("size", info.size));
+		target.appendChild(labeledValue("mtime", info.mtime));
+		if (info.info.length) {
+			target.appendChild(labeledValue("length", info.info.length + ""));
+		}
+		if (info.discnumber && info.totaldiscs) {
+			target.appendChild(labeledValue("disc number", info.discnumber + " / " + info.totaldiscs));
+		} else if (info.discnumber) {
+			target.appendChild(labeledValue("disc number", info.discnumber));
+		}
+		for (var i = 0; info.album && i < info.album.length; i++) {
+			target.appendChild(labeledValue("album", info.album[i]));
+		}
+		if (info.tracknumber && info.totaltracks) {
+			target.appendChild(labeledValue("track number", info.tracknumber + " / " + info.totaltracks));
+		} else if (info.tracknumber) {
+			target.appendChild(labeledValue("track number", info.tracknumber));
+		}
+		for (var i = 0; info.artist && i < info.artist.length; i++) {
+			target.appendChild(labeledValue("artist", info.artist[i]));
+		}
+		for (var i = 0; info.title && i < info.title.length; i++) {
+			target.appendChild(labeledValue("title", info.title[i]));
+		}
+		for (var i = 0; info.musicbrainz_albumartistid && i < info.musicbrainz_albumartistid.length; i++) {
+			target.appendChild(labeledLink("musicbrainz album artist ID",
+				info.musicbrainz_albumartistid[i],
+				"http://musicbrainz.org/artist/" + info.musicbrainz_albumartistid[i]
+			));
+		}
+		for (var i = 0; info.musicbrainz_albumid && i < info.musicbrainz_albumid.length; i++) {
+			target.appendChild(labeledLink("musicbrainz album ID",
+				info.musicbrainz_albumid[i],
+				"http://musicbrainz.org/release/" + info.musicbrainz_albumid[i]
+			));
+		}
+		for (var i = 0; info.musicbrainz_artistid && i < info.musicbrainz_artistid.length; i++) {
+			target.appendChild(labeledLink("musicbrainz artist ID",
+				info.musicbrainz_artistid[i],
+				"http://musicbrainz.org/artist/" + info.musicbrainz_artistid[i]
+			));
+		}
+		for (var i = 0; info.musicbrainz_trackid && i < info.musicbrainz_trackid.length; i++) {
+			target.appendChild(labeledLink("musicbrainz track ID",
+				info.musicbrainz_trackid[i],
+				"http://musicbrainz.org/recording/" + info.musicbrainz_trackid[i]
+			));
+		}
+		for (var i = 0; info.genre && i < info.genre.length; i++) {
+			target.appendChild(labeledValue("genre", info.genre[i]));
+		}
+		if (info.replaygain_track_gain) {
+			target.appendChild(labeledValue("track gain", info.replaygain_track_gain));
+		}
+		if (info.replaygain_album_peak) {
+			target.appendChild(labeledValue("track peak", info.replaygain_album_peak));
+		}
+		if (info.replaygain_track_gain) {
+			target.appendChild(labeledValue("album gain", info.replaygain_track_gain));
+		}
+		if (info.replaygain_album_peak) {
+			target.appendChild(labeledValue("album peak", info.replaygain_album_peak));
+		}
+
+/* {
+"media":"CD",
+"codec":"mp3",
+"type":"file",
+"tags":["id3","apev2"],
+"date":"1993",
+"container":"mpeg",
+"info":{"layer":3,"padding":false,"length":137.08533333333332394,"version":1,"sample_rate":44100,"mode":1,"protected":false,"bitrate":192000},
+"pictures":[]
+} */
+
+		var root = document.body.parentElement, width = root.clientWidth, height = root.clientHeight;
+
+		target.style.display = "";
+		target.onclick = click;
+		target.style.top = target.style.left = "";
+		target.style.overflowY = "";
+		target.style.right = (width - (x - 10)) + "px";
+		target.style.bottom = (height - y) + "px";
+
+		if (target.clientWidth * 100 > width * 90) {
+			target.style.left = "5px";
+		}
+		if (target.clientHeight * 100 > height * 90) {
+			target.style.left = "5px";
+			target.style.right = "5px";
+			target.style.top = "5px";
+			target.style.bottom = "5px";
+			target.style.overflowY = "scroll";
+		} else if (y - target.clientHeight < 5) {
+			target.style.bottom = "";
+			target.style.top = "5px";
+		}
+	}
+
+	get_file_info(fid, showTrackInfoPopup);
+}
+
 function makeLink(data, target, cls, sep, instead) {
 	var n = 0;
 	if (data) {
@@ -409,6 +551,8 @@ function installClickHandler(target, handler) {
 			button = "play";
 		} else if (cl.contains("remove-button")) {
 			button = "remove";
+		} else if (cl.contains("info-button")) {
+			button = "info";
 		}
 		if (button) {
 			event.preventDefault();
@@ -416,11 +560,11 @@ function installClickHandler(target, handler) {
 			cl = target.classList;
 
 			if (cl.contains("album-track")) {
-				handler.handleAlbumTrack(button, target);
+				handler.handleAlbumTrack(button, target, event);
 			} else if (cl.contains("album-label")) {
-				handler.handleAlbum(button, target);
+				handler.handleAlbum(button, target, event);
 			} else if (cl.contains("single-track")) {
-				handler.handleSingleTrack(button, target);
+				handler.handleSingleTrack(button, target, event);
 			} else {
 				return;
 			}

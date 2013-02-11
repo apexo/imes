@@ -85,7 +85,7 @@ body {
 	margin-right: 0.5em;
 	display: inline;
 }
-.play-button, .remove-button {
+.play-button, .remove-button, .info-button {
 	width: 1.5em;
 	height: 1.5em;
 	background-position-y: center;
@@ -93,9 +93,12 @@ body {
 	cursor: pointer;
 	margin-right: 0.5em;
 }
-a.play-button, a.remove-button, a.append-button, a.add-button, a.resume-button, a.pause-button {
+a.info-button, a.play-button, a.remove-button, a.append-button, a.add-button, a.resume-button, a.pause-button {
 	display: inline-block;
 	text-decoration: none;
+}
+.info-button {
+	background-image: url(info.svg);
 }
 .play-button {
 	background-image: url(play.svg);
@@ -130,12 +133,14 @@ h1 {
 	font-size: 1em;
 }
 #auth-link-popup {
+	top: 5%;
+	left: 5%;
+}
+#auth-link-popup, #track-info-popup {
 	position: fixed;
 	border: 1px solid black;
 	background-color: white;
 	padding: 1em;
-	top: 5%;
-	left: 5%;
 	z-index: 2;
 }
 .clear-right {

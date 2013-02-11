@@ -1,11 +1,19 @@
 var SearchResult = {};
-SearchResult.createSingleTrackButtons = SearchResult.createAlbumButtons = SearchResult.createAlbumTrackButtons = function(target) {
+SearchResult.createAlbumButtons = function(target) {
 	createButton(target, "play", "Add this album/track to the target playlist.");
 }
 
-SearchResult.handleAlbumTrack = SearchResult.handleSingleTrack = function(button, target) {
-	if (button !== "play") {return alert(button);};
-	enqueueTracks([target.dataset.id]);
+SearchResult.createSingleTrackButtons = SearchResult.createAlbumTrackButtons = function(target) {
+	createButton(target, "info", "Query track information.");
+	createButton(target, "play", "Add this album/track to the target playlist.");
+}
+
+SearchResult.handleAlbumTrack = SearchResult.handleSingleTrack = function(button, target, event) {
+	if (button === "play") {
+		enqueueTracks([target.dataset.id]);
+	} else if (button === "info") {
+		displayTrackInfo(target.dataset.id, event);
+	}
 }
 
 SearchResult.handleAlbum = function(button, target) {
