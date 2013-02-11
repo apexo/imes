@@ -169,14 +169,17 @@ function ViewProxy(url, startkey, endkey, descending, docid) {
 	this.endkey = endkey;
 	this.currentstartkey = startkey;
 	this.skip = 0;
-	this._url = url + "?include_docs=true&endkey=" + encodeURIComponent(JSON.stringify(this.endkey));
+	this._url = url + "?include_docs=true"
+	if (this.endkey !== undefined && this.endkey !== null) {
+		this._url += "&endkey=" + encodeURIComponent(JSON.stringify(this.endkey));
+	}
 	if (descending) {
 		this._url += "&descending=true";
 	}
 	this.xhr = null;
 
 	this.clone = function() {
-		return new ViewProxy(this.url, this.startkey, this.endkey, docid);
+		return new ViewProxy(this.url, this.startkey, this.endkey, descending, docid);
 	}
 
 	this.reset = function() {
@@ -187,7 +190,9 @@ function ViewProxy(url, startkey, endkey, descending, docid) {
 	this.fetch = function(callback, limit) {
 		var me = this;
 		var url = this._url;
-		url += "&startkey=" + encodeURIComponent(JSON.stringify(this.currentstartkey));
+		if (this.currentstartkey !== undefined && this.currentstartkey !== null) {
+			url += "&startkey=" + encodeURIComponent(JSON.stringify(this.currentstartkey));
+		}
 
 		if (this.skip) {
 			url += "&skip=" + this.skip;
@@ -369,25 +374,26 @@ function PlaylistIterator(proxy, skip, reverse) {
 }
 
 function PlaylistView(playlist, plid, idx) {
-	var viewPrefix = DB_NAME + "/_all_docs/";
+	var viewPrefix = DB_URL + DB_NAME + "/_all_docs/";
 
 	var reverseEndkey = playlist + ":";
 	var startkey = plid ? plid : playlist + ":";
 	var endkey = playlist + ":z";
 
 	this.getForwardIterator = function() {
-		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, endkey, false, true);
+		var proxy = new ViewProxy(viewPrefix, startkey, endkey, false, true);
 		return new PlaylistIterator(proxy, idx, false);
 	}
 
 	this.getReverseIterator = function() {
-		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, reverseEndkey, true, true);
+		var proxy = new ViewProxy(viewPrefix, startkey, reverseEndkey, true, true);
 		return new PlaylistIterator(proxy, idx, true);
 	}
 }
 
 function Remote() {
-	var viewPrefix = DB_NAME + "/_design/file/_view/";
+	var viewPrefix = DB_URL + DB_NAME + "/_design/file/_view/";
+	var viewAll = DB_URL + DB_NAME + "/_all_docs/";
 
 	function lc(v) {
 		return v.toLowerCase();
@@ -423,7 +429,7 @@ function Remote() {
 		}
 		v = decodeURI(v);
 		if (!v.length) {
-			return [-1, "search", "", COUCH_SUFFIX];
+			return null;
 		}
 		var p = prefixes[k];
 		return [v.length + p.mod, p.view, p.transform(v), p.range];
@@ -442,16 +448,20 @@ function Remote() {
 		var temp = [];
 		for (var i = 0; i < terms.length; i++) {
 			var t = normalizeTerm(terms[i]);
-			if (t[0] >= 0) {
+			if (t !== null) {
 				temp.push(t);
 			}
 		}
-		if (!temp.length) {
-			temp.push([0, "search", "", COUCH_SUFFIX]);
+		var proxy;
+		if (temp.length) {
+			temp.sort();
+			var ps = temp[temp.length - 1];
+			proxy = new ViewProxy(viewPrefix + ps[1], ps[2], ps[2] + ps[3]);
 		}
-		temp.sort();
-		var ps = temp[temp.length - 1];
-		var proxy = new ViewProxy(DB_URL + viewPrefix + ps[1], ps[2], ps[2] + ps[3]);
+		if (!temp.length) {
+			proxy = new ViewProxy(viewAll, null, null, false, true);
+			temp.push([0, "all", null, null]);
+		}
 		var filter = temp.length < 1 ? null : _createFilter(temp, 0, temp.length - 1);
 		var result = new ViewIterator(proxy, filter);
 		result.filter = _createFilter(temp, 0, temp.length);

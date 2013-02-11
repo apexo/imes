@@ -1,6 +1,6 @@
 createFilter = (function() {
 	function artist(term) {
-		var start = term.toLocaleLowerCase(), end = start + "zzzzz";
+		var start = term.toLocaleLowerCase(), end = start + COUCH_SUFFIX;
 		return function(doc) {
 			var a = doc.artist;
 			if (a && a.length) {
@@ -17,7 +17,7 @@ createFilter = (function() {
 		};
 	}
 	function album(term) {
-		var start = term.toLocaleLowerCase(), end = start + "zzzzz";
+		var start = term.toLocaleLowerCase(), end = start + COUCH_SUFFIX;
 		return function(doc) {
 			var a = doc.album;
 			if (a && a.length) {
@@ -34,7 +34,7 @@ createFilter = (function() {
 		};
 	}
 	function title(term) {
-		var start = term.toLocaleLowerCase(), end = start + "zzzzz";
+		var start = term.toLocaleLowerCase(), end = start + COUCH_SUFFIX;
 		return function(doc) {
 			var a = doc.title;
 			if (a && a.length) {
@@ -96,6 +96,11 @@ createFilter = (function() {
 			return false;
 		};
 	}
+	function all(term) {
+		return function(doc) {
+			return true;
+		}
+	}
 	var map = {
 		"artist": artist,
 		"album": album,
@@ -104,6 +109,7 @@ createFilter = (function() {
 		"artist2": artist2,
 		"album2": album2,
 		"title2": title2,
+		"all": all,
 	}
 
 	function createFilter(spec) {
