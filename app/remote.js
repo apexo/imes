@@ -87,9 +87,14 @@ function _ajax_common(url, rawData, cb, config) {
 	}
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState !== 4) {
+			if (xhr.aborted) {
+				console.log(xhr);
+				alert("aborted with readyState != 4: " + xhr);
+			}
 			return;
-		}
-		if (xhr.status === 404) {
+		} else if (xhr.aborted) {
+			return;
+		} else if (xhr.status === 404) {
 			cb(null);
 		}
 		else if (xhr.status === 200 || xhr.status === 201) {
@@ -110,7 +115,7 @@ function _ajax_common(url, rawData, cb, config) {
 			if (cb) {
 				cb(response);
 			}
-		} else if (!xhr.aborted) {
+		} else {
 			config.error(url, config, xhr);
 		}
 	}
@@ -168,6 +173,7 @@ function ViewProxy(url, startkey, endkey, descending) {
 	if (descending) {
 		this._url += "&descending=true";
 	}
+	this.xhr = null;
 
 	this.clone = function() {
 		return new ViewProxy(this.url, this.startkey, this.endkey);
@@ -214,7 +220,14 @@ function ViewProxy(url, startkey, endkey, descending) {
 			return cb({"rows": []});
 		}
 
-		ajax_get(url, cb);
+		this.xhr = ajax_get(url, cb);
+	}
+
+	this.abort = function() {
+		if (this.xhr) {
+			ajax_abort(this.xhr);
+			this.xhr = null;
+		}
 	}
 }
 
@@ -243,6 +256,9 @@ function ViewIterator(proxy, filter) {
 			callback(filtered(rows), done);
 		}
 		this.proxy.fetch(cb, limit);
+	}
+	this.abort = function() {
+		this.proxy.abort();
 	}
 }
 

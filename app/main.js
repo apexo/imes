@@ -7,36 +7,10 @@
 	}
 })();
 
-var currentSearchToken = 0;
 var currentPlaylistToken = 0;
 var remote = null;
 var subscription = null;
 var playlist = new avltree();
-
-var SearchResult = {};
-SearchResult.createSingleTrackButtons = SearchResult.createAlbumButtons = SearchResult.createAlbumTrackButtons = function(target) {
-	createButton(target, "play", "Add this album/track to the target playlist.");
-}
-
-SearchResult.handleAlbumTrack = SearchResult.handleSingleTrack = function(button, target) {
-	if (button !== "play") {return alert(button);};
-	enqueueTracks([target.dataset.id]);
-}
-
-SearchResult.handleAlbum = function(button, target) {
-	if (button !== "play") {return alert(button);};
-	var ids = [];
-	var tracks = target.parentElement.querySelectorAll(".album-track");
-	for (var i = 0; i < tracks.length; i++) {
-		var t = tracks[i];
-		ids.push(t.dataset.id);
-	}
-	enqueueTracks(ids);
-}
-
-SearchResult.handleSearch = function(value) {
-	setSearchTerms(value);
-}
 
 var Playlist = {};
 Playlist.createSingleTrackButtons = Playlist.createAlbumTrackButtons = function(target) {
@@ -338,155 +312,6 @@ function deleteTrack(track, albumCache) {
 	}
 }
 
-function doSearch(terms) {
-	currentSearchToken += 1;
-	var mySearchToken = currentSearchToken;
-
-	var target = document.querySelector("#search-result");
-	if (remote === null) {
-		remote = new Remote(target);
-	}
-	var view = remote.getView(terms);
-	var page = 10;
-	var placeHolder = document.createElement("div");
-	var scrollParent = document.body;
-	var albumCache = {};
-	var idCache = {};
-	placeHolder.style.visibility = "hidden";
-	placeHolder.style.height = Math.floor(scrollParent.parentElement.clientHeight / 2) + "px";
-
-	target.innerHTML = "";
-	target.appendChild(placeHolder);
-
-	function remove(id) {
-		var t = idCache[id];
-		if (!idCache.hasOwnProperty(id)) {
-			return;
-		}
-		delete idCache[id];
-		deleteTrack(t, albumCache);
-	}
-
-	function add(i) {
-		if (idCache.hasOwnProperty(i._id) || i.type !== "file") {
-			return;
-		}
-
-		var key = albumKey(i);
-		var cachedAlbum = key ? albumCache[key] : null;
-
-		if (!cachedAlbum) {
-			var t = formatSingleTrack(i, SearchResult);
-			idCache[i._id] = t;
-
-			if (key) {
-				albumCache[key] = {t: t, i: i}
-			}
-			target.insertBefore(t, placeHolder);
-			return;
-		}
-
-		var tracklist;
-
-		if (!cachedAlbum.container) {
-			cachedAlbum.container = makeAlbum(i, key, SearchResult);
-			tracklist = cachedAlbum.container.getElementsByClassName("album-tracklist")[0];
-
-			idCache[cachedAlbum.i._id] = formatAlbumTrack(cachedAlbum.i, tracklist, 0, SearchResult);
-			target.removeChild(cachedAlbum.t);
-			delete cachedAlbum.t;
-			delete cachedAlbum.i;
-		} else {
-			addCover(cachedAlbum.container, i);
-			target.removeChild(cachedAlbum.container);
-			tracklist = cachedAlbum.container.getElementsByClassName("album-tracklist")[0];
-		}
-
-
-		idCache[i._id] = formatAlbumTrack(i, tracklist, 0, SearchResult);
-		target.insertBefore(cachedAlbum.container, placeHolder);
-	}
-
-	var state = "paused";
-
-	function resume(ids, done) {
-		if (currentSearchToken !== mySearchToken) {
-			return release();
-		}
-		for (var i = 0; i < ids.length; i++) {
-			add(ids[i].doc);
-		}
-		if (done) {
-			target.removeChild(placeHolder);
-			placeHolder = null;
-			window.removeEventListener("scroll", update);
-			window.removeEventListener("resize", update);
-			navigation.onnavigate.removeListener(update);
-			state = "done";
-			return;
-		}
-		if (placeHolder.offsetTop - scrollParent.scrollTop < scrollParent.parentElement.clientHeight) {
-			view.fetch(resume, page);
-		} else {
-			state = "paused";
-		}
-	}
-
-	function update() {
-		if (currentSearchToken !== mySearchToken) {
-			return release();
-		}
-
-		if (state === "paused") {
-			if (isVisible(placeHolder, scrollParent)) {
-				state = "loading";
-				view.fetch(resume, page);
-			}
-		}
-	}
-
-	function readyCb() {
-		window.addEventListener("scroll", update);
-		window.addEventListener("resize", update);
-		navigation.onnavigate.addListener(update);
-		update();
-	}
-
-	function changesCb(changes) {
-		if (currentSearchToken !== mySearchToken) {
-			return release();
-		}
-
-		for (var i = 0; i < changes.length; i++) {
-			var change = changes[i];
-			if (change.deleted) {
-				remove(change.id);
-			} else if (view.filter(change)) {
-				remove(change.id);
-				add(change.doc);
-			}
-		}
-
-		update();
-	}
-
-	var manager = new EventManager();
-
-	function release() {
-		manager.destroy();
-		window.removeEventListener("scroll", update);
-		window.removeEventListener("resize", update);
-		navigation.onnavigate.removeListener(update);
-	}
-
-	if (subscription.ready) {
-		readyCb();
-	} else {
-		manager.addListener(subscription.onready, readyCb, this);
-	}
-	manager.addListener(subscription.onchange, changesCb, this);
-}
-
 function deleteFromPlaylist(plid, idxs) {
 	var url = DB_URL + DB_NAME + "/" + encodeURIComponent(plid);
 	function doDelete(value) {
@@ -537,7 +362,7 @@ function setSearchTerms(terms, source) {
 			target.value = terms;
 		}
 	}
-	doSearch(terms);
+	search.update(terms);
 }
 
 var currentStatus = null;
@@ -1015,6 +840,7 @@ var settings;
 var playlistSelector;
 var navigation;
 var notification;
+var search;
 
 function onLoad() {
 	if (subscription) {
@@ -1077,6 +903,8 @@ function onLoad() {
 			}
 		}
 	});
+
+	search = new Search(document.getElementById("search-result"), subscription, navigation);
 
 	setTimeout(function() {
 		new HeaderLayout(document.body);
