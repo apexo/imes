@@ -423,7 +423,7 @@ function Remote() {
 		}
 		v = decodeURI(v);
 		if (!v.length) {
-			return [-1, "search", ""];
+			return [-1, "search", "", COUCH_SUFFIX];
 		}
 		var p = prefixes[k];
 		return [v.length + p.mod, p.view, p.transform(v), p.range];
@@ -447,7 +447,7 @@ function Remote() {
 			}
 		}
 		if (!temp.length) {
-			temp.push([0, "search", ""]);
+			temp.push([0, "search", "", COUCH_SUFFIX]);
 		}
 		temp.sort();
 		var ps = temp[temp.length - 1];
