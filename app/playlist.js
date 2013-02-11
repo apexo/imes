@@ -199,7 +199,7 @@ Playlist.prototype.statusUpdate = function(s) {
 
 		if (entry && entry.key == key) {
 			this.initProgressBar(entry.value);
-		} else if (key !== plkey("", 0) && isVisible(this.target)) {
+		} else if (key !== plkey("", 0) && isVisible(this.target) && pos.fid) {
 			console.log("not found:", key, " - reloading playlist");
 			this.update(this.playlistSelector, this.playlistSelector.targetPlaylist);
 		}
