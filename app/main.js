@@ -180,7 +180,7 @@ function albumLink(i, target) {
 }
 
 function titleLink(i, target) {
-	var instead = i.path.substring(i.path.lastIndexOf("/"));
+	var instead = i.path.substring(i.path.lastIndexOf("/") + 1);
 	makeLink(i.title, target, "title-link", ", ", "Unknown Title [" + instead + "]");
 }
 
