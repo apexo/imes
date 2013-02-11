@@ -160,10 +160,10 @@ function get_file_info(name, callback) {
 		}
 		callback.apply(this, extraArguments.concat([data]));
 	}
-	ajax_get(DB_URL + DB_NAME + "/" + encodeURIComponent(name), cb);
+	return ajax_get(DB_URL + DB_NAME + "/" + encodeURIComponent(name), cb);
 }
 
-function ViewProxy(url, startkey, endkey, descending) {
+function ViewProxy(url, startkey, endkey, descending, docid) {
 	this.url = url;
 	this.startkey = startkey;
 	this.endkey = endkey;
@@ -176,7 +176,7 @@ function ViewProxy(url, startkey, endkey, descending) {
 	this.xhr = null;
 
 	this.clone = function() {
-		return new ViewProxy(this.url, this.startkey, this.endkey);
+		return new ViewProxy(this.url, this.startkey, this.endkey, docid);
 	}
 
 	this.reset = function() {
@@ -203,7 +203,10 @@ function ViewProxy(url, startkey, endkey, descending) {
 			var currentkey = me.currentstartkey;
 			for (var i = 0; i < rows.length; i++) {
 				var row = rows[i];
-				if (row.key == currentkey) {
+				if (docid) {
+					currentkey = row.id + "X";
+					skip = 0;
+				} else if (row.key == currentkey) {
 					skip += 1;
 				} else {
 					currentkey = row.key;
@@ -240,7 +243,7 @@ function ViewIterator(proxy, filter) {
 			var result = [];
 			for (var i = 0; i < rows.length; i++) {
 				if (filter(rows[i])) {
-					result[result.length] = rows[i];
+					result.push(rows[i]);
 				} else {
 				}
 			}
@@ -292,12 +295,18 @@ function PlaylistIterator(proxy, skip, reverse) {
 			skip = null;
 		}
 	}
+
+	var order = [], me = this;
+
 	this.fetch = function(callback, limit) {
-		var pending = {}, order = [], result = [], me = this;
+		var pending = {}, result = [];
 		function cb2(plid, idx, value) {
+			if (!order.length) {
+				console.log("callback while not pending!", arguments);
+			}
 			pending[plkey(plid, idx)] = value;
-			while (order.length && pending.hasOwnProperty(order[0])) {
-				var key = order.shift();
+			while (order.length && pending.hasOwnProperty(order[0][0])) {
+				var key = order.shift()[0];
 				result.push({"key": key, "value": pending[key]});
 				delete pending[key];
 			}
@@ -308,8 +317,8 @@ function PlaylistIterator(proxy, skip, reverse) {
 		function getinfo() {
 			for (var i = 0; i < limit && me.todo.length; i++) {
 				var item = me.todo.shift();
-				order.push(plkey(item.plid, item.idx));
-				get_file_info(item.id, cb2, item.plid, item.idx);
+				var xhr = get_file_info(item.id, cb2, item.plid, item.idx);
+				order.push([plkey(item.plid, item.idx), xhr]);
 			}
 			if (!order.length) {
 				callback([], true);
@@ -350,6 +359,13 @@ function PlaylistIterator(proxy, skip, reverse) {
 			getinfo();
 		}
 	}
+	this.abort = function() {
+		this.proxy.abort();
+		for (var i = 0; i < order.length; i++) {
+			ajax_abort(order[i][1]);
+		}
+		order.length = 0;
+	}
 }
 
 function PlaylistView(playlist, plid, idx) {
@@ -360,12 +376,12 @@ function PlaylistView(playlist, plid, idx) {
 	var endkey = playlist + ":z";
 
 	this.getForwardIterator = function() {
-		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, endkey);
+		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, endkey, false, true);
 		return new PlaylistIterator(proxy, idx, false);
 	}
 
 	this.getReverseIterator = function() {
-		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, reverseEndkey, true);
+		var proxy = new ViewProxy(DB_URL + viewPrefix, startkey, reverseEndkey, true, true);
 		return new PlaylistIterator(proxy, idx, true);
 	}
 }

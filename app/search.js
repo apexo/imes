@@ -24,7 +24,6 @@ SearchResult.handleSearch = function(value) {
 }
 
 function Search(target, subscription, navigation) {
-	this.token = 0;
 	this.target = target;
 	this.subscription = subscription;
 	this.navigation = navigation;

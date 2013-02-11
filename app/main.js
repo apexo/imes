@@ -7,56 +7,6 @@
 	}
 })();
 
-var currentPlaylistToken = 0;
-var remote = null;
-var subscription = null;
-var playlist = new avltree();
-
-var Playlist = {};
-Playlist.createSingleTrackButtons = Playlist.createAlbumTrackButtons = function(target) {
-	createButton(target, "play", "Play this track now.");
-	createButton(target, "remove", "Remove this track from the playlist.");
-}
-
-Playlist.createAlbumButtons = function(target) {
-	createButton(target, "remove", "Remove this album from the playlist.");
-}
-
-Playlist.handleAlbumTrack = Playlist.handleSingleTrack = function(button, target) {
-	if (button === "play") {
-		playNow(target);
-	} else if (button === "remove") {
-		var plkey = target.dataset.key;
-		deleteFromPlaylist(plkey_plid(plkey), [plkey_idx(plkey)]);
-	}
-}
-
-Playlist.handleAlbum = function(button, target) {
-	var tracks = target.parentElement.querySelectorAll(".album-track");
-	if (button === "play") {
-		playNow(tracks[0]);
-	} else if (button === "remove") {
-		var plids = {};
-		for (var i = 0; i < tracks.length; i++) {
-			var plkey = tracks[i].dataset.key, plid = plkey_plid(plkey), idx = plkey_idx(plkey);
-			if (!plids.hasOwnProperty(plid)) {
-				plids[plid] = [];
-			}
-			plids[plid].push(idx);
-		}
-		for (var plid in plids) {
-			if (plids.hasOwnProperty(plid)) {
-				deleteFromPlaylist(plid, plids[plid]);
-			}
-		}
-	}
-}
-
-Playlist.handleSearch = function(value) {
-	setSearchTerms(value);
-	navigation.triggerNavigation(document.getElementById("nav-search"));
-}
-
 function makeLink(data, target, cls, sep, instead) {
 	var n = 0;
 	if (data) {
@@ -365,21 +315,11 @@ function setSearchTerms(terms, source) {
 	search.update(terms);
 }
 
-var currentStatus = null;
-var userStatus = null;
-
 function addOption(select, name, value) {
 	var option = select.appendChild(document.createElement("option"));
 	option.appendChild(document.createTextNode(name));
 	option.value = value;
 	return option;
-}
-
-function createProgressBar() {
-	var pb = document.createElement("div");
-	pb.classList.add("progress-bar");
-	pb.appendChild(document.createTextNode("\xa0"))
-	return pb;
 }
 
 function formatLength(length, pos) {
@@ -400,56 +340,6 @@ function createLengthIndicator(text) {
 	result.appendChild(document.createTextNode(text));
 	result.classList.add("length-indicator");
 	return result;
-}
-
-function updateProgressBar(pb, offset, length, t0, now, color) {
-	var
-		total = length ? Math.floor(length * 44100 + 0.5) : 0,
-		pos = offset + Math.floor((now - t0) * 44.1 + 0.5);
-
-	pb.parentElement.getElementsByClassName("length-indicator")[0].firstChild.textContent = formatLength(length, pos / 44100);
-
-	if (pos >= total) {
-		pb.style.backgroundColor = "red";
-		pb.style.width = "100%";
-	} else {
-		pb.style.backgroundColor = color;
-		pb.style.width = Math.min(pos * 100 / total, 100) + "%";
-	}
-}
-
-function initProgressBar(el) {
-	var pb = createProgressBar();
-	el.classList.add("currently-playing");
-	el.appendChild(pb);
-
-	function update() {
-		var color, now, t0, pos;
-		if (currentStatus.currentlyPlaying) {
-			t0 = currentStatus.currentlyPlaying.t0;
-			if (currentStatus.paused) {
-				color = "blue";
-				now = t0;
-			} else if (currentStatus.autoPaused) {
-				color = "yellow";
-				now = t0;
-			} else {
-				color = "";
-				now = Date.now();
-			}
-			pos = currentStatus.currentlyPlaying;
-		} else {
-			now = t0 = Date.now();
-			color = "black";
-			pos = currentStatus.savedPosition;
-		}
-		updateProgressBar(pb, pos.pos, el.dataset.length, t0, now, color);
-	}
-
-	update();
-
-	RAF.register("playlist", update);
-	el.scrollIntoViewIfNeeded();
 }
 
 var lastPlaying = {plid: "", idx: 0};
@@ -476,46 +366,6 @@ function updateNowPlaying(s) {
 	});
 }
 
-function removeProgressBar(element) {
-	element.removeChild(element.getElementsByClassName("progress-bar")[0]);
-	element.getElementsByClassName("length-indicator")[0].firstChild.textContent = formatLength(element.dataset.length);
-	element.classList.remove("currently-playing");
-	RAF.unregister("playlist");
-}
-
-function statusUpdated(s) {
-	currentStatus = s;
-
-	var target = document.querySelector("#playlist");
-	var cp = target.getElementsByClassName("currently-playing")
-
-	var pos = s.currentlyPlaying ? s.currentlyPlaying : s.savedPosition;
-	if (s.currentlyPlaying) {
-		s.currentlyPlaying.t0 = Date.now();
-	}
-
-	var found = false, key = pos ? plkey(pos.plid, pos.idx) : "";
-
-	for (var i = 0; i < cp.length; i++) {
-		if (cp[i].dataset.key === key) {
-			found = true;
-		} else {
-			removeProgressBar(cp[i]);
-			i -= 1;
-		}
-	}
-
-	if (!found) {
-		var entry = playlist.lookupGte(key);
-
-		if (entry && entry.key == key) {
-			initProgressBar(entry.value);
-		} else {
-			updatePlaylist();
-		}
-	}
-}
-
 function isVisible(element, within) {
 	if (within) {
 		if (element.offsetTop + element.clientHeight - within.scrollTop <= 0) {
@@ -536,254 +386,6 @@ function isVisible(element, within) {
 		element = element.parentElement;
 	}
 	return true;
-}
-
-function updatePlaylist() {
-	currentPlaylistToken += 1;
-	var myToken = currentPlaylistToken;
-	playlist = new avltree();
-
-	var target = document.querySelector("#playlist");
-	target.innerHTML = "";
-	if (!playlistSelector.targetPlaylist) {
-		return;
-	}
-
-	subscription.args.playlist = playlistSelector.targetPlaylist.substring(9);
-
-	if (playlistSelector.userPlaylist) {
-		delete subscription.args.channel;
-	} else {
-		subscription.args.channel = playlistSelector.targetPlaylist.substring(17);
-	}
-	subscription.updateArguments();
-	
-	var plid, idx, pos;
-	pos = currentStatus ? (currentStatus.currentlyPlaying ? currentStatus.currentlyPlaying : currentStatus.savedPosition) : null;
-	if (pos && playlistSelector.targetPlaylist === "playlist:channel:" + currentStatus.channel) {
-		plid = pos.plid;
-		idx = pos.idx;
-	} else {
-		plid = "";
-		idx = 0;
-	}
-
-	var forwardPlaceHolder = document.createElement("div");
-	var backwardPlaceHolder = document.createElement("div");
-	var view = new PlaylistView(playlistSelector.targetPlaylist, plid, idx);
-	forwardPlaceHolder.style.visibility = "hidden";
-	backwardPlaceHolder.style.visibility = "hidden";
-	var scrollParent = document.body;
-	forwardPlaceHolder.style.height = Math.floor(scrollParent.parentElement.clientHeight / 2) + "px";
-	backwardPlaceHolder.style.height = Math.floor(scrollParent.parentElement.clientHeight / 2) + "px";
-
-	target.innerHTML = "";
-	target.appendChild(backwardPlaceHolder);
-	target.appendChild(forwardPlaceHolder);
-
-	var forward = view.getForwardIterator();
-	var backward = view.getReverseIterator();
-	var forwardActive = false, backwardActive = false;
-	var forwardDone = false, backwardDone = false;
-	var forwardLast = null, backwardLast = null;
-
-	function remove(plid) {
-		var items = [];
-		playlist.getRange(plid_range_low(plid), plid_range_high(plid), items);
-		for (var i = 0; i < items.length; i++) {
-			playlist = playlist.remove(items[i].dataset.key);
-			deleteTrack(items[i]);
-		}
-	}
-
-	function onupdate(doc) {
-		var plid = doc._id;
-		for (var i = 0; i < doc.items.length; i++) {
-			var id = doc.items[i], key = plkey(plid, i);
-			if (!id) {
-				var entry = playlist.lookupGte(key);
-				if (entry.key === key) {
-					playlist = playlist.remove(entry.key);
-					deleteTrack(entry.value);
-				}
-			} else {
-				if (!playlist.count || key > playlist.max().key) {
-					resumeForward();
-				}
-			}
-		}
-	}
-
-	function add(item, last, insertBefore, p) {
-		if (item.value._deleted) {
-			// file associated with playlist entry does not exist (anymore)
-			var t = formatErrorTrack(item.value._id, Playlist);
-			t.dataset.key = item.key;
-			playlist = playlist.insert(item.key, t);
-			if (item.key === plid) {
-				initProgressBar(t);
-			}
-			target.insertBefore(t, insertBefore);
-			return null;
-		}
-		var key = albumKey(item.value), el;
-		var pos = currentStatus ? (currentStatus.currentlyPlaying ? currentStatus.currentlyPlaying : currentStatus.savedPosition) : null;
-		var plid = pos ? plkey(pos.plid, pos.idx) : "";
-		if (last && last.key && last.key === key) {
-			if (!last.container) {
-				last.container = makeAlbum(last.i, key, Playlist);
-				target.insertBefore(last.container, last.t);
-				target.removeChild(last.t);
-				el = formatAlbumTrack(last.i, last.container.getElementsByClassName("album-tracklist")[0], 0, Playlist);
-				el.dataset.key = last.t.dataset.key;
-				playlist = playlist.insert(last.t.dataset.key, el);
-				if (last.t.dataset.key === plid) {
-					initProgressBar(el);
-				}
-				delete last.t;
-				delete last.i;
-			}
-			el = formatAlbumTrack(item.value, last.container.getElementsByClassName("album-tracklist")[0], p, Playlist);
-			el.dataset.key = item.key;
-			playlist = playlist.insert(item.key, el);
-			if (item.key === plid) {
-				initProgressBar(el);
-			}
-			return last;
-		}
-		last = {
-			t: formatSingleTrack(item.value, Playlist),
-			i: item.value,
-			key: key
-		};
-		last.t.dataset.key = item.key;
-		playlist = playlist.insert(item.key, last.t);
-		if (item.key === plid) {
-			initProgressBar(last.t);
-		}
-		target.insertBefore(last.t, insertBefore);
-		return last;
-	}
-
-	function addForward(items, done) {
-		if (currentPlaylistToken !== myToken) {
-			return release();
-		}
-		for (var i = 0; i < items.length; i++) {
-			forwardLast = add(items[i], forwardLast, forwardPlaceHolder, 1);
-			if (!backwardLast) {
-				backwardLast = forwardLast;
-			}
-		}
-
-		if (done) {
-			target.removeChild(forwardPlaceHolder);
-			forwardDone = true;
-		} else {
-			forwardActive = false;
-		}
-		update();
-	}
-
-	function addBackward(items, done) {
-		if (currentPlaylistToken !== myToken) {
-			return release();
-		}
-		var oldHeight = target.clientHeight;
-
-		for (var i = 0; i < items.length; i++) {
-			backwardLast = add(items[i], backwardLast, backwardPlaceHolder.nextElementSibling, -1);
-			if (!forwardLast) {
-				forwardLast = backwardLast;
-			}
-		}
-
-		var newHeight = target.clientHeight;
-		if (done) {
-			target.removeChild(backwardPlaceHolder);
-			backwardPlaceHolder = null;
-			backwardDone = true;
-		} else {
-			backwardActive = false;
-		}
-		scrollParent.scrollTop += newHeight - oldHeight;
-		update();
-	}
-
-	function update() {
-		if (currentPlaylistToken !== myToken) {
-			return release();
-		}
-		if (!forwardActive && isVisible(forwardPlaceHolder, scrollParent)) {
-			forwardActive = true;
-			forward.fetch(addForward, 10);
-		}
-		if (!backwardActive && isVisible(backwardPlaceHolder, scrollParent)) {
-			backwardActive = true;
-			backward.fetch(addBackward, 10);
-		}
-		if (forwardDone && backwardDone) {
-			window.removeEventListener("scroll", update);
-			window.removeEventListener("resize", update);
-			navigation.onnavigate.removeListener(update);
-		}
-	}
-
-	function resumeForward() {
-		if (forwardDone && backwardDone) {
-			window.addEventListener("scroll", update);
-			window.addEventListener("resize", update);
-			navigation.onnavigate.addListener(update);
-		}
-		if (forwardDone) {
-			target.appendChild(forwardPlaceHolder);
-			forwardDone = false;
-			forwardActive = false;
-		}
-		forward.done = false;
-		update();
-	}
-
-	var manager = new EventManager();
-
-	function readyCb() {
-		window.addEventListener("scroll", update);
-		window.addEventListener("resize", update);
-		navigation.onnavigate.addListener(update);
-		update();
-	}
-
-	function release() {
-		manager.destroy();
-		window.removeEventListener("scroll", update);
-		window.removeEventListener("resize", update);
-		navigation.onnavigate.removeListener(update);
-	}
-
-	function changesCb(changes) {
-		if (currentPlaylistToken !== myToken) {
-			return release();
-		}
-
-		for (var i = 0; i < changes.length; i++) {
-			var change = changes[i];
-			if (change.deleted) {
-				remove(change.id);
-			} else if (change.doc.type === "playlist") {
-				onupdate(change.doc);
-			}
-		}
-
-		update();
-	}
-
-	if (subscription.ready) {
-		readyCb();
-	} else {
-		manager.addListener(subscription.onready, readyCb, this);
-	}
-
-	manager.addListener(subscription.onchange, changesCb, this);
 }
 
 function playNow(track) {
@@ -809,6 +411,7 @@ function installClickHandler(target, handler) {
 			button = "remove";
 		}
 		if (button) {
+			event.preventDefault();
 			target = target.parentElement.parentElement;
 			cl = target.classList;
 
@@ -822,19 +425,23 @@ function installClickHandler(target, handler) {
 				return;
 			}
 		} else if (cl.contains("album-link")) {
+			event.preventDefault();
 			handler.handleSearch("album2:" + encodeURI(target.firstChild.textContent));
 		} else if (cl.contains("artist-link")) {
+			event.preventDefault();
 			handler.handleSearch("artist2:" + encodeURI(target.firstChild.textContent));
 		} else if (cl.contains("title-link")) {
+			event.preventDefault();
 			handler.handleSearch("title2:" + encodeURI(target.firstChild.textContent));
 		} else {
 			return;
 		}
 		event.stopPropagation();
-		event.preventDefault();
 	}, false);
 }
 
+var subscription;
+var userStatus;
 var scrollBarWidth;
 var settings;
 var playlistSelector;
@@ -865,22 +472,17 @@ function onLoad() {
 
 	subscription = new Subscription({
 		"include_docs": "true",
-		"limit": 10,
+		"limit": 20,
 		"filter": "file/all",
 		"timeout": 59000,
 	})
 	userStatus = new UserStatus();
-	userStatus.onupdate.addListener(statusUpdated);
 	userStatus.onupdate.addListener(updateNowPlaying);
 	settings = new Settings(userStatus);
 
 	var playlistTarget = document.getElementById("playlist-select");
 	var playlistAdd = document.getElementById("playlist-add");
 	playlistSelector = new PlaylistSelector(playlistTarget, playlistAdd, settings, userStatus);
-
-	playlistSelector.onplaylistselect.addListener(function() {
-		updatePlaylist();
-	});
 
 	new ChannelControl(document.getElementById("channel-control"), userStatus);
 
@@ -895,16 +497,12 @@ function onLoad() {
 	});
 
 	navigation = new Navigation(document.getElementById("nav"), layoutManager);
-	navigation.onnavigate.addListener(function(target) {
-		if (target.id === "nav-playlist") {
-			var cp = document.querySelector("#playlist").getElementsByClassName("currently-playing");
-			if (cp && cp.length) {
-				cp[0].scrollIntoViewIfNeeded();
-			}
-		}
-	});
-
 	search = new Search(document.getElementById("search-result"), subscription, navigation);
+
+	var terms = document.location.hash ? decodeURI(document.location.hash.substring(1)) : "";
+	setSearchTerms(terms, "location");
+
+	playlist = new Playlist(document.getElementById("playlist"), subscription, navigation, playlistSelector, userStatus);
 
 	setTimeout(function() {
 		new HeaderLayout(document.body);
@@ -918,16 +516,7 @@ function onLoad() {
 			layoutManager.layout();
 		});
 		installClickHandler(document.getElementById("search-result"), SearchResult);
-		installClickHandler(document.getElementById("playlist"), Playlist);
-
-		setTimeout(function() {
-			if (document.location.hash) {
-				setSearchTerms(decodeURI(document.location.hash.substring(1)), "location");
-			} else {
-				setSearchTerms("", "location");
-			}
-			updatePlaylist();
-		}, 500);
+		installClickHandler(document.getElementById("playlist"), PlaylistDisplay);
 
 		window.addEventListener("popstate", function() {
 			setSearchTerms(decodeURI(document.location.hash.substring(1)), "location");
