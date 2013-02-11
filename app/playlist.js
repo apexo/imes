@@ -122,6 +122,9 @@ Playlist.prototype.updateProgressBar = function(pb) {
 	var color, now, t0, pos, s = this.userStatus.status;
 
 	if (s.currentlyPlaying) {
+		if (s.currentlyPlaying.t0 === undefined) {
+			s.currentlyPlaying.t0 = Date.now();
+		}
 		t0 = s.currentlyPlaying.t0;
 		if (s.paused) {
 			color = "blue";
@@ -204,7 +207,7 @@ Playlist.prototype.statusUpdate = function(s) {
 }
 
 Playlist.prototype.getPosition = function() {
-	var defaultPosition = {plid: "", idx: 0};
+	var defaultPosition = {plid: "", idx: 0, pos: 0};
 	if (this.state === "ready" && this.playlistSelector.targetPlaylist === "playlist:channel:" + this.userStatus.status.channel) {
 		if (this.userStatus.status.currentlyPlaying) {
 			return this.userStatus.status.currentlyPlaying;
