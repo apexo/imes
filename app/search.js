@@ -36,6 +36,7 @@ function Search(target, subscription, navigation) {
 	this.view = null;
 	this.albumCache = {};
 	this.idCache = {};
+	this.albumsLoading = {};
 
 	window.addEventListener("resize", this.resize.bind(this));
 	window.addEventListener("scroll", this.fetchSome.bind(this));
@@ -60,6 +61,13 @@ Search.prototype.update = function(terms) {
 	if (this.view && this.state === "loading") {
 		this.view.abort();
 	}
+
+	for (var k in this.albumsLoading) {
+		if (this.albumsLoading.hasOwnProperty(k)) {
+			ajax_abort(this.albumsLoading[k]);
+		}
+	}
+	this.albumsLoading = {};
 
 	this.target.innerHTML = "";
 	this.target.appendChild(this.placeHolder);
@@ -107,6 +115,8 @@ Search.prototype.add = function(info) {
 		this.idCache[cachedAlbum.info._id] = formatAlbumTrack(cachedAlbum.info, tracklist, 0, SearchResult);
 		this.target.removeChild(cachedAlbum.track);
 		cachedAlbum.track = cachedAlbum.info = null;
+
+		this.loadAlbum(key);
 	} else {
 		addCover(cachedAlbum.container, info);
 		this.target.removeChild(cachedAlbum.container);
@@ -116,6 +126,39 @@ Search.prototype.add = function(info) {
 
 	this.idCache[info._id] = formatAlbumTrack(info, tracklist, 0, SearchResult);
 	this.target.insertBefore(cachedAlbum.container, this.state === "done" ? null : this.placeHolder);
+}
+
+Search.prototype.loadAlbum = function(key) {
+	if (this.albumsLoading.hasOwnProperty(key)) {
+		console.log("album already loading?", key);
+		return;
+	}
+
+	var tokens = key.split("\x00");
+	if (tokens.length != 3) {
+		console.log("this supposed to be an album key?", tokens);
+		return;
+	}
+	var path = tokens[0], album = tokens[1], discnumber = parseInt(tokens[2]);
+
+	var url = DB_URL + DB_NAME + "/_design/file/_view/path2?include_docs=true";
+	url += "&key=" + encodeURIComponent(JSON.stringify([path, album, discnumber]));
+
+	this.albumsLoading[key] = ajax_get(url, this.albumCb.bind(this, key));
+}
+
+Search.prototype.albumCb = function(key, result) {
+	if (!this.albumsLoading.hasOwnProperty(key)) {
+		return;
+	}
+
+	delete this.albumsLoading[key];
+
+	for (var i = 0; i < result.rows.length; i++) {
+		if (this.view.filter(result.rows[i])) {
+			this.add(result.rows[i].doc);
+		}
+	}
 }
 
 Search.prototype.viewCb = function(ids, done) {
