@@ -101,11 +101,11 @@ function displayTrackInfo(fid, event) {
 		if (info.replaygain_track_gain) {
 			target.appendChild(labeledValue("track gain", info.replaygain_track_gain));
 		}
-		if (info.replaygain_album_peak) {
-			target.appendChild(labeledValue("track peak", info.replaygain_album_peak));
+		if (info.replaygain_track_peak) {
+			target.appendChild(labeledValue("track peak", info.replaygain_track_peak));
 		}
-		if (info.replaygain_track_gain) {
-			target.appendChild(labeledValue("album gain", info.replaygain_track_gain));
+		if (info.replaygain_album_gain) {
+			target.appendChild(labeledValue("album gain", info.replaygain_album_gain));
 		}
 		if (info.replaygain_album_peak) {
 			target.appendChild(labeledValue("album peak", info.replaygain_album_peak));
