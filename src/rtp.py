@@ -63,7 +63,7 @@ class Response(object):
 		for header in headers:
 			self.addHeader(CORS_HEADERS, header)
 
-	def setResponse(self, cod, msg):
+	def setResponse(self, code, msg):
 		self.code = code
 		self.msg = msg
 
@@ -246,6 +246,10 @@ class Connection(object):
 					state.setUserAggregate(user, data["aggregate"])
 				if "channel" in data:
 					state.setAggregateChannel(user.aggregate, data["channel"])
+				if "session_timeout" in data:
+					user.setSessionTimeout(data["session_timeout"], state)
+				if "lockout" in data:
+					user.setLockout(data["lockout"], state)
 				self.handler.state.getUserStatus(user, cb)
 			else:
 				raise Exception("not authorized")
@@ -363,6 +367,8 @@ class Connection(object):
 			p = self._doHttpDelegate
 		elif path[0] == "user":
 			target = self.handler.state.getUser(path[1])
+			if not target.authorized:
+				raise Exception("not authorized")
 			p = self._doHttpUser
 		else:
 			raise Exception("not authorized")

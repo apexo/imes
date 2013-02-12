@@ -92,5 +92,13 @@ UserStatus.prototype.schedule = function(timeout) {
 }
 
 UserStatus.prototype.setUserAggregate = function(aggregate) {
-	ajax_post(this.backendUrl() + "status", {"aggregate": aggregate});
+	ajax_post(this.backendUrl() + "status", {"aggregate": aggregate}, this.trigger.bind(this));
+}
+
+UserStatus.prototype.setLockout = function(value) {
+	ajax_post(this.backendUrl() + "status", {"lockout": value}, this.trigger.bind(this));
+}
+
+UserStatus.prototype.setSessionTimeout = function(value) {
+	ajax_post(this.backendUrl() + "status", {"session_timeout": value}, this.trigger.bind(this));
 }

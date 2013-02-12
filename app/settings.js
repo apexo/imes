@@ -10,6 +10,49 @@ function Settings(userStatus) {
 	} else {
 		this.userStatus.onready.addListener(this.userReady, this);
 	}
+	this.userStatus.onupdate.addListener(this.userUpdate, this);
+
+	this.session_timeout = document.getElementById("session_timeout");
+	this.session_timeout.addEventListener("change", this.setSessionTimeout.bind(this));
+}
+
+Settings.prototype.setSessionTimeout = function(event) {
+	event.preventDefault();
+	var value = this.session_timeout.value;
+	console.log("setting session timeout", value);
+	if (!value || value === "custom") {
+		return;
+	} else if (value === "default") {
+		value = null;
+	} else {
+		value = parseInt(value);
+	}
+	console.log("setting session timeout, now really", value);
+	this.userStatus.setSessionTimeout(value);
+}
+
+Settings.prototype.userUpdate = function(s) {
+	function fmtTimespan(n) {
+		if (n < 120) {
+			return n + " seconds";
+		} else if (n < 7200) {
+			return Math.floor(n / 60 + 0.5) + " minutes";
+		} else {
+			return Math.floor(n / 3600 + 0.5) + " hours";
+		}
+	}
+
+	this.session_timeout.disabled = false;
+	if (s.session_timeout_default) {
+		this.session_timeout.querySelector("[value=default]").textContent = "Default (" + fmtTimespan(s.session_timeout) + ")";
+		this.session_timeout.value = "default";
+	} else {
+		this.session_timeout.value = "" + s.session_timeout;
+		if (!this.session_timeout.value) {
+			this.session_timeout.querySelector("[value=custom]").textContent = fmtTimespan(s.session_timeout);
+			target.value = "custom";
+		}
+	}
 }
 
 Settings.prototype.setDelegateDevices = function(delegate, devices, event) {

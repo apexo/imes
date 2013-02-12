@@ -644,6 +644,9 @@ function onLoad() {
 	})
 	userStatus = new UserStatus();
 	userStatus.onupdate.addListener(updateNowPlaying);
+	userStatus.onupdate.addListener(function(s) {
+		document.getElementById("lockout").style.display = s.lockout ? "" : "none";
+	});
 	settings = new Settings(userStatus);
 
 	var playlistTarget = document.getElementById("playlist-select");
@@ -690,6 +693,12 @@ function onLoad() {
 
 		window.addEventListener("keydown", function(event) {
 			var terms = document.getElementById("search-terms");
+			if (event.keyCode === 0x4c && event.ctrlKey) { // ctrl+L
+				event.preventDefault();
+				userStatus.setLockout(userStatus.status && userStatus.status.lockout ? false : true);
+				return;
+			}
+
 			if (event.target === terms) {
 				if (event.keyCode == 27) { // ESC
 					terms.blur();
@@ -699,7 +708,7 @@ function onLoad() {
 			if (!isVisible(terms)) {
 				return;
 			}
-			if (event.keyCode === 0x46 && event.ctrlKey) { // ctrl+f
+			if (event.keyCode === 0x46 && event.ctrlKey) { // ctrl+F
 				terms.focus();
 			} else if (event.keyCode === 191 && event.shiftKey || event.keyCode === 111) { // "/"
 				terms.value = "";

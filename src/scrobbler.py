@@ -51,7 +51,7 @@ class Scrobbler(object):
 
 		for k, v in {
 			"lastfm": self._lastfm,
-			"librefm": self._librefm,
+			#"librefm": self._librefm, # track.scrobble doesn't work, maybe use old (1.2) submission API?
 		}.iteritems():
 			if k in config:
 				self.networkFactory[k] = v(config[k]["key"], config[k]["secret"])
@@ -66,7 +66,10 @@ class Scrobbler(object):
 
 	def _librefm(self, key, secret):
 		def factory(session_key=None):
-			return pylast.LibreFMNetwork(key, secret, session_key)
+			network = pylast.LibreFMNetwork(key, secret, session_key)
+			network.ws_server = ("alpha.libre.fm", "/2.0/")
+			network.homepage = "http://alpha.libre.fm"
+			return network
 		return factory
 
 	def scrobble(self, userNames, fid):
@@ -219,7 +222,7 @@ class Scrobbler(object):
 		try:
 			doc = request.execute()
 		except pylast.WSError as e:
-			if int(e.status) == pylast.STATUS_TOKEN_EXIRED:
+			if int(e.status) == pylast.STATUS_TOKEN_EXPIRED:
 				return "error:token is expired, remove and re-start"
 			elif int(e.status) == pylast.STATUS_TOKEN_UNAUTHORIZED:
 				return "error:not authorized"

@@ -149,3 +149,37 @@ h1 {
 .clear-left {
 	clear: left;
 }
+#lockout {
+	z-index: 3;
+	position: fixed;
+	left: 0px;
+	right: 0px;
+	top: 0px;
+	bottom: 0px;
+	background-color: black;
+	opacity: 0.7;
+	color: white;
+
+	display: flex;
+	display: -webkit-flex;
+	flex-flow: column;
+	-webkit-flex-flow:column;
+}
+#lockout .center {
+	display: flex;
+	display: -webkit-flex;
+	display: -moz-box;
+	flex-flow: row;
+	-webkit-flex-flow: row;
+}
+#lockout .spacer {
+	flex: auto;
+	-webkit-flex:auto;
+	-moz-box-flex:1
+}
+#lockout div div:not(.spacer) {
+	border: 0.25em solid white;
+	padding: 0em 1em;
+	font-size: 200%;
+	margin: 1em;
+}

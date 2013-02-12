@@ -49,10 +49,23 @@
 		<div id="playlist" style="display:none">
 		</div>
 		<div id="settings" style="display:none">
-			<h1>Notifications</h1>
-			<p id="notifications"><a href onclick="notification.requestPermission(); event.preventDefault();">request permission</a></p>
-			<h1>Scrobblers</h1>
-			<p id="scrobblers"></p>
+			<h1>User Settings</h1>
+			<ul>
+				<li><b>Notifications:</b> <span id="notifications"><a href onclick="notification.requestPermission(); event.preventDefault();">request permission</a></span>
+				<li><b>Session Timeout:</b> <select id="session_timeout" disabled>
+					<option value="" hidden>(error)</option>
+					<option value="loading" hidden selected>(loading)</option>
+					<option value="custom" hidden>custom</option>
+					<option value="default">Default</option>
+					<option value="30">30 seconds</option>
+					<option value="120">2 minutes</option>
+					<option value="900">15 minutes</option>
+					<option value="3600">1 hours</option>
+					<option value="21600">6 hours</option>
+					<option value="86400">24 hours</option>
+				</select></li>
+				<li><b>Scrobblers:</b> <p id="scrobblers"></p></li>
+			</ul>
 			<h1>Channels</h1>
 			<p id="channels"></p>
 			<h1>Aggregates</h1>
@@ -68,5 +81,17 @@
 		<p><a onclick="document.getElementById('auth-link-popup').style.display='none';" href="" id="auth-link" target="_blank"></a></p>
 	</div>
 	<div id="track-info-popup" style="display:none"></div>
+	<div id="lockout" style="display:none">
+		<div class="spacer">&nbsp;</div>
+		<div class="center">
+			<div class="spacer">&nbsp;</div>
+			<div>
+				<p>user has been locked out</p>
+				<p><a href="" onclick="event.preventDefault(); userStatus.setLockout(false);">click here to unlock</a></p>
+			</div>
+			<div class="spacer">&nbsp;</div>
+		</div>
+		<div class="spacer">&nbsp;</div>
+	</div>
 </body>
 </html>

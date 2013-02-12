@@ -91,7 +91,7 @@ class Device(object):
 		self._channel = None
 
 	def update(self, state, reactor):
-		hasUsers = False if self.aggregate is None else bool(self.aggregate.users)
+		hasUsers = False if self.aggregate is None else any(not user.lockout for user in self.aggregate.users)
 		paused = any(delegate.paused for delegate in self.delegates) or not hasUsers
 		if paused != self._paused:
 			for ms in self.mediaStreams:
@@ -236,6 +236,8 @@ class User(_Session):
 		self.authorized = bool(set(roles) & set(["_admin", "imes_user"]) and self.authToken)
 		aggregateName = imes.get("aggregate", None)
 		self.aggregate = None
+		self.lockout = imes.get("lockout", False)
+		self.session_timeout = imes.get("session_timeout")
 		self._initializing = True
 		try:
 			state.setUserAggregate(self, aggregateName)
@@ -245,6 +247,36 @@ class User(_Session):
 	@property
 	def key(self):
 		return u"org.couchdb.user:" + self.name
+
+	def setLockout(self, value, state):
+		assert value in (False, True)
+		user = state.userDb[self.key]
+		imes = user.setdefault("imes", {})
+		if imes.get("lockout", False) != value:
+			if not value:
+				imes.pop("lockout")
+			else:
+				imes["lockout"] = value
+			state.userDb[self.key] = user
+		if self.lockout != value:
+			self.lockout = value
+			if self.aggregate is not None:
+				for device in self.aggregate.devices:
+					device.update(state, state.reactor)
+
+	def setSessionTimeout(self, value, state):
+		assert value is None or isinstance(value, int) and 10 <= value <= 86400
+		user = state.userDb[self.key]
+		imes = user.setdefault("imes", {})
+		if imes.get("session_timeout") != value:
+			if value is None:
+				imes.pop("session_timeout")
+			else:
+				imes["session_timeout"] = value
+			state.userDb[self.key] = user
+		if self.session_timeout != value:
+			self.session_timeout = value
+			self.refresh(state)
 
 	def save(self, state):
 		if self._initializing:
@@ -257,7 +289,7 @@ class User(_Session):
 			state.userDb[self.key] = user
 
 	def refresh(self, state):
-		super(User, self).refresh()
+		super(User, self).refresh(self.session_timeout)
 		state._users[self.name] = state._users.pop(self.name)
 
 	def discard(self, state):
@@ -569,6 +601,9 @@ class State(object):
 		result = {}
 		aggregate = user.aggregate
 		result["devices"] = {}
+		result["lockout"] = user.lockout
+		result["session_timeout"] = user.default_timeout if user.session_timeout is None else user.session_timeout
+		result["session_timeout_default"] = user.session_timeout is None
 		if aggregate is None:
 			result["aggregate"] = None
 			channel = None
