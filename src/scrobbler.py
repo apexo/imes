@@ -219,7 +219,9 @@ class Scrobbler(object):
 		try:
 			doc = request.execute()
 		except pylast.WSError as e:
-			if int(e.status) == pylast.STATUS_TOKEN_UNAUTHORIZED:
+			if int(e.status) == pylast.STATUS_TOKEN_EXIRED:
+				return "error:token is expired, remove and re-start"
+			elif int(e.status) == pylast.STATUS_TOKEN_UNAUTHORIZED:
 				return "error:not authorized"
 			raise
 		result = doc.getElementsByTagName('key')[0].firstChild.data

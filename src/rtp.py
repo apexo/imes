@@ -144,7 +144,7 @@ class Connection(object):
 			if isinstance(response, Response):
 				response = response.assemble()
 			if isinstance(response, Exception):
-				resp = Respones("HTTP/1.1")
+				resp = Response("HTTP/1.1")
 				resp.setResponse(500, "Internal Server Error")
 				resp.setHeader(CTYPE, "text/plain")
 				resp.setHeader("Connection", "close")
