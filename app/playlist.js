@@ -386,11 +386,11 @@ Playlist.prototype.fetchSome = function() {
 	if (this.state !== "ready") {
 		return;
 	}
-	if (this.forwardState === "paused" && isVisible(this.forwardPlaceHolder, this.scrollParent)) {
+	if (this.forwardState === "paused" && isVisible2(this.forwardPlaceHolder)) {
 		this.forwardState = "loading";
 		this.forward.fetch(this.addForward.bind(this), 10);
 	}
-	if (this.backwardState === "paused" && isVisible(this.backwardPlaceHolder, this.scrollParent)) {
+	if (this.backwardState === "paused" && isVisible2(this.backwardPlaceHolder)) {
 		this.backwardState = "loading";
 		this.backward.fetch(this.addBackward.bind(this), 10);
 	}

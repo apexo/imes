@@ -177,7 +177,7 @@ Search.prototype.viewCb = function(ids, done) {
 	if (done) {
 		this.target.removeChild(this.placeHolder);
 		this.state = "done";
-	} else if (isVisible(this.placeHolder, this.scrollParent)) {
+	} else if (isVisible2(this.placeHolder)) {
 		this.view.fetch(this.viewCb.bind(this), this.pageSize);
 	} else {
 		this.state = "paused";
@@ -186,7 +186,7 @@ Search.prototype.viewCb = function(ids, done) {
 
 Search.prototype.fetchSome = function() {
 	if (this.view && this.state === "paused") {
-		if (isVisible(this.placeHolder, this.scrollParent)) {
+		if (isVisible2(this.placeHolder)) {
 			this.state = "loading";
 			this.view.fetch(this.viewCb.bind(this), this.pageSize);
 		}

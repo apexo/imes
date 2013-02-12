@@ -515,15 +515,22 @@ function updateNowPlaying(s) {
 	});
 }
 
-function isVisible(element, within) {
-	if (within) {
-		if (element.offsetTop + element.clientHeight - within.scrollTop <= 0) {
-			return false;
-		}
-		if (element.offsetTop - within.scrollTop >= within.parentElement.clientHeight) {
-			return false;
-		}
+function isVisible2(element) {
+	var top = element.offsetTop;
+	for (var el = element.offsetParent; el; el = el.offsetParent) {
+		top += el.offsetTop;
 	}
+	for (var el = element.parentElement; el; el = el.parentElement) {
+		top -= el.scrollTop;
+	}
+	if ((top + element.clientHeight <= 0) || (top >= document.body.parentElement.clientHeight)) {
+		return false;
+	}
+
+	return isVisible(element);
+}
+
+function isVisible(element) {
 	if (element.style.display === "none") {
 		return false;
 	}
