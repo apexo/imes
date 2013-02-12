@@ -40,7 +40,8 @@ var AJAX_GET_DEFAULT_CONFIG = {
 	"error": _ajax_retry,
 	"jsonResponse": true,
 	"headers": {},
-	"retryDelay": 10000
+	"retryDelay": 10000,
+	"timeout": 20000
 }
 
 var AJAX_POST_DEFAULT_CONFIG = {
@@ -51,7 +52,8 @@ var AJAX_POST_DEFAULT_CONFIG = {
 	"headers": {
 		"Content-Type": "application/json"
 	},
-	"retryDelay": 10000
+	"retryDelay": 10000,
+	"timeout": 20000
 }
 
 function apply_defaults(defaults, config) {
@@ -92,7 +94,11 @@ function _ajax_common(url, rawData, cb, config) {
 				alert("aborted with readyState != 4: " + xhr);
 			}
 			return;
-		} else if (xhr.aborted) {
+		}
+		if (xhr._timeout !== null) {
+			clearTimeout(xhr._timeout);
+		}
+		if (xhr.aborted) {
 			return;
 		} else if (xhr.status === 404) {
 			cb(null);
@@ -124,6 +130,21 @@ function _ajax_common(url, rawData, cb, config) {
 		config._origXhr = xhr;
 	} else {
 		config._origXhr._retry = xhr;
+	}
+	if (config.timeout) {
+		xhr._timeout = setTimeout(function() {
+			if (xhr.aborted || xhr.readyState === 4) {
+				console.log("XHR already aborted / done when timeout hit", xhr.aborted, xhr.readyState);
+				return;
+			}
+			console.log("timeout on", xhr);
+			xhr._timeout = null,
+			ajax_abort(xhr);
+			xhr.aborted = false;
+			config.error(url, config, xhr);
+		}, config.timeout);
+	} else {
+		xhr._timeout = null;
 	}
 	return xhr;
 }
@@ -572,7 +593,7 @@ Subscription.prototype.poll = function() {
 		throw ["illegal state (poll)", this.state];
 	}
 	this.state = "waiting";
-	this.xhr = ajax_get(this.url + "&since=" + this.seq + this.getArguments(), this.onChange.bind(this), this.onChangeError.bind(this));
+	this.xhr = ajax_get(this.url + "&since=" + this.seq + this.getArguments(), this.onChange.bind(this), {timeout: 120000});
 }
 
 
