@@ -36,7 +36,15 @@ function displayTrackInfo(fid, event) {
 		return result;
 	}
 	function showTrackInfoPopup(info) {
-		var el = event.target, x = event.offsetX, y = event.offsetY - document.body.scrollTop;
+		var el = event.target, x, y;
+		if (event.offsetX !== undefined && event.offsetY !== undefined) {
+			x = event.offsetX;
+			y = event.offsetY - (document.body.scrollTop + document.body.parentElement.scrollTop);
+		} else {
+			x = event.layerX;
+			y = event.layerY - (document.body.scrollTop + document.body.parentElement.scrollTop);
+			el = el.offsetParent;
+		}
 		while (el && el !== document.body) {
 			x += el.offsetLeft;
 			y += el.offsetTop;
