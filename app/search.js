@@ -109,6 +109,7 @@ Search.prototype.add = function(info) {
 
 		if (key) {
 			this.albumCache[key] = {track: track, info: info, container: null}
+			track.dataset.key = key;
 		}
 		this.target.insertBefore(track, this.state === "done" ? null : this.placeHolder);
 		return;

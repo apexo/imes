@@ -394,6 +394,9 @@ function albumKey(i) {
 function deleteTrack(track, albumCache) {
 	if (track.classList.contains("single-track")) {
 		track.parentElement.removeChild(track);
+		if (albumCache && track.dataset.key) {
+			delete albumCache[albumContainer.dataset.key];
+		}
 	} else {
 		var tracklist = track.parentElement;
 		tracklist.removeChild(track);
