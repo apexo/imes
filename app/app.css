@@ -6,14 +6,14 @@
 .album-track {
 	padding:2px;
 	padding-left:2em;
-	background-color:#ddf;
+	background-color:#cdf;
 	background-image: -webkit-linear-gradient(top, #cdf, #def);
 	background-image: -moz-linear-gradient(top, #cdf, #def);
 	position: relative;
 }
 .album-label, .single-track {
 	padding:2px;
-	background-color:#ddf;
+	background-color:#cdf;
 	line-height:150%;
 	padding-left: 8px;
 	background-image: -webkit-linear-gradient(top, #abe, #cdf);
@@ -38,7 +38,7 @@
 }
 .album {
 	margin:2px;
-	background-color: #ddf;
+	background-color: #cdf;
 }
 .currently-playing {
 	font-weight: bold;
