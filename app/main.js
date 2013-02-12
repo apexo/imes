@@ -45,70 +45,74 @@ function displayTrackInfo(fid, event) {
 
 		target.innerHTML = "";
 
-		target.appendChild(labeledValue("path", info.path));
 		target.appendChild(labeledValue("id", info._id));
-		target.appendChild(labeledValue("size", info.size));
-		target.appendChild(labeledValue("mtime", info.mtime));
-		if (info.info.length) {
-			target.appendChild(labeledValue("length", info.info.length + ""));
-		}
-		if (info.discnumber && info.totaldiscs) {
-			target.appendChild(labeledValue("disc number", info.discnumber + " / " + info.totaldiscs));
-		} else if (info.discnumber) {
-			target.appendChild(labeledValue("disc number", info.discnumber));
-		}
-		for (var i = 0; info.album && i < info.album.length; i++) {
-			target.appendChild(labeledValue("album", info.album[i]));
-		}
-		if (info.tracknumber && info.totaltracks) {
-			target.appendChild(labeledValue("track number", info.tracknumber + " / " + info.totaltracks));
-		} else if (info.tracknumber) {
-			target.appendChild(labeledValue("track number", info.tracknumber));
-		}
-		for (var i = 0; info.artist && i < info.artist.length; i++) {
-			target.appendChild(labeledValue("artist", info.artist[i]));
-		}
-		for (var i = 0; info.title && i < info.title.length; i++) {
-			target.appendChild(labeledValue("title", info.title[i]));
-		}
-		for (var i = 0; info.musicbrainz_albumartistid && i < info.musicbrainz_albumartistid.length; i++) {
-			target.appendChild(labeledLink("musicbrainz album artist ID",
-				info.musicbrainz_albumartistid[i],
-				"http://musicbrainz.org/artist/" + info.musicbrainz_albumartistid[i]
-			));
-		}
-		for (var i = 0; info.musicbrainz_albumid && i < info.musicbrainz_albumid.length; i++) {
-			target.appendChild(labeledLink("musicbrainz album ID",
-				info.musicbrainz_albumid[i],
-				"http://musicbrainz.org/release/" + info.musicbrainz_albumid[i]
-			));
-		}
-		for (var i = 0; info.musicbrainz_artistid && i < info.musicbrainz_artistid.length; i++) {
-			target.appendChild(labeledLink("musicbrainz artist ID",
-				info.musicbrainz_artistid[i],
-				"http://musicbrainz.org/artist/" + info.musicbrainz_artistid[i]
-			));
-		}
-		for (var i = 0; info.musicbrainz_trackid && i < info.musicbrainz_trackid.length; i++) {
-			target.appendChild(labeledLink("musicbrainz track ID",
-				info.musicbrainz_trackid[i],
-				"http://musicbrainz.org/recording/" + info.musicbrainz_trackid[i]
-			));
-		}
-		for (var i = 0; info.genre && i < info.genre.length; i++) {
-			target.appendChild(labeledValue("genre", info.genre[i]));
-		}
-		if (info.replaygain_track_gain) {
-			target.appendChild(labeledValue("track gain", info.replaygain_track_gain));
-		}
-		if (info.replaygain_track_peak) {
-			target.appendChild(labeledValue("track peak", info.replaygain_track_peak));
-		}
-		if (info.replaygain_album_gain) {
-			target.appendChild(labeledValue("album gain", info.replaygain_album_gain));
-		}
-		if (info.replaygain_album_peak) {
-			target.appendChild(labeledValue("album peak", info.replaygain_album_peak));
+		if (info._deleted) {
+			target.appendChild(document.createTextNode("deleted"));
+		} else {
+			target.appendChild(labeledValue("path", info.path));
+			target.appendChild(labeledValue("size", info.size));
+			target.appendChild(labeledValue("mtime", info.mtime));
+			if (info.info.length) {
+				target.appendChild(labeledValue("length", info.info.length + ""));
+			}
+			if (info.discnumber && info.totaldiscs) {
+				target.appendChild(labeledValue("disc number", info.discnumber + " / " + info.totaldiscs));
+			} else if (info.discnumber) {
+				target.appendChild(labeledValue("disc number", info.discnumber));
+			}
+			for (var i = 0; info.album && i < info.album.length; i++) {
+				target.appendChild(labeledValue("album", info.album[i]));
+			}
+			if (info.tracknumber && info.totaltracks) {
+				target.appendChild(labeledValue("track number", info.tracknumber + " / " + info.totaltracks));
+			} else if (info.tracknumber) {
+				target.appendChild(labeledValue("track number", info.tracknumber));
+			}
+			for (var i = 0; info.artist && i < info.artist.length; i++) {
+				target.appendChild(labeledValue("artist", info.artist[i]));
+			}
+			for (var i = 0; info.title && i < info.title.length; i++) {
+				target.appendChild(labeledValue("title", info.title[i]));
+			}
+			for (var i = 0; info.musicbrainz_albumartistid && i < info.musicbrainz_albumartistid.length; i++) {
+				target.appendChild(labeledLink("musicbrainz album artist ID",
+					info.musicbrainz_albumartistid[i],
+					"http://musicbrainz.org/artist/" + info.musicbrainz_albumartistid[i]
+				));
+			}
+			for (var i = 0; info.musicbrainz_albumid && i < info.musicbrainz_albumid.length; i++) {
+				target.appendChild(labeledLink("musicbrainz album ID",
+					info.musicbrainz_albumid[i],
+					"http://musicbrainz.org/release/" + info.musicbrainz_albumid[i]
+				));
+			}
+			for (var i = 0; info.musicbrainz_artistid && i < info.musicbrainz_artistid.length; i++) {
+				target.appendChild(labeledLink("musicbrainz artist ID",
+					info.musicbrainz_artistid[i],
+					"http://musicbrainz.org/artist/" + info.musicbrainz_artistid[i]
+				));
+			}
+			for (var i = 0; info.musicbrainz_trackid && i < info.musicbrainz_trackid.length; i++) {
+				target.appendChild(labeledLink("musicbrainz track ID",
+					info.musicbrainz_trackid[i],
+					"http://musicbrainz.org/recording/" + info.musicbrainz_trackid[i]
+				));
+			}
+			for (var i = 0; info.genre && i < info.genre.length; i++) {
+				target.appendChild(labeledValue("genre", info.genre[i]));
+			}
+			if (info.replaygain_track_gain) {
+				target.appendChild(labeledValue("track gain", info.replaygain_track_gain));
+			}
+			if (info.replaygain_track_peak) {
+				target.appendChild(labeledValue("track peak", info.replaygain_track_peak));
+			}
+			if (info.replaygain_album_gain) {
+				target.appendChild(labeledValue("album gain", info.replaygain_album_gain));
+			}
+			if (info.replaygain_album_peak) {
+				target.appendChild(labeledValue("album peak", info.replaygain_album_peak));
+			}
 		}
 
 /* {
