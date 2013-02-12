@@ -5,7 +5,7 @@
 }
 .album-track {
 	padding:2px;
-	padding-left:2em;
+	padding-left:1em;
 	background-color:#cdf;
 	background-image: -webkit-linear-gradient(top, #cdf, #def);
 	background-image: -moz-linear-gradient(top, #cdf, #def);
