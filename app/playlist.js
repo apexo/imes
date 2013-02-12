@@ -379,6 +379,7 @@ Playlist.prototype.addBackward = function(items, done) {
 	}
 	var newHeight = this.target.clientHeight;
 	this.scrollParent.scrollTop += newHeight - oldHeight;
+	this.scrollParent.parentElement.scrollTop += newHeight - oldHeight;
 	this.fetchSome();
 }
 
