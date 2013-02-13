@@ -128,12 +128,15 @@ class Channel(object):
 		self.autoPaused = True
 		self._think = False
 		self.queue = collections.deque(maxlen=int((self.jitterBuffer*1225+31+32)/32))
+		self.hasHttpStreams = False
+		self.allHttpStreamsArePaused = False
 
 	def getMasterApi(self):
 		return {
 			"addMediaStream": self.addMediaStream,
 			"removeMediaStream": self.removeMediaStream,
 			"pauseMediaStream": self.pauseMediaStream,
+			"setHasHttpStreams": self.setHasHttpStreams,
 		}
 
 	def getWorkerApi(self):
@@ -192,6 +195,11 @@ class Channel(object):
 	def destroy(self):
 		raise SystemExit()
 
+	def setHasHttpStreams(self, value, allPaused):
+		self._think = True
+		self.hasHttpStreams = value
+		self.allHttpStreamsArePaused = allPaused
+
 	def addMediaStream(self, ssrc, *args):
 		self._think = True
 		assert ssrc not in self.mediaStreams
@@ -204,7 +212,7 @@ class Channel(object):
 		result = None if ms is None else ms.export()
 		if callback is not None:
 			callback(result)
-		if not self.mediaStreams:
+		if not self.hasHttpStreams and not self.mediaStreams:
 			self.worker.destroy()
 			self.destroy()
 
@@ -224,13 +232,13 @@ class Channel(object):
 			return
 		self._think = False
 		if self.autoPaused:
-			if not all(ms.shouldBePaused for ms in self.mediaStreams.itervalues()):
+			if (self.hasHttpStreams and not self.allHttpStreamsArePaused) or not all(ms.shouldBePaused for ms in self.mediaStreams.itervalues()):
 				for ms in self.mediaStreams.itervalues():
 					ms.isPaused = ms.shouldBePaused
 				self.autoPaused = False
 				self.worker.setAutoPaused(False)
 			return
-		if all(ms.shouldBePaused for ms in self.mediaStreams.itervalues()):
+		if (not self.hasHttpStreams or self.allHttpStreamsArePaused) and all(ms.shouldBePaused for ms in self.mediaStreams.itervalues()):
 			self.autoPaused = None
 			self.worker.setAutoPaused(True, callback=self._autoPausedNow)
 		else:
@@ -261,6 +269,8 @@ class Channel(object):
 			payload = self.queue.popleft() if self.queue else SILENCE
 			for ms in self.mediaStreams.itervalues():
 				ms.send(SILENCE if ms.isPaused else payload)
+			if self.hasHttpStreams:
+				self.master.push(payload)
 			self.playClock.next()
 			pc = self.playClock.value
 

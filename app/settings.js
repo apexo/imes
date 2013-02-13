@@ -212,9 +212,12 @@ Settings.prototype.categories = {
 		"target": "devices",
 		"format": function(item, target, data) {
 			var url = RTSP_BACKEND + "device/" + item + "/" + data.authToken;
+			var url2 = DELEGATE_BACKEND + "device/" + item + "/" + data.authToken + "/stream.mp3";
 			var ul = document.createElement("ul");
 			var li = ul.appendChild(document.createElement("li"));
 			li.appendChild(document.createTextNode(url));
+			li = ul.appendChild(document.createElement("li"));
+			li.appendChild(document.createTextNode(url2));
 			li = ul.appendChild(document.createElement("li"));
 			var select = li.appendChild(document.createElement("select"));
 			this.createLink(li, "set", this.setDeviceAggregate.bind(this, item, select));

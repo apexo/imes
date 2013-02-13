@@ -357,6 +357,17 @@ class Connection(object):
 		else:
 			raise Exception("not authorized")
 
+	def _doHttpDevice(self, request, uri, data, body, device, cmd, args, callback):
+		if request != "GET" or cmd != "stream.mp3" or args:
+			raise Exception("not authorized")
+		response = Response("HTTP/1.1")
+		response.setHeader("Content-Type", "audio/x-mpeg") # TODO: correct?
+		response.setHeader("Connection", "close")
+		self.reactor.unregister(self.sock.fileno())
+		self.sock.send(response.assemble())
+		self.sock.shutdown(socket.SHUT_RD)
+		self.handler.state.addDeviceHttpStream(device, self.sock)
+
 	def _doHttp(self, request, uri, path, data, body, callback):
 		if request not in ("GET", "POST", "OPTIONS", "PUT", "DELETE"):
 			raise Exception("not authorized")
@@ -370,6 +381,9 @@ class Connection(object):
 			if not target.authorized:
 				raise Exception("not authorized")
 			p = self._doHttpUser
+		elif path[0] == "device":
+			target = self.handler.state.getDevice(path[1])
+			p = self._doHttpDevice
 		else:
 			raise Exception("not authorized")
 		if path[2] != target.authToken:

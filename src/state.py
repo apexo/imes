@@ -1,9 +1,11 @@
 import signal
-import channel
 import os
 import struct
+import socket
+import errno
 from collections import OrderedDict
 
+import channel
 from reactor import clock
 from ipc import Async
 
@@ -86,6 +88,7 @@ class Device(object):
 		self.delegates = set()
 
 		self.mediaStreams = set()
+		self.httpStreams = set()
 
 		self._paused = False
 		self._channel = None
@@ -117,8 +120,28 @@ class _Session(object):
 	def refresh(self, timeout=None):
 		self.expires = clock() + (self.default_timeout if timeout is None else timeout)
 
+class HttpMediaStream(object):
+	httpStream = True
+
+	def __init__(self, device, sock):
+		self.device = device
+		self.sock = sock
+		self.channel = None
+		self.paused = False
+
+	def discard(self, state):
+		self.device.mediaStreams.remove(self)
+		self.device = None
+		if self.channel is not None:
+			self.channel.httpStreams.remove(self)
+			if not self.channel.httpStreams:
+				self.channel.channel.setHasHttpStreams(False, True)
+			self.channel = None
+
 class MediaStream(_Session):
 	default_timeout = RTP_TIMEOUT
+
+	httpStream = False
 
 	def __init__(self, ssrc, session, device):
 		super(MediaStream, self).__init__()
@@ -174,6 +197,7 @@ class Channel(object):
 		self.name = name
 		self.aggregates = set()
 
+		self.httpStreams = set()
 		self.running = False
 		self.channel = None
 		self.worker = None
@@ -439,8 +463,19 @@ class State(object):
 		else:
 			print "TODO: cannot change paused state of offline channel"
 
-	def getChannelApi(self, channel):
-		return {}
+	def getChannelApi(self, channel_):
+		def push(data):
+			for ms in list(channel_.httpStreams):
+				try:
+					ms.sock.send(channel.SILENCE if ms.paused else data)
+				except socket.error as e:
+					if e.errno == errno.EPIPE or e.errno == errno.ECONNRESET:
+						ms.discard(self)
+					elif e.errno == errno.EAGAIN:
+						return
+					else:
+						raise
+		return {"push": push}
 
 	def getWorkerApi(self, channel):
 		def scrobble(info):
@@ -571,7 +606,10 @@ class State(object):
 			return
 		mediaStream.paused = paused
 		if mediaStream.channel is not None:
-			mediaStream.channel.channel.pauseMediaStream(mediaStream.ssrc, paused)
+			if mediaStream.httpStream:
+				mediaStream.channel.channel.setHasHttpStreams(True, all(ms.paused for ms in mediaStream.channel.httpStreams))
+			else:
+				mediaStream.channel.channel.pauseMediaStream(mediaStream.ssrc, paused)
 
 	def getUser(self, name):
 		if name in self._users:
@@ -587,10 +625,20 @@ class State(object):
 			if channel is not None:
 				if not channel.running:
 					channel.start(self.rtpSocket, self.db, self.reactor, self.getChannelApi(channel), self.getWorkerApi(channel))
-				channel.channel.addMediaStream(mediaStream.ssrc, mediaStream.session.rtpAddr, mediaStream.paused, *args)
+				if mediaStream.httpStream:
+					if not channel.httpStreams:
+						channel.channel.setHasHttpStreams(True, mediaStream.paused)
+					channel.httpStreams.add(mediaStream)
+				else:
+					channel.channel.addMediaStream(mediaStream.ssrc, mediaStream.session.rtpAddr, mediaStream.paused, *args)
 		if mediaStream.channel is channel:
 			pass
 		elif mediaStream.channel is None:
+			proceed(())
+		elif mediaStream.httpStream:
+			mediaStream.channel.httpStreams.remove(mediaStream)
+			if not mediaStream.channel.httpStreams:
+				mediaStream.channel.channel.setHasHttpStreams(False, True)
 			proceed(())
 		else:
 			oldChannel = mediaStream.channel
@@ -642,3 +690,11 @@ class State(object):
 			channel = aggregate.channel
 			if channel is not None and channel.worker is not None:
 				channel.worker.play(plid, idx, fid)
+
+	def addDeviceHttpStream(self, device, sock):
+		ms = HttpMediaStream(device, sock)
+		device.mediaStreams.add(ms)
+
+		self.setMediaStreamPaused(ms, device._paused)
+		self.setMediaStreamChannel(ms, device._channel)
+		device.update(self, self.reactor)
