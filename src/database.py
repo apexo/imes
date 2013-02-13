@@ -341,6 +341,17 @@ class Database(object):
 		f.__name__ = 'set_single_value_' + dstkey
 		return f
 
+	def m4a_rg(dstkey, suffix=""):
+		def f(dst, value):
+			v = value[0]
+			try:
+				float(v)
+			except ValueError:
+				print "invalid %s: %r" % (dstkey, value)
+			dst[dstkey] = v + suffix
+		f.__name__ = 'set_m4a_rg_' + dstkey
+		return f
+
 	def id3v2_numpair(dst1, dst2):
 		def f(dst, value):
 			a, slash, b = value.text[0].partition("/")
@@ -408,6 +419,10 @@ class Database(object):
 		'\xa9day': single_value('date'),
 		'\xa9gen': generic('genre'),
 		'disk': m4a_numpair('discnumber', 'totaldiscs'),
+		'----:com.apple.iTunes\x00:replaygain_album_gain\x00': m4a_rg('replaygain_album_gain', ' dB'),
+		'----:com.apple.iTunes\x00:replaygain_track_gain\x00': m4a_rg('replaygain_track_gain', ' dB'),
+		'----:com.apple.iTunes\x00:replaygain_album_peak\x00': m4a_rg('replaygain_album_peak'),
+		'----:com.apple.iTunes\x00:replaygain_track_peak\x00': m4a_rg('replaygain_track_peak'),
 		# covr
 	}
 
