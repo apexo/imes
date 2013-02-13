@@ -472,7 +472,7 @@ class State(object):
 					if e.errno == errno.EPIPE or e.errno == errno.ECONNRESET:
 						ms.discard(self)
 					elif e.errno == errno.EAGAIN:
-						return
+						pass
 					else:
 						raise
 		return {"push": push}
