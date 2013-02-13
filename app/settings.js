@@ -85,11 +85,21 @@ Settings.prototype.setChannelPaused = function(channel, paused, event) {
 	ajax_post(url, {"paused": paused});
 }
 
-Settings.prototype.createLink = function(target, text, handler) {
+Settings.prototype.createLink = function(target, text, handler, confirm_text) {
 	var a = target.appendChild(document.createElement("a"));
 	a.href = "";
 	a.appendChild(document.createTextNode(text));
-	a.addEventListener("click", handler, false);
+	a.addEventListener("click", function(event) {
+		if (confirm_text) {
+			if (confirm("Are you sure you want to " + confirm_text + "?")) {
+				return handler(event);
+			} else {
+				event.preventDefault();
+			}
+		} else {
+			return handler(event);
+		}
+	}, false);
 	return a;
 }
 
@@ -167,15 +177,10 @@ Settings.prototype.categories = {
 		"target": "channels",
 		"format": function(item, target, data) {
 			target.appendChild(document.createTextNode("; "));
-			var a = target.appendChild(document.createElement("a"));
-			a.appendChild(document.createTextNode("pause"));
-			a.href = "";
-			a.addEventListener("click", this.setChannelPaused.bind(this, item, true), false);
+			this.createLink(target, "pause", this.setChannelPaused.bind(this, item, true));
+
 			target.appendChild(document.createTextNode("; "));
-			var a = target.appendChild(document.createElement("a"));
-			a.appendChild(document.createTextNode("resume"));
-			a.href = "";
-			a.addEventListener("click", this.setChannelPaused.bind(this, item, false), false);
+			this.createLink(target, "resume", this.setChannelPaused.bind(this, item, false));
 		},
 		"trigger": "aggregate",
 		"initial": true
@@ -187,10 +192,7 @@ Settings.prototype.categories = {
 			var li = ul.appendChild(document.createElement("li"));
 			li.appendChild(document.createTextNode("channel "));
 			var select = li.appendChild(document.createElement("select"));
-			var a = li.appendChild(document.createElement("a"));
-			a.appendChild(document.createTextNode("set"));
-			a.href = "";
-			a.addEventListener("click", this.setAggregateChannel.bind(this, item, select), false);
+			this.createLink(li, "set", this.setAggregateChannel.bind(this, item, select));
 
 			var channels = [""].concat(this.lists.channel);
 			for (var i = 0; i < channels.length; i++) {
@@ -215,6 +217,8 @@ Settings.prototype.categories = {
 			li.appendChild(document.createTextNode(url));
 			li = ul.appendChild(document.createElement("li"));
 			var select = li.appendChild(document.createElement("select"));
+			this.createLink(li, "set", this.setDeviceAggregate.bind(this, item, select));
+
 			var aggregates = [""].concat(this.lists.aggregate);
 			for (var i = 0; i < aggregates.length; i++) {
 				var option = select.appendChild(document.createElement("option"));
@@ -224,10 +228,6 @@ Settings.prototype.categories = {
 					option.selected = true;
 				}
 			}
-			var a = li.appendChild(document.createElement("a"));
-			a.appendChild(document.createTextNode("set"));
-			a.href = "";
-			a.addEventListener("click", this.setDeviceAggregate.bind(this, item, select), false);
 			target.appendChild(ul);
 		},
 		"trigger": "delegate"
@@ -249,19 +249,13 @@ Settings.prototype.categories = {
 				}
 				var li = ul.appendChild(document.createElement("li"));
 				li.appendChild(document.createTextNode("device " + dev + "; "));
-				var a = li.appendChild(document.createElement("a"));
-				a.appendChild(document.createTextNode("remove"));
-				a.href = "";
-				a.addEventListener("click", this.setDelegateDevices.bind(this, item, rm), false);
+				this.createLink(li, "remove", this.setDelegateDevices.bind(this, item, rm));
 			}
 			if (otherDevices.length) {
 				var li = ul.appendChild(document.createElement("li"));
 				li.appendChild(document.createTextNode("device "));
 				var select = li.appendChild(document.createElement("select"));
-				var a = li.appendChild(document.createElement("a"));
-				a.appendChild(document.createTextNode("add"));
-				a.href = "";
-				a.addEventListener("click", this.addDelegateDevice.bind(this, item, data.devices, select), false);
+				this.createLink(li, "add", this.addDelegateDevice.bind(this, item, data.devices, select));
 				for (var i = 0; i < otherDevices.length; i++) {
 					var option = select.appendChild(document.createElement("option"));
 					option.appendChild(document.createTextNode(otherDevices[i]));
@@ -314,11 +308,7 @@ Settings.prototype.removeElement = function(category, item, event) {
 
 Settings.prototype.updateItem = function(category, item, target, result) {
 	target.appendChild(document.createTextNode(": "));
-	var remove = document.createElement("a");
-	remove.href = "";
-	remove.addEventListener("click", this.removeElement.bind(this, category, item), false);
-	remove.appendChild(document.createTextNode("delete"));
-	target.appendChild(remove);
+	this.createLink(target, "delete", this.removeElement.bind(this, category, item), "delete " + category + " " + item);
 	this.categories[category].format.call(this, item, target, result);
 }
 
@@ -374,12 +364,8 @@ Settings.prototype.updateList = function(category, items, target) {
 	}
 
 	if (this.categories[category].create !== false) {
-		var create = document.createElement("a");
-		create.href = "";
-		create.addEventListener("click", this.createElement.bind(this, category), false);
-		create.appendChild(document.createTextNode("create"));
 		var li = document.createElement("li");
-		li.appendChild(create);
+		this.createLink(li, "create", this.createElement.bind(this, category));
 		ul.appendChild(li);
 	}
 
