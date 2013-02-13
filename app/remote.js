@@ -119,7 +119,13 @@ function _ajax_common(url, rawData, cb, config) {
 				response = xhr.responseText;
 			}
 			if (cb) {
-				cb(response);
+				try {
+					cb(response);
+				} catch (e) {
+					console.trace();
+					console.log("error processing response", response, "from", url);
+					throw e;
+				}
 			}
 		} else {
 			config.error(url, config, xhr);
