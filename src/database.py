@@ -423,6 +423,18 @@ class Database(object):
 		'----:com.apple.iTunes\x00:replaygain_track_gain\x00': m4a_rg('replaygain_track_gain', ' dB'),
 		'----:com.apple.iTunes\x00:replaygain_album_peak\x00': m4a_rg('replaygain_album_peak'),
 		'----:com.apple.iTunes\x00:replaygain_track_peak\x00': m4a_rg('replaygain_track_peak'),
+		'----:com.apple.iTunes:MusicBrainz Artist Id': generic('musicbrainz_artistid'),
+		'----:com.apple.iTunes:MusicBrainz Track Id': generic('musicbrainz_trackid'),
+		'----:com.apple.iTunes:MusicBrainz Album Id': generic('musicbrainz_albumid'),
+		'----:com.apple.iTunes:MusicBrainz Album Artist Id': generic('musicbrainz_albumartistid'),
+		'----:com.apple.iTunes:MusicBrainz Disc Id': generic('musicbrainz_discid'),
+		'soaa': generic('albumartistsort'),
+		'soar': generic('artistsort'),
+		'soal': generic('albumsort'),
+		'sonm': generic('titlesort'),
+		'soco': generic('composersort'),
+		'aART': generic('albumartist'),
+		'\xa9wrt': generic('composer'),
 		# covr
 	}
 
@@ -626,6 +638,17 @@ class Database(object):
 		doc["container"] = "mpeg"
 		doc["codec"] = "mp4"
 		doc["tags"] = ["id4"]
+
+		pictures = []
+
+		for p in m.get("covr", []):
+			key, formats = self.updatePicture(str(p))
+			if key is None:
+				print "broken picture in", path
+				continue
+			pictures.append({"type": 3, "desc": u"", "key": key, "formats": formats})
+		doc["pictures"] = pictures
+
 		# TODO: covr
 		# TODO: APEv2 (???)
 		return doc
