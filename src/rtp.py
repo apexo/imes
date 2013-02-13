@@ -365,7 +365,7 @@ class Connection(object):
 		if request != "GET" or cmd != "stream.mp3" or args:
 			raise Exception("not authorized")
 		response = Response("HTTP/1.1")
-		response.setHeader("Content-Type", "audio/x-mpeg") # TODO: correct?
+		response.setHeader("Content-Type", "audio/mpeg") # TODO: correct?
 		response.setHeader("Connection", "close")
 		self.reactor.unregister(self.sock.fileno())
 		self.sock.send(response.assemble())
