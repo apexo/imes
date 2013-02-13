@@ -142,7 +142,10 @@ class Connection(object):
 			if self.sock is None:
 				return
 			if isinstance(response, Response):
+				doClose = response.headers.get("Connection") == "close"
 				response = response.assemble()
+			else:
+				doClose = False
 			if isinstance(response, Exception):
 				resp = Response("HTTP/1.1")
 				resp.setResponse(500, "Internal Server Error")
@@ -150,13 +153,14 @@ class Connection(object):
 				resp.setHeader("Connection", "close")
 				resp.setBody(str(response))
 				self.sock.send(resp.assemble())
+				doClose = True
 				self.close()
 			else:
 				self.sock.send(response)
 				self.queue.pop(0)
-				if data.get("connection") == "close":
+				if data.get("connection") == "close" or doClose:
 					self.close()
-				if self.queue:
+				elif self.queue:
 					self.reactor.defer(self._processNext)
 
 		try:
