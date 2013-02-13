@@ -71,6 +71,8 @@ function Playlist(target, subscription, navigation, playlistSelector, userStatus
 
 	this.state = "pending";
 
+	this.resize();
+
 	if (this.subscription.ready) {
 		this.subscriptionReady();
 	}
@@ -271,6 +273,7 @@ Playlist.prototype.remove = function(plid) {
 	for (var i = 0; i < items.length; i++) {
 		this.playlist = this.playlist.remove(items[i].dataset.key);
 		deleteTrack(items[i]);
+		this.fetchSome();
 	}
 }
 
@@ -283,6 +286,7 @@ Playlist.prototype.onupdate = function(doc) {
 			if (entry.key === key) {
 				this.playlist = this.playlist.remove(entry.key);
 				deleteTrack(entry.value);
+				this.fetchSome();
 			}
 		} else {
 			if (!this.playlist.count || key > this.playlist.max().key) {
