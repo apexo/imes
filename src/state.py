@@ -128,6 +128,7 @@ class HttpMediaStream(object):
 		self.sock = sock
 		self.channel = None
 		self.paused = False
+		self.q = 0
 
 	def discard(self, state):
 		self.device.mediaStreams.remove(self)
@@ -137,6 +138,17 @@ class HttpMediaStream(object):
 			if not self.channel.httpStreams:
 				self.channel.channel.setHasHttpStreams(False, True)
 			self.channel = None
+		try:
+			self.sock.shutdown(socket.SHUT_RDWR)
+		except socket.error:
+			traceback.print_exc()
+		self.sock.close()
+		self.sock = None
+
+	def __str__(self):
+		cn = "[None]" if self.channel is None else self.channel.name
+		return "<HttpMediaStream, device %s, channel %s, peer %s, q %r>" % (self.device.name, cn, self.sock.getpeername(), self.q)
+
 
 class MediaStream(_Session):
 	default_timeout = RTP_TIMEOUT
@@ -468,11 +480,15 @@ class State(object):
 			for ms in list(channel_.httpStreams):
 				try:
 					ms.sock.send(channel.SILENCE if ms.paused else data)
+					ms.q -= (ms.q + 3) // 4
 				except socket.error as e:
 					if e.errno == errno.EPIPE or e.errno == errno.ECONNRESET:
 						ms.discard(self)
 					elif e.errno == errno.EAGAIN:
-						pass
+						ms.q += 1
+						if ms.q == 192: # 192 MPEG 1 Layer 3 frames =~ 5s
+							print "discarding blocked http stream %s" % (ms,)
+							ms.discard(self)
 					else:
 						raise
 		return {"push": push}
@@ -692,6 +708,9 @@ class State(object):
 				channel.worker.play(plid, idx, fid)
 
 	def addDeviceHttpStream(self, device, sock):
+		sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 16384)
+		sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_WINDOW_CLAMP, 16384)
+
 		ms = HttpMediaStream(device, sock)
 		device.mediaStreams.add(ms)
 
