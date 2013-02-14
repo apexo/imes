@@ -218,6 +218,10 @@ Settings.prototype.categories = {
 			li.appendChild(document.createTextNode(url));
 			li = ul.appendChild(document.createElement("li"));
 			li.appendChild(document.createTextNode(url2));
+			li.appendChild(document.createTextNode("; "));
+			var open = li.appendChild(document.createElement("a"));
+			open.target = "_blank";
+			open.href = url2;
 			li = ul.appendChild(document.createElement("li"));
 			var select = li.appendChild(document.createElement("select"));
 			this.createLink(li, "set", this.setDeviceAggregate.bind(this, item, select));
