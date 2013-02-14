@@ -1,5 +1,4 @@
 var DOMNotification = (function() {
-if (window.Notification) {
 	function DOMNotification() {
 		this.onready = new Event();
 		this.permission = "default";
@@ -66,8 +65,70 @@ if (window.Notification) {
 		}.bind(this), this.timeout);
 	}
 
-	return DOMNotification;
-} else {
+
+	function WebkitNotification() {
+		this.onready = new Event();
+		this.permission = "default";
+		this.pending = false;
+		this.timeout = 5000;
+		this._nowPlaying = null;
+
+		// chrome actually seems to display only 32x32 :-(
+		this.iconWidth = 64;
+		this.iconHeight = 64;
+	}
+
+	WebkitNotification.prototype.query = function() {
+		var p = webkitNotifications.checkPermission();
+		return ["granted", "default", "denied"][p];
+	}
+
+	WebkitNotification.prototype.requestPermission = function() {
+		if (this.permission !== "default" || this.pending) {
+			return;
+		}
+		this.permission = this.query()
+		/*if (this.permission !== "default") {
+			this.requestPermissionCallback(this.permission);
+		}*/
+		this.pending = true;
+		webkitNotifications.requestPermission(this.requestPermissionCallback.bind(this));
+	}
+
+	WebkitNotification.prototype.requestPermissionCallback = function(value) {
+		var value = value || this.query();
+		this.pending = false;
+		this.permission = value;
+		if (value === "granted" || value === "denied") {
+			this.onready.fire(this, value);
+		}
+	}
+
+	WebkitNotification.prototype.nowPlaying = function(info) {
+		if (this._nowPlaying) {
+			this._nowPlaying.cancel();
+			this._nowPlaying = null;
+		}
+		if (!info) {
+			return;
+		}
+
+		var body = info.artist && info.artist.length ? info.artist[0] : "";
+		var title = info.title && info.title.length ? info.title[0] : "[Unknown Title]";
+		var cover = selectPicture(info, this.iconWidth, this.iconHeight, THUMB_TYPE);
+		var icon = cover ? window.location.protocol + "//" + window.location.host + cover.src : "";
+
+		var notification = webkitNotifications.createNotification(icon, title, body);
+		this._nowPlaying = notification;
+
+		setTimeout(function() {
+			if (this._nowPlaying === notification) {
+				this._nowPlaying.cancel();
+				this._nowPlaying = null;
+			}
+		}.bind(this), this.timeout);
+	}
+
 	function DOMNotificationUnsupported() {
 		this.onready = new Event();
 		this.permission = "unsupported";
@@ -80,6 +141,14 @@ if (window.Notification) {
 	DOMNotificationUnsupported.prototype.nowPlaying = function(info) {
 	}
 
-	return DOMNotificationUnsupported;
+
+if (window.webkitNotifications) {
+	return WebkitNotification;
 }
+
+if (window.Notification) {
+	return DOMNotification;
+}
+
+return DOMNotificationUnsupported;
 })();
