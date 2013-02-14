@@ -120,6 +120,8 @@ class _Session(object):
 	def refresh(self, timeout=None):
 		self.expires = clock() + (self.default_timeout if timeout is None else timeout)
 
+import traceback
+
 class HttpMediaStream(object):
 	httpStream = True
 
@@ -140,8 +142,9 @@ class HttpMediaStream(object):
 			self.channel = None
 		try:
 			self.sock.shutdown(socket.SHUT_RDWR)
-		except socket.error:
-			traceback.print_exc()
+		except socket.error as e:
+			if e.errno != errno.ENOTCONN:
+				traceback.print_exc()
 		self.sock.close()
 		self.sock = None
 
