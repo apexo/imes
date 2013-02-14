@@ -11,7 +11,6 @@ import json
 import traceback
 
 from fade import SoxDecoder
-from lame import Encoder
 from reactor import clock
 from state import State
 

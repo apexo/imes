@@ -1,7 +1,6 @@
 from cffi import FFI
 from fade import SoxDecoder, EOF, BUFFER_SIZE, SAMPLE_RATE, SAMPLE_TYPE, Stable, zeroer, Limiter, LookAhead, Blender, Joiner
 import numpy
-import threading
 
 # depends:
 # - debian:
@@ -285,7 +284,6 @@ int lame_close (lame_global_flags *);
 
 ffi = FFI()
 ffi.cdef(CDEF)
-#lib = ffi.dlopen("/usr/lib/x86_64-linux-gnu/libmp3lame.so.0")
 lib = ffi.verify("#include <lame/lame.h>", libraries=["mp3lame"])
 
 class Encoder(object):
@@ -359,129 +357,3 @@ class Encoder(object):
 				self.read = m
 				return m
 			n = min(len(self.samplesTemp), self.frameSize - self._j)
-
-class PlaylistHandler(object):
-	def __init__(self, src, playlist):
-		self.src = src
-		self.playlist = playlist
-		self.t1 = 44100 * 4
-		self.t2 = 44100 // 2
-
-		self.lock = threading.Lock()
-
-	def _preroll(self, d, info):
-		d.preroll()
-		with self.lock:
-			if info["tooLate"]:
-				print "preroll too late"
-				if self.src.src is zeroer:
-					print "already playing zeroes"
-					self.src.src = d
-				else:
-					print "just in time for blending", self.src.src
-					self.src.src = Blender(self.src.src, d, self.t2)
-			else:
-				print "preroll in time"
-				info["prerolled"] = d
-
-	def _makeDecoder(self):
-		def startBlending(la):
-			with self.lock:
-				info = la.info
-
-				if info["prerolled"] is None:
-					print "start blending, but preroll not finished"
-					info["tooLate"] = True
-					return Joiner(la, zeroer)
-
-				print "oh yeah"
-				return Blender(la, info["prerolled"], self.t2)
-
-		def enqueueNext(la):
-			with self.lock:
-				if not self.playlist:
-					return la
-				info = {"tooLate": False, "prerolled": None}
-
-				if la.remaining < self.t2:
-					print "prerolling, but it's too late already", la.remaining
-					info["tooLate"] = True
-					# too late for proper blending
-					result = Joiner(la, zeroer)
-				else:
-					print "prerolling!", la.remaining
-					la.limit = self.t2
-					la.callback = startBlending
-					la.info = info
-					result = la
-
-				t = threading.Thread(target=self._preroll, args=(self._makeDecoder(), info))
-				t.start()
-
-				return result
-
-		return LookAhead(Limiter(SoxDecoder(self.playlist.pop(0), 2), 44100*5), self.t1, 2, enqueueNext)
-
-	def _preroll2(self, d):
-		d.preroll()
-		with self.lock:
-			self.src.src = d
-
-	def _startPlaying(self):
-		with self.lock:
-			if not self.playlist:
-				return
-			d = self._makeDecoder()
-			t = threading.Thread(target=self._preroll2, args=(self._makeDecoder(),))
-			t.start()
-
-	def _startPlayingNow(self):
-		d = self._makeDecoder()
-		d.preroll()
-		self.src.src = d
-
-def play_next(src, playlist):
-	if not playlist:
-		return
-	def preroll(decoder):
-		decoder.preroll()
-	def theEndIsNear(la):
-		decoder = play_next(src, playlist)
-		
-	decoder = LookAhead(Limiter(SoxDecoder(playlist.pop(0), 2), 44100*5), 44100*2, 2, theEndIsNear)
-	
-
-def test():
-	playlist = [
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[01] She Is My Sin.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[02] The Kinslayer.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[03] Come Cover Me.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[04] Wanderlust.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[05] Two For Tragedy.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[06] Wishmaster.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[07] Bare Grace Misery.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[08] Crownless.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[09] Deep Silent Complete.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[10] Dead Boy's Poem.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[11] Fantasmic.mp3",
-		"/home/apexo/ext/media/Nightwish/Nightwish - Wishmaster/[12] Sleepwalker (Bonus).mp3",
-	]
-	src = Stable(zeroer)
-	p = PlaylistHandler(src, playlist)
-	p._startPlayingNow()
-
-	out = open("test.mp3", "wb")
-	#src = SoxDecoder("/home/apexo/ext/media/Mariah Carey - Without You.mp3", 2)
-	enc = Encoder(src)
-	temp = bytearray("\x00" * 2048)
-	view = memoryview(temp)
-	n = enc.read_into(view, 0, len(view))
-	while n:
-		#print n, repr(temp[:min(n, 120)])
-		out.write(view[:n])
-		n = enc.read_into(view, 0, len(view))
-	out.close()
-	return enc
-
-if __name__ == '__main__':
-	t = test()
