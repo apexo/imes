@@ -124,17 +124,15 @@ Search.prototype.add = function(info) {
 		this.idCache[cachedAlbum.info._id] = formatAlbumTrack(cachedAlbum.info, tracklist, 0, SearchResult);
 		this.target.removeChild(cachedAlbum.track);
 		cachedAlbum.track = cachedAlbum.info = null;
+		this.target.insertBefore(cachedAlbum.container, this.state === "done" ? null : this.placeHolder);
 
 		this.loadAlbum(key);
 	} else {
 		addCover(cachedAlbum.container, info);
-		this.target.removeChild(cachedAlbum.container);
 		tracklist = cachedAlbum.container.getElementsByClassName("album-tracklist")[0];
 	}
 
-
 	this.idCache[info._id] = formatAlbumTrack(info, tracklist, 0, SearchResult);
-	this.target.insertBefore(cachedAlbum.container, this.state === "done" ? null : this.placeHolder);
 }
 
 Search.prototype.loadAlbum = function(key) {
