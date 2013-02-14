@@ -1,9 +1,11 @@
-import pylast
 import time
+import random
+
+import pylast
 
 from reactor import clock
 
-SCROBBLING_DELAY = 1
+SCROBBLING_DELAY = 10
 SCROBBLING_LIMIT = 20
 
 STATUS_INTERNAL_ERROR = 16
@@ -175,7 +177,7 @@ class Scrobbler(object):
 	def _doCatchup(self, t):
 		self.scheduled = False
 		if self.pending:
-			userName = iter(self.pending).next()
+			userName = random.select(list(self.pending))
 			if self._doCatchupUser(userName):
 				self.pending.discard(userName)
 		if self.pending:
