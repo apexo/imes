@@ -119,6 +119,7 @@ var DOMNotification = (function() {
 		var icon = cover ? window.location.protocol + "//" + window.location.host + cover.src : "";
 
 		var notification = webkitNotifications.createNotification(icon, title, body);
+		notification.show();
 		this._nowPlaying = notification;
 
 		setTimeout(function() {
