@@ -149,7 +149,7 @@ h1 {
 .clear-left {
 	clear: left;
 }
-#lockout {
+#lockout, #help {
 	z-index: 3;
 	position: fixed;
 	left: 0px;
@@ -157,7 +157,7 @@ h1 {
 	top: 0px;
 	bottom: 0px;
 	background-color: black;
-	opacity: 0.7;
+	opacity: 0.75;
 	color: white;
 
 	display: flex;
@@ -165,21 +165,27 @@ h1 {
 	flex-flow: column;
 	-webkit-flex-flow:column;
 }
-#lockout .center {
+#lockout .center, #help .center {
 	display: flex;
 	display: -webkit-flex;
 	display: -moz-box;
 	flex-flow: row;
 	-webkit-flex-flow: row;
 }
-#lockout .spacer {
+#lockout .spacer, #help .spacer {
 	flex: auto;
 	-webkit-flex:auto;
 	-moz-box-flex:1
 }
-#lockout div div:not(.spacer) {
+#lockout div div:not(.spacer), #help div div:not(.spacer) {
 	border: 0.25em solid white;
 	padding: 0em 1em;
 	font-size: 200%;
 	margin: 1em;
+}
+#help h1 {
+	font-size: 1.5em;
+}
+#help p {
+	margin-bottom: 1em;
 }

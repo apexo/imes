@@ -705,6 +705,12 @@ function onLoad() {
 				}
 				return;
 			}
+			if (event.keyCode === 0x70 || event.keyCode === 0xbf) { // F1 / "?"
+				event.preventDefault();
+				var help = document.getElementById("help");
+				help.style.display = help.style.display === "none" ? "" : "none";
+				return;
+			}
 			if (!isVisible(terms)) {
 				return;
 			}
