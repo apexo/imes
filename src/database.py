@@ -44,6 +44,7 @@ CTYPE_MAP = {
 }
 
 CRE_REPLACE = re.compile("^.*%%%([A-Z_]+)%%%$")
+CRE_MBID = re.compile("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 def _id(d):
 	# base64 uses + and /, which are not very safe to include in URL path
@@ -297,6 +298,36 @@ class Database(object):
 
 		return k, formats
 
+	def mbids(dstkey):
+		def f(dst, value):
+			values = sum((v.split("/") for v in value), [])
+			if not all(CRE_MBID.match(v) for v in values):
+				print "invalid %s: %r" % (dstkey, value)
+			else:
+				dst[dstkey] = values
+		f.__name__ = 'set_mbid_' + dstkey
+		return f
+
+	def id3v2_txxx_mbids(dstkey):
+		def f(dst, value):
+			values = sum((v.split("/") for v in value.text), [])
+			if not all(CRE_MBID.match(v) for v in values):
+				print "invalid %s: %r" % (dstkey, value)
+			else:
+				dst[dstkey] = values
+		f.__name__ = 'set_id3v2_txxx_mbid_' + dstkey
+		return f
+
+	def id3v2_ufid_mbid(dstkey):
+		def f(dst, value):
+			values = [value.data]
+			if not all(CRE_MBID.match(v) for v in values):
+				print "invalid %s: %r" % (dstkey, value)
+			else:
+				dst[dstkey] = values
+		f.__name__ = 'set_id3v2_ufid_mbid_' + dstkey
+		return f
+
 	def generic(dstkey):
 		def f(dst, value):
 			dst[dstkey] = [item.rstrip("\x00") for item in value]
@@ -418,11 +449,11 @@ class Database(object):
 		'----:com.apple.iTunes\x00:replaygain_track_gain\x00': m4a_rg('replaygain_track_gain', ' dB'),
 		'----:com.apple.iTunes\x00:replaygain_album_peak\x00': m4a_rg('replaygain_album_peak'),
 		'----:com.apple.iTunes\x00:replaygain_track_peak\x00': m4a_rg('replaygain_track_peak'),
-		'----:com.apple.iTunes:MusicBrainz Artist Id': generic('musicbrainz_artistid'),
-		'----:com.apple.iTunes:MusicBrainz Track Id': generic('musicbrainz_trackid'),
-		'----:com.apple.iTunes:MusicBrainz Album Id': generic('musicbrainz_albumid'),
-		'----:com.apple.iTunes:MusicBrainz Album Artist Id': generic('musicbrainz_albumartistid'),
-		'----:com.apple.iTunes:MusicBrainz Disc Id': generic('musicbrainz_discid'),
+		'----:com.apple.iTunes:MusicBrainz Artist Id': mbids('musicbrainz_artistid'),
+		'----:com.apple.iTunes:MusicBrainz Track Id': mbids('musicbrainz_trackid'),
+		'----:com.apple.iTunes:MusicBrainz Album Id': mbids('musicbrainz_albumid'),
+		'----:com.apple.iTunes:MusicBrainz Album Artist Id': mbids('musicbrainz_albumartistid'),
+		'----:com.apple.iTunes:MusicBrainz Disc Id': mbids('musicbrainz_discid'),
 		'soaa': generic('albumartistsort'),
 		'soar': generic('artistsort'),
 		'soal': generic('albumsort'),
@@ -433,8 +464,7 @@ class Database(object):
 		# covr
 	}
 
-	# {'\xa9alb': [u'Sehnsucht nach Ver\xe4nderung'], 'tmpo': [0], '\xa9nam': [u'Musette'], '\xa9ART': [u"L'art De Passage"], 'trkn': [(1, 11)], '\xa9too': [u'iTunes v7.4.3.1, QuickTime 7.2'], 'cpil': False, '----:com.apple.iTunes:iTunSMPB': [' 00000000 00000840 00000048 00000000002A4B78 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000'], '----:com.apple.iTunes:iTunes_CDDB_IDs': ['11+78B21AEA2DF89AFC94288091A11803DE+1262221'], '\xa9day': [u'1995'], 'pgap': False, '\xa9gen': [u'Jazz'], 'disk': [(1, 1)], '----:com.apple.iTunes:iTunNORM': [' 000000FC 00000130 00002D95 00001B27 0000B7A4 0000B7A4 00005240 000062C4 0000F010 0000F010']}
-
+	# {'tmpo': [0], '\xa9too': [u'iTunes v7.4.3.1, QuickTime 7.2'], 'cpil': False, '----:com.apple.iTunes:iTunSMPB': [' 00000000 00000840 00000048 00000000002A4B78 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000'], '----:com.apple.iTunes:iTunes_CDDB_IDs': ['11+78B21AEA2DF89AFC94288091A11803DE+1262221'], 'pgap': False, '----:com.apple.iTunes:iTunNORM': [' 000000FC 00000130 00002D95 00001B27 0000B7A4 0000B7A4 00005240 000062C4 0000F010 0000F010']}
 
 	FLAC_MAP = {
 		'album': generic('album'),
@@ -448,11 +478,11 @@ class Database(object):
 		'tracknumber': int_pair('tracknumber', 'totaltracks'),
 		'totaltracks': single_int('totaltracks'),
 		'tracktotal': single_int('totaltracks'),
-		'musicbrainz_albumartistid': generic('musicbrainz_albumartistid'),
-		'musicbrainz_artistid': generic('musicbrainz_artistid'),
-		'musicbrainz_trackid': generic('musicbrainz_trackid'),
-		'musicbrainz_discid': generic('musicbrainz_discid'),
-		'musicbrainz_albumid': generic('musicbrainz_albumid'),
+		'musicbrainz_albumartistid': mbids('musicbrainz_albumartistid'),
+		'musicbrainz_artistid': mbids('musicbrainz_artistid'),
+		'musicbrainz_trackid': mbids('musicbrainz_trackid'),
+		'musicbrainz_discid': mbids('musicbrainz_discid'),
+		'musicbrainz_albumid': mbids('musicbrainz_albumid'),
 		'date': single_value('date'),
 		'albumartistsort': generic('albumartistsort'),
 		'artistsort': generic('artistsort'),
@@ -467,16 +497,16 @@ class Database(object):
 
 	OGG_MAP = FLAC_MAP
 
-	# {'album': [u'Crazy Heart Original Motion Picture Soundtrack\x00'], 'artist': [u'Ryan Bingham\x00'], 'tool version': [u'14.0.147\x00'], 'title': [u"I Don't Know\x00"], 'bpm': [u'73\x00'], 'replaygain_track_peak': [u'0.967800\x00'], 'genre': [u'Country\x00'], 'intensity': [u'4\x00'], 'replaygain_track_gain': [u'-7.72 dB\x00'], 'tool name': [u'Media Center\x00'], 'date': [u'2010\x00'], 'tracknumber': [u'6\x00']}
-	# {'album': [u'Star Trek The Motion Picture OST CD1'], 'replaygain_reference_loudness': [u'89.0 dB'], 'replaygain_album_gain': [u'-1.05 dB'], 'title': [u'Main Title'], 'artist': [u'Jerry Goldsmith'], 'tracktotal': [u'18'], 'date': [u'1998'], 'replaygain_track_gain': [u'-4.22 dB'], 'genre': [u'Soundtrack'], 'tracknumber': [u'02'], 'discnumber': [u'1'], 'replaygain_track_peak': [u'0.99996948'], 'replaygain_album_peak': [u'1.00000000']}
-	# {'replaygain_reference_loudness': [u'89.0 dB'], 'albumartistsort': [u'BerlinskiBeat'], 'disctotal': [u'1'], 'releasecountry': [u'DE'], 'totaldiscs': [u'1'], 'albumartist': [u'BerlinskiBeat'], 'musicbrainz_albumartistid': [u'a014e2d1-7601-4883-b29a-dbfe28423e72'], 'tracknumber': [u'9'], 'replaygain_track_peak': [u'0.98348999'], 'album': [u'Gassenhauer'], 'replaygain_album_gain': [u'-9.54 dB'], 'musicbrainz_artistid': [u'a014e2d1-7601-4883-b29a-dbfe28423e72'], 'title': [u'Champagner f\xfcr alle'], 'media': [u'CD'], 'tracktotal': [u'11'], 'artistsort': [u'BerlinskiBeat'], 'musicbrainz_albumid': [u'd0b44012-44fd-46e1-a561-588ea12a434e'], 'replaygain_album_peak': [u'0.98348999'], 'barcode': [u'4029759081449'], 'releasestatus': [u'official'], 'musicbrainz_discid': [u'SWHZT74tt5V1YmaNlplItv3BY_0-'], 'date': [u'2012-08-03'], 'discnumber': [u'1'], 'originaldate': [u'2012-08-03'], 'language': [u'deu'], 'artist': [u'BerlinskiBeat'], 'script': [u'Latn'], 'releasetype': [u'album'], 'musicbrainz_trackid': [u'7dca8e03-6286-4bd1-8d3b-905aec67c3d6'], 'totaltracks': [u'11'], 'replaygain_track_gain': [u'-9.56 dB']}
+	# {'tool version': [u'14.0.147\x00'], , 'bpm': [u'73\x00'], , , 'intensity': [u'4\x00'], , 'tool name': [u'Media Center\x00'], , }
+	# {'replaygain_reference_loudness': [u'89.0 dB']}
+	# {'replaygain_reference_loudness': [u'89.0 dB'], 'releasecountry': [u'DE'], 'media': [u'CD'], 'barcode': [u'4029759081449'], 'releasestatus': [u'official'], 'originaldate': [u'2012-08-03'], 'language': [u'deu'], 'script': [u'Latn'], 'releasetype': [u'album']}
 
 	ID3V2_MAP = {
 		"TMED": id3v2_single_value('media'),
-		"TXXX:MusicBrainz Album Artist Id": id3v2_values('musicbrainz_albumartistid'),
-		"TXXX:MusicBrainz Artist Id": id3v2_values('musicbrainz_artistid'),
-		"TXXX:MusicBrainz Album Id": id3v2_values('musicbrainz_albumid'),
-		"UFID:http://musicbrainz.org": id3v2_data_tolist('musicbrainz_trackid'),
+		"TXXX:MusicBrainz Album Artist Id": id3v2_txxx_mbids('musicbrainz_albumartistid'),
+		"TXXX:MusicBrainz Artist Id": id3v2_txxx_mbids('musicbrainz_artistid'),
+		"TXXX:MusicBrainz Album Id": id3v2_txxx_mbids('musicbrainz_albumid'),
+		"UFID:http://musicbrainz.org": id3v2_ufid_mbid('musicbrainz_trackid'),
 		"TDOR": id3v2_single_value_text('date'),
 		"TPE1": id3v2_values('artist'),
 		"TSOP": id3v2_values('artistsort'),
@@ -513,7 +543,7 @@ class Database(object):
 		if kind in ("TSSE", "USLT", "TDRC", "TPE2", "TENC",
 			"TPUB", "TCMP", "TSRC", "TLAN", "TCOP", "TSO2", "TRSO", "TRSN", "TPE4", "TOPE", "WORS", "TPE3",
 			"TCOM", "TIT1", "TOWN", "MCDI", "TIT3", "TIPL",
-			"releasecountry", "asin", "metadata_block_picture", "releasestatus", "script", "releasetype", "label", "language", "author", "barcode", "tmpo", "\xa9too", "cpil", "pgap", "\xa9wrt",
+			"releasecountry", "asin", "metadata_block_picture", "releasestatus", "script", "releasetype", "label", "language", "author", "barcode", "tmpo", "\xa9too", "cpil", "pgap",
 			"covr", "comment", "producer", "catalognumber", "format", "WCOP", "TBPM", "license", "TOAL", "PCNT", "isrc", "itunes_cddb_1",
 			"performer", "conductor", "mixer", "arranger", "copyright", "discid", "tool version", "tool name", "bpm", "intensity", "discsubtitle", "\xa9cmt", "WM/Lyrics", "WM/MCDI"):
 			return True
