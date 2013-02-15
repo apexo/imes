@@ -17,6 +17,8 @@ function PlaylistSelector(target, add, settings, userStatus) {
 
 	target.addEventListener("change", this.handleSelect.bind(this), false);
 	add.addEventListener("click", this.handleAdd.bind(this), false);
+
+	this.updateMaybe();
 }
 
 PlaylistSelector.prototype.updatePlaylists = function() {
@@ -37,6 +39,7 @@ PlaylistSelector.prototype.processPlaylists = function(result) {
 		this.playlists.push(rows[i].key);
 	}
 	this.playlistUpdatePending = false;
+	this.updateMaybe();
 }
 
 PlaylistSelector.prototype.updateMaybe = function() {
