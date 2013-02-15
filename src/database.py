@@ -253,7 +253,6 @@ class Database(object):
 		if pic is not None:
 			del self.db[k]
 
-		print "processing image", k
 		try:
 			img = PIL.Image.open(StringIO.StringIO(data))
 			mime, ext = MIME_MAP[img.__class__]
@@ -286,15 +285,10 @@ class Database(object):
 		for name, data, mime in attach:
 			self.db.put_attachment(doc, data, name, mime)
 
-		print doc
 		doc = self.db[k]
-		print doc
 		doc.pop("inprogress")
 		self._temp.discard(k)
 		self.db[k] = doc
-
-		print formats
-		print "done processing image"
 
 		return k, formats
 
