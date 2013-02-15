@@ -1,7 +1,7 @@
 from cffi import FFI
-from fade import SoxDecoder, EOF, BUFFER_SIZE, SAMPLE_RATE, SAMPLE_TYPE, Stable, zeroer, Limiter, LookAhead, Blender, Joiner
 import numpy
 
+from fade import EOF, BUFFER_SIZE, SAMPLE_RATE, SAMPLE_TYPE
 # depends:
 # - debian:
 #     libmp3lame0 (>=1:3.99.5) (3.98.4 does not seem to work)
