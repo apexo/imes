@@ -546,9 +546,6 @@ class Worker(object):
 					return entry["_id"], idx, id_, pos
 			pos = idx = 0
 
-	def playing(self):
-		pass
-
 	@property
 	def key(self):
 		return u"channel:" + self.name
