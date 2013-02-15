@@ -35,6 +35,14 @@ function displayTrackInfo(fid, event) {
 		result.appendChild(a);
 		return result;
 	}
+	function mblink(target, title, cat, value) {
+		for (var i = 0; value && i < value.length; i++) {
+			var values = value[i].split("/");
+			for (var j = 0; j < values.length; j++) {
+				target.appendChild(labeledLink(title, values[j], "http://musicbrainz.org/" + cat + "/" + values[j]));
+			}
+		}
+	}
 	function showTrackInfoPopup(info) {
 		var el = event.target, x, y;
 		if (event.offsetX !== undefined && event.offsetY !== undefined) {
@@ -82,30 +90,10 @@ function displayTrackInfo(fid, event) {
 			for (var i = 0; info.title && i < info.title.length; i++) {
 				target.appendChild(labeledValue("title", info.title[i]));
 			}
-			for (var i = 0; info.musicbrainz_albumartistid && i < info.musicbrainz_albumartistid.length; i++) {
-				target.appendChild(labeledLink("musicbrainz album artist ID",
-					info.musicbrainz_albumartistid[i],
-					"http://musicbrainz.org/artist/" + info.musicbrainz_albumartistid[i]
-				));
-			}
-			for (var i = 0; info.musicbrainz_albumid && i < info.musicbrainz_albumid.length; i++) {
-				target.appendChild(labeledLink("musicbrainz album ID",
-					info.musicbrainz_albumid[i],
-					"http://musicbrainz.org/release/" + info.musicbrainz_albumid[i]
-				));
-			}
-			for (var i = 0; info.musicbrainz_artistid && i < info.musicbrainz_artistid.length; i++) {
-				target.appendChild(labeledLink("musicbrainz artist ID",
-					info.musicbrainz_artistid[i],
-					"http://musicbrainz.org/artist/" + info.musicbrainz_artistid[i]
-				));
-			}
-			for (var i = 0; info.musicbrainz_trackid && i < info.musicbrainz_trackid.length; i++) {
-				target.appendChild(labeledLink("musicbrainz track ID",
-					info.musicbrainz_trackid[i],
-					"http://musicbrainz.org/recording/" + info.musicbrainz_trackid[i]
-				));
-			}
+			mblink(target, "musicbrainz album artist ID", "artist", info.musicbrainz_albumartistid);
+			mblink(target, "musicbrainz album ID", "release", info.musicbrainz_albumid);
+			mblink(target, "musicbrainz artist ID", "artist", info.musicbrainz_artistid);
+			mblink(target, "musicbrainz track ID", "recording", info.musicbrainz_trackid);
 			for (var i = 0; info.genre && i < info.genre.length; i++) {
 				target.appendChild(labeledValue("genre", info.genre[i]));
 			}
