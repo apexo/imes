@@ -12,7 +12,6 @@ import mutagen.oggvorbis
 import mutagen.apev2
 import mutagen.asf
 import couchdb
-import copy
 import os
 import errno
 import hashlib
@@ -25,7 +24,6 @@ import PIL.PngImagePlugin
 import PIL.GifImagePlugin
 import struct
 import glob
-import os
 import re
 import json
 
@@ -299,9 +297,6 @@ class Database(object):
 
 		return k, formats
 
-	def _doFLAC(self, dst, src):
-		d
-
 	def generic(dstkey):
 		def f(dst, value):
 			dst[dstkey] = [item.rstrip("\x00") for item in value]
@@ -538,12 +533,6 @@ class Database(object):
 				continue
 			map[k](dst, v)
 
-	def _doMP4(self, dst, src):
-		for k, v in src.iteritems():
-			d = self.MP4_MAP.get(k)
-			if d:
-				dst[d] = v
-
 	def updateFLAC(self, path, m, info):
 		doc = {}
 		self._process(doc, m, self.FLAC_MAP, "FLAC", path)
@@ -613,7 +602,7 @@ class Database(object):
 			raw = mbp.decode("base64")
 			type, mime_len = struct.unpack_from(">II", raw)
 			i = 8 + mime_len
-			mime = raw[8:i].decode("ascii", "replace")
+			#mime = raw[8:i].decode("ascii", "replace")
 			desc_len, = struct.unpack_from(">I", raw, i);
 			i += 4 + desc_len
 			desc = raw[i-desc_len:i].decode("utf-8", "replace")
