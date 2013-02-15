@@ -177,7 +177,7 @@ class Scrobbler(object):
 	def _doCatchup(self, t):
 		self.scheduled = False
 		if self.pending:
-			userName = random.select(list(self.pending))
+			userName = random.choice(list(self.pending))
 			if self._doCatchupUser(userName):
 				self.pending.discard(userName)
 		if self.pending:
