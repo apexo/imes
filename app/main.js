@@ -692,28 +692,28 @@ function onLoad() {
 		});
 
 		window.addEventListener("keydown", function(event) {
-			var terms = document.getElementById("search-terms");
 			if (event.keyCode === 0x4c && event.ctrlKey) { // ctrl+L
 				event.preventDefault();
 				userStatus.setLockout(userStatus.status && userStatus.status.lockout ? false : true);
 				return;
 			}
-
-			if (event.target === terms) {
-				if (event.keyCode == 27) { // ESC
-					terms.blur();
-				}
+			if (event.keyCode === 27 && (event.target.id === "playlist-select" || event.target.id == "search-terms")) { // ESC
+				event.preventDefault();
+				event.target.blur();
 				return;
 			}
-			if (event.keyCode === 0x70 || event.keyCode === 0xbf) { // F1 / "?"
+			if (event.keyCode === 0x70) { // F1
 				event.preventDefault();
 				var help = document.getElementById("help");
 				help.style.display = help.style.display === "none" ? "" : "none";
 				return;
 			}
-			if (!isVisible(terms)) {
+
+			var terms = document.getElementById("search-terms");
+			if (event.target === terms || !isVisible(terms)) {
 				return;
 			}
+
 			if (event.keyCode === 0x46 && event.ctrlKey) { // ctrl+F
 				terms.focus();
 			} else if (event.keyCode === 191 && event.shiftKey || event.keyCode === 111) { // "/"
