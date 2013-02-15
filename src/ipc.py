@@ -239,7 +239,6 @@ def master(reactor, r, w):
 
 if __name__ == '__main__':
 	from reactor import Reactor, clock
-	import os
 	reactor = Reactor()
 	m2s_r, m2s_w = os.pipe()
 	s2m_r, s2m_w = os.pipe()

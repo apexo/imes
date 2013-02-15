@@ -1,6 +1,5 @@
 # encoding: utf-8
 import numpy
-import ast
 import subprocess
 import os
 import errno

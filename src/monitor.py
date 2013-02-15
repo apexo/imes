@@ -2,7 +2,6 @@ import inotifyx
 import os
 import stat
 import heapq
-import pprint
 import errno
 import base64
 

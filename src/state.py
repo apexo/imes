@@ -485,7 +485,7 @@ class State(object):
 					ms.sock.send(channel.SILENCE if ms.paused else data)
 					ms.q -= (ms.q + 3) // 4
 				except socket.error as e:
-					if e.errno == errno.EPIPE or e.errno == errno.ECONNRESET:
+					if e.errno == errno.EPIPE or e.errno == errno.ECONNRESET: # EHOSTUNREACH/113?
 						ms.discard(self)
 					elif e.errno == errno.EAGAIN:
 						ms.q += 1
