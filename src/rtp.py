@@ -1,17 +1,11 @@
-import time
 import socket
-import random
 import struct
-import heapq
-import collections
 import errno
 import select
 import urlparse
 import json
 import traceback
 
-from fade import SoxDecoder
-from reactor import clock
 from state import State
 
 class FixedLengthBodyDecoder(object):
@@ -435,7 +429,7 @@ a=rtpmap:14 mpa/90000/2
 		elif request == "PLAY":
 			sessionId = data["session"]
 			session = self.handler.state._sessions[sessionId]
-			media = self.handler.state.createMediaStream(session, device)
+			self.handler.state.createMediaStream(session, device)
 			return "RTSP/1.0 200 OK\r\nCSeq: %s\r\nSession: %s\r\n\r\n" % (data["cseq"], session.id)
 		elif request == "TEARDOWN":
 			sessionId = data["session"]
@@ -638,7 +632,7 @@ def test():
 	userDb = _db["_users"]
 
 	reactor = Reactor()
-	handler = RTSPHandler(("0.0.0.0", 9997), "http://localhost:5984", db, userDb, reactor)
+	RTSPHandler(("0.0.0.0", 9997), "http://localhost:5984", db, userDb, reactor)
 	try:
 		reactor.run()
 	except KeyboardInterrupt:
