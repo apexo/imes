@@ -463,7 +463,6 @@ a=rtpmap:14 mpa/90000/2
 			raise
 		if not n:
 			# HUP?
-			self.reactor.unregister(self.sock.fileno())
 			self.close()
 			return
 		self.write += n
