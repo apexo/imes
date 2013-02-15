@@ -81,7 +81,7 @@ class SampleCounter(object):
 		return 0, EOF
 
 class SoxDecoder(Decoder):
-	def __init__(self, fileName, gain=None, channels=NUM_CHANNELS):
+	def __init__(self, fileName, reactor, gain=None, channels=NUM_CHANNELS):
 		if gain and gain.endswith("dB"):
 			gain = gain[:-2].strip()
 		try:
@@ -92,6 +92,7 @@ class SoxDecoder(Decoder):
 		gain = [] if gain is None else ["gain", gain]
 		self.p = None
 		self.p = subprocess.Popen(["sox", fileName, "-r", str(SAMPLE_RATE), "-b", str(SAMPLE_SIZE * 8), "-c", str(channels), "-t", "raw", "-"] + gain, stdout=subprocess.PIPE)
+		reactor.registerPid(self.p.pid, lambda pid, status: None)
 		super(SoxDecoder, self).__init__(self.p.stdout.fileno(), channels)
 
 	def __del__(self):
