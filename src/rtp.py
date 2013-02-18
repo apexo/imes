@@ -545,7 +545,7 @@ class RTSPHandler(object):
 			if mediaStream is not None:
 				mediaStream.refresh(self.state) #update(sender_ssrc, loss, last, jitter, lsr, dlsr)
 				mediaStream.session.refresh(self.state)
-			print "sender_ssrc=%s, ssrc=%s, loss=%d, last=%d, jitter=%d, lsr=%d, dlsr=%d" % (sender_ssrc, ssrc, loss, last, jitter, lsr, dlsr)
+			#print "sender_ssrc=%s, ssrc=%s, loss=%d, last=%d, jitter=%d, lsr=%d, dlsr=%d" % (sender_ssrc, ssrc, loss, last, jitter, lsr, dlsr)
 			ofs += 24
 		assert ofs0 + length == ofs, (ofs0, length, ofs)
 		return ofs0 + length
