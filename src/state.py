@@ -501,7 +501,8 @@ class State(object):
 			userNames = set()
 			for aggregate in channel.aggregates:
 				for user in aggregate.users:
-					userNames.add(user.name)
+					if not user.lockout:
+						userNames.add(user.name)
 			self.scrobbler.scrobble(list(userNames), info)
 		return {"scrobble": scrobble}
 
