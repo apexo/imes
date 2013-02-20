@@ -43,6 +43,24 @@ function displayTrackInfo(fid, event) {
 			}
 		}
 	}
+	function formatLZ(n, digits) {
+		var result = n.toString();
+		while (result.length < digits) {
+			result = "0" + result;
+		}
+		return result;
+	}
+	function formatDateTime(value) {
+		var d = new Date(value * 1000);
+		return (
+			formatLZ(d.getFullYear(), 4) + "-" +
+			formatLZ(d.getMonth() + 1, 2) + "-" +
+			formatLZ(d.getDate(), 2) + " " +
+			formatLZ(d.getHours(), 2) + ":" +
+			formatLZ(d.getMinutes(), 2) + ":" +
+			formatLZ(d.getSeconds(), 2)
+		)
+	}
 	function showTrackInfoPopup(info) {
 		var el = event.target, x, y;
 		if (event.offsetX !== undefined && event.offsetY !== undefined) {
@@ -67,7 +85,7 @@ function displayTrackInfo(fid, event) {
 		} else {
 			target.appendChild(labeledValue("path", info.path));
 			target.appendChild(labeledValue("size", info.size));
-			target.appendChild(labeledValue("mtime", info.mtime));
+			target.appendChild(labeledValue("mtime", formatDateTime(info.mtime)));
 			if (info.info.length) {
 				target.appendChild(labeledValue("length", info.info.length + ""));
 			}
