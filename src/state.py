@@ -665,7 +665,7 @@ class State(object):
 			mediaStream.channel = None
 			oldChannel.channel.removeMediaStream(mediaStream.ssrc, callback=proceed)
 
-	def getUserStatus(self, user, callback):
+	def getUserStatus(self, user, callback, channelOverride=None):
 		result = {}
 		aggregate = user.aggregate
 		result["devices"] = {}
@@ -682,6 +682,8 @@ class State(object):
 				d = result["devices"].setdefault(device.name, {})
 				d["connected"] = bool(device.mediaStreams)
 				d["delegates_paused"] = [delegate.name for delegate in device.delegates if delegate.paused]
+		if channelOverride is not None:
+			channel = self._channels.get(channelOverride)
 		if channel is None:
 			result["channel"] = None
 		else:

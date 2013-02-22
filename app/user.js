@@ -1,13 +1,15 @@
 function UserStatus() {
 	this.onready = new Event();
 	this.onupdate = new Event();
+	this.oninvalidate = new Event();
 	this.ready = false;
 	this.userName = null;
 	this.authToken = null;
 	this.status = null;
 
-	this.pending = false;
+	this.pending = null;
 	this.scheduled = false;
+	this.displayChannel = null;
 
 	ajax_get(DB_URL + "_session", this.sessionLoaded.bind(this));
 }
@@ -61,22 +63,30 @@ UserStatus.prototype.backendUrl = function() {
 }
 
 UserStatus.prototype.statusLoaded = function(s) {
-	this.pending = false;
+	this.pending = null;
 	this.status = s;
 	this.onupdate.fire(this, s);
 	this.schedule(5000);
 }
 
-UserStatus.prototype.statusLoadedError = function() {
-	this.pending = false;
-	this.schedule(30000);
+UserStatus.prototype.setDisplayChannel = function(value) {
+	if (this.displayChannel !== value) {
+		this.status = null;
+		this.displayChannel = value;
+		this.oninvalidate.fire(this);
+		this.trigger();
+	}
 }
 
 UserStatus.prototype.trigger = function() {
-	if (!this.pending) {
-		this.pending = true;
-		ajax_get(this.backendUrl() + "status", this.statusLoaded.bind(this));
+	if (this.pending) {
+		ajax_abort(this.pending);
 	}
+	var url = this.backendUrl() + "status";
+	if (this.displayChannel) {
+		url += "?channel=" + encodeURIComponent(this.displayChannel);
+	}
+	this.pending = ajax_get(url, this.statusLoaded.bind(this));
 }
 
 UserStatus.prototype.triggerScheduledUpdate = function() {

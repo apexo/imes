@@ -66,6 +66,7 @@ function Playlist(target, subscription, navigation, playlistSelector, userStatus
 	this.navigation.onnavigate.addListener(this.navigationCb, this);
 	this.subscription.onchange.addListener(this.changesCb, this);
 	this.userStatus.onupdate.addListener(this.statusUpdate, this);
+	this.userStatus.oninvalidate.addListener(this.statusInvalidate, this);
 	this.playlistSelector.onplaylistselect.addListener(this.update, this);
 	this.subscription.onready.addListener(this.subscriptionReady, this);
 
@@ -170,6 +171,10 @@ Playlist.prototype.removeProgressBar = function(element) {
 	element.getElementsByClassName("length-indicator")[0].firstChild.textContent = formatLength(element.dataset.length);
 	element.classList.remove("currently-playing");
 	RAF.unregister("playlist");
+}
+
+Playlist.prototype.statusInvalidate = function() {
+	this.state = "pending";
 }
 
 Playlist.prototype.statusUpdate = function(s) {

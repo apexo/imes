@@ -108,6 +108,11 @@ PlaylistSelector.prototype.update = function(value) {
 	}
 
 	this.userPlaylist = value.substring(0, 14) === "playlist:user:";
+	if (value.substring(0, 17) === "playlist:channel:") {
+		this.userStatus.setDisplayChannel(value.substring(17));
+	} else {
+		this.userStatus.setDisplayChannel(null);
+	}
 
 	if (this.targetPlaylist !== value) {
 		console.log("change playlist", this.targetPlaylist, "->", value);

@@ -130,6 +130,7 @@ class Connection(object):
 
 		p = urlparse.urlparse(uri)
 		path = p.path.strip("/").split("/")
+		query = urlparse.parse_qs(p.query) if p.query else {}
 
 		def callback(response):
 			if self.sock is None:
@@ -167,7 +168,7 @@ class Connection(object):
 				if version != "HTTP/1.0" and version != "HTTP/1.1":
 					self.close()
 					return
-				response = self._doHttp(request, uri, path, data, body, callback)
+				response = self._doHttp(request, uri, path, data, body, callback, query)
 			else:
 				self.close()
 				return
@@ -224,11 +225,16 @@ class Connection(object):
 		else:
 			raise Exception("not authorized")
 
-	def _doHttpUser(self, request, uri, data, body, user, cmd, args, callback):
+	def _doHttpUser(self, request, uri, data, body, user, cmd, args, callback, query):
 		state = self.handler.state
 		scrobbler = self.handler.scrobbler
 
+		if query and cmd != "status":
+			raise Exception("not authorized")
+
 		if cmd == "status":
+			if set(query) - set(["channel"]) or len(query.get("channel", [])) > 1:
+				raise Exception("not authorized")
 			if args:
 				raise Exception("not authorized")
 			def cb(value):
@@ -236,7 +242,7 @@ class Connection(object):
 			if request == "OPTIONS":
 				return self._makeResponse(methods=("POST",), is_options=True)
 			elif request == "GET":
-				self.handler.state.getUserStatus(user, cb)
+				self.handler.state.getUserStatus(user, cb, query.get("channel", [None])[0])
 			elif request == "POST":
 				data = json.loads(body)
 				if "aggregate" in data:
@@ -332,8 +338,8 @@ class Connection(object):
 		else:
 			raise ValueError()
 
-	def _doHttpDelegate(self, request, uri, data, body, delegate, cmd, args, callback):
-		if request != "GET":
+	def _doHttpDelegate(self, request, uri, data, body, delegate, cmd, args, callback, query):
+		if request != "GET" or query:
 			raise Exception("not authorized")
 		if cmd == "pause":
 			if not args:
@@ -354,8 +360,8 @@ class Connection(object):
 		else:
 			raise Exception("not authorized")
 
-	def _doHttpDevice(self, request, uri, data, body, device, cmd, args, callback):
-		if request != "GET" or cmd != "stream.mp3" or args:
+	def _doHttpDevice(self, request, uri, data, body, device, cmd, args, callback, query):
+		if request != "GET" or cmd != "stream.mp3" or args or query:
 			raise Exception("not authorized")
 		response = Response("HTTP/1.1")
 		response.setHeader("Content-Type", "audio/mpeg") # TODO: correct?
@@ -365,7 +371,7 @@ class Connection(object):
 		self.sock.shutdown(socket.SHUT_RD)
 		self.handler.state.addDeviceHttpStream(device, self.sock)
 
-	def _doHttp(self, request, uri, path, data, body, callback):
+	def _doHttp(self, request, uri, path, data, body, callback, query):
 		if request not in ("GET", "POST", "OPTIONS", "PUT", "DELETE"):
 			raise Exception("not authorized")
 		if len(path) < 4:
@@ -385,7 +391,7 @@ class Connection(object):
 			raise Exception("not authorized")
 		if path[2] != target.authToken:
 			raise Exception("not authorized")
-		return p(request, uri, data, body, target, path[3], path[4:], callback)
+		return p(request, uri, data, body, target, path[3], path[4:], callback, query)
 
 	def _doRtsp(self, request, uri, path, data, body, callback):
 		if request == "OPTIONS":
