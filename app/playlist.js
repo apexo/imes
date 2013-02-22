@@ -182,10 +182,11 @@ Playlist.prototype.statusInvalidate = function() {
 		this.removeProgressBar(cp[i]);
 		i -= 1;
 	}
+
 }
 
 Playlist.prototype.statusUpdate = function(s) {
-	if (!this.subscription.ready) {
+	if (!this.subscription.ready || !this.userStatus.status) {
 		return;
 	}
 	if (this.state === "pending") {
