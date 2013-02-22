@@ -159,6 +159,7 @@ PlaylistSelector.prototype.aggregateChanged = function(aggregate) {
 	this.newAggregate = null;
 	if (this.settings.aggregates.hasOwnProperty(aggregate)) {
 		var pl = "playlist:channel:" + this.settings.aggregates[aggregate].channel;
+		pl = pl === "playlist:channel:" ? "" : pl;
 		this.target.value = pl;
 		this.update(pl);
 	} else {

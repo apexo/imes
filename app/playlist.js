@@ -175,6 +175,13 @@ Playlist.prototype.removeProgressBar = function(element) {
 
 Playlist.prototype.statusInvalidate = function() {
 	this.state = "pending";
+
+	var cp = this.target.getElementsByClassName("currently-playing");
+
+	for (var i = 0; i < cp.length; i++) {
+		this.removeProgressBar(cp[i]);
+		i -= 1;
+	}
 }
 
 Playlist.prototype.statusUpdate = function(s) {
@@ -184,6 +191,7 @@ Playlist.prototype.statusUpdate = function(s) {
 	if (this.state === "pending") {
 		this.state = "ready";
 		this.update(this.playlistSelector, this.playlistSelector.targetPlaylist);
+		return;
 	}
 
 	var cp = this.target.getElementsByClassName("currently-playing");

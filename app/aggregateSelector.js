@@ -6,7 +6,8 @@ function AggregateSelector(target, settings, userStatus, layoutManager) {
 	this.settings = settings;
 	this.userStatus = userStatus;
 
-	this.aggregate = undefined;
+	this.aggregate = null;
+	this.requestedAggregate = null;
 	this.oldAggregates = [];
 
 	this.onaggregatechange = new Event();
@@ -44,6 +45,15 @@ AggregateSelector.prototype.updateMaybe = function() {
 		this.oldAggregates = aggregates;
 	}
 
+	if (this.requestedAggregate !== null && this.requestedAggregate === newAggregate) {
+		console.log("confirm change aggregate", this.aggregate, "->", newAggregate);
+		this.aggregate = newAggregate;
+		this.requestedAggregate = null;
+		this.onaggregatechange.fire(this, newAggregate);
+		this.target.disabled = false;
+		return;
+	}
+
 	if (this.aggregate !== newAggregate) {
 		if (!newAggregate || this.oldAggregates.indexOf(newAggregate) >= 0) {
 			this.target.value = newAggregate || "";
@@ -58,10 +68,10 @@ AggregateSelector.prototype.updateMaybe = function() {
 
 AggregateSelector.prototype.update = function(aggregate) {
 	if (aggregate !== this.aggregate) {
-		console.log("change aggregate", this.aggregate, "->", aggregate);
-		this.onaggregatechange.fire(this, aggregate);
-		this.aggregate = aggregate;
+		console.log("request change aggregate", this.aggregate, "->", aggregate);
+		this.requestedAggregate = aggregate;
 		this.userStatus.setUserAggregate(aggregate);
+		this.target.disabled = true;
 	}
 }
 

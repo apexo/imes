@@ -71,6 +71,10 @@ UserStatus.prototype.statusLoaded = function(s) {
 
 UserStatus.prototype.setDisplayChannel = function(value) {
 	if (this.displayChannel !== value) {
+		if (this.status && this.status.channel === value) {
+			this.displayChannel = value;
+			return;
+		}
 		this.status = null;
 		this.displayChannel = value;
 		this.oninvalidate.fire(this);
