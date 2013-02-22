@@ -711,7 +711,7 @@ function onLoad() {
 				userStatus.setLockout(userStatus.status && userStatus.status.lockout ? false : true);
 				return;
 			}
-			if (event.keyCode === 27 && (event.target.id === "playlist-select" || event.target.id == "search-terms")) { // ESC
+			if (event.keyCode === 27 && (event.target.id === "playlist-select" || event.target.id == "search-terms" || event.target.id == "aggregate-select")) { // ESC
 				event.preventDefault();
 				event.target.blur();
 				return;
