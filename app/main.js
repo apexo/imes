@@ -447,12 +447,12 @@ function deleteFromPlaylist(plid, idxs) {
 	ajax_get(url, doDelete);
 }
 
-function enqueueTracks(ids) {
-	if (!playlistSelector.targetPlaylist) {
+function enqueueTracks(ids, tpl) {
+	tpl = tpl || playlistSelector.targetPlaylist;
+	if (!tpl) {
 		return alert("No playlist selected.");
 	}
 	var
-		tpl = playlistSelector.targetPlaylist,
 		date = new Date().toISOString().replace(/[-:.TZ]/g, ""),
 		rnd = Math.floor(Math.random() * 4294967296).toString(16);
 	while (rnd.length < 8) {
@@ -685,6 +685,57 @@ function onLoad() {
 	setSearchTerms(terms, "location");
 
 	playlist = new Playlist(document.getElementById("playlist"), subscription, navigation, playlistSelector, userStatus);
+
+	document.getElementById("playlist-append").addEventListener("click", function(event) {
+		event.preventDefault();
+		if (!playlistSelector.targetPlaylist) {
+			alert("No playlist selected.");
+			return;
+		}
+		if (!playlistSelector.userPlaylist) {
+			// not because we can't, but because channel playlists are not really bounded, they can get very long
+			alert("You cannot append a channel's playlist.");
+			return;
+		}
+		if (!userStatus.userName) {
+			alert("user name unknown");
+			return;
+		}
+		var targetAggregate = aggregateSelector.aggregate;
+		if (!targetAggregate) {
+			alert("No target aggregate selected");
+			return;
+		}
+		if (!settings.ready || !settings.aggregates.hasOwnProperty(targetAggregate)) {
+			alert("Could not query current aggregates' channel");
+			return;
+		}
+		var targetChannel = settings.aggregates[targetAggregate].channel;
+		var targetPlaylist = "playlist:channel:" + targetChannel;
+		var sourcePlaylist = playlistSelector.targetPlaylist;
+		var expectedPrefix = "playlist:user:" + userStatus.userName + ":";
+		if (sourcePlaylist.substring(0, expectedPrefix.length) !== expectedPrefix) {
+			alert("illegal playlist");
+			return;
+		}
+		var viewPrefix = DB_URL + DB_NAME + "/_all_docs/";
+
+		new ViewProxy(viewPrefix, sourcePlaylist + ":", sourcePlaylist + ":z", false, true).fetch(function(result) {
+			var ids = [];
+			for (var i = 0; i < result.length; i++) {
+				var items = result[i].doc.items;
+				for (var j = 0; j < items.length; j++) {
+					ids.push(items[j]);
+				}
+			}
+			if (!ids.length) {
+				alert("Playlist is empty - nothing to do.");
+				return;
+			}
+			enqueueTracks(ids, targetPlaylist);
+			alert("Enqueued " + ids.length + " track(s) to channel " + targetChannel);
+		});
+	});
 
 	setTimeout(function() {
 		new HeaderLayout(document.body);
