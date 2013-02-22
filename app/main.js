@@ -617,6 +617,7 @@ var userStatus;
 var scrollBarWidth;
 var settings;
 var playlistSelector;
+var aggregateSelector;
 var navigation;
 var notification;
 var search;
@@ -655,9 +656,15 @@ function onLoad() {
 	});
 	settings = new Settings(userStatus);
 
-	var playlistTarget = document.getElementById("playlist-select");
-	var playlistAdd = document.getElementById("playlist-add");
-	playlistSelector = new PlaylistSelector(playlistTarget, playlistAdd, settings, userStatus);
+	aggregateSelector = new AggregateSelector(document.getElementById("aggregate-select"), settings, userStatus, layoutManager);
+	playlistSelector = new PlaylistSelector(
+		document.getElementById("playlist-select"),
+		document.getElementById("playlist-add"),
+		settings,
+		userStatus,
+		aggregateSelector,
+		layoutManager
+	);
 
 	new ChannelControl(document.getElementById("channel-control"), userStatus);
 
@@ -684,6 +691,7 @@ function onLoad() {
 		new HBoxLayout(document.querySelector("#header"));
 		new VBoxLayout(document.querySelector("#header-inner"));
 		new HBoxLayout(document.querySelector("#top"));
+		new HBoxLayout(document.querySelector("#top-nav"));
 		new HBoxLayout(document.querySelector("#top .filter"));
 	
 		layoutManager.layout();

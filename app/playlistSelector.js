@@ -1,7 +1,7 @@
-function PlaylistSelector(target, add, settings, userStatus) {
+function PlaylistSelector(target, add, settings, userStatus, aggregateSelector, layoutManager) {
 	this.target = target;
 	this.add = add;
-	userStatus.onupdate.addListener(this.updateMaybe, this);
+	userStatus.onready.addListener(this.updateMaybe, this);
 	settings.onupdate.addListener(this.updateMaybe, this);
 	this.settings = settings;
 	this.userStatus = userStatus;
@@ -9,14 +9,18 @@ function PlaylistSelector(target, add, settings, userStatus) {
 	this.playlistUpdatePending = false;
 	this.locallyCreatedPlaylists = [];
 
-	this.targetPlaylist = undefined;
-	this.aggregate = undefined;
+	this.targetPlaylist = "";
+	this.newAggregate = null;
 	this.userPlaylist = false;
+	this.options = null;
 
 	this.onplaylistselect = new Event();
 
 	target.addEventListener("change", this.handleSelect.bind(this), false);
 	add.addEventListener("click", this.handleAdd.bind(this), false);
+	aggregateSelector.onaggregatechange.addListener(this.aggregateChanged, this);
+
+	this.layoutManager = layoutManager;
 
 	this.updateMaybe();
 }
@@ -45,29 +49,23 @@ PlaylistSelector.prototype.processPlaylists = function(result) {
 PlaylistSelector.prototype.updateMaybe = function() {
 	if (this.userStatus.ready && !this.playlists) {
 		this.updatePlaylists();
+	}
+	if (!this.settings.ready || !this.playlists) {
 		return;
 	}
-	if (!this.settings.ready || !this.userStatus.status || !this.playlists) {
-		return;
-	}
-	var aggregate = this.aggregate === undefined ? this.userStatus.status.aggregate : this.aggregate;
-	var targetPlaylist = this.targetPlaylist === undefined ? (this.userStatus.status.channel ? "playlist:channel:" + this.userStatus.status.channel : "") : this.targetPlaylist;
 
 	this.target.innerHTML = "";
-	var validValues = {};
-	var aggregates = this.settings.lists.aggregate;
-	var currentAggregate = this.userStatus.status.aggregate || "";
-	for (var i = 0; i < aggregates.length; i++) {
-		var a = aggregates[i];
-		var c = this.settings.aggregates[a].channel;
-		if (c) {
-			addOption(this.target, "[Aggregate " + a + ", Channel " + c + "]", a);
-		} else {
-			addOption(this.target, "[Aggregate " + a + ", No Channel]", a);
-		}
-		validValues[a] = true;
+	var options = [];
+	var channels = this.settings.lists.channel;
+
+	for (var i = 0; i < channels.length; i++) {
+		var v = "playlist:channel:" + channels[i];
+		addOption(this.target, "[" + channels[i] + "]", v);
+		options.push(v);
 	}
 	addOption(this.target, "[None]", "");
+	options.push("");
+
 	var playlists = this.playlists.concat([]);
 	for (var i = 0; i < this.locallyCreatedPlaylists.length; i++) {
 		var pl = this.locallyCreatedPlaylists[i];
@@ -78,60 +76,43 @@ PlaylistSelector.prototype.updateMaybe = function() {
 	playlists.sort();
 	for (var i = 0; i < playlists.length; i++) {
 		var pl = playlists[i], idx = pl.lastIndexOf(":"), name = pl.substring(idx + 1);
-		addOption(this.target, "Playlist " + name, pl);
-		validValues[pl] = true;
+		addOption(this.target, name, pl);
+		options.push(pl);
 	}
 
-	var value;
+	this.layoutManager.layout();
 
-	if (this.userPlaylist && targetPlaylist && validValues.hasOwnProperty(targetPlaylist)) {
-		value = targetPlaylist;
-	} else if (aggregate && validValues.hasOwnProperty(aggregate)) {
-		value = aggregate;
+	this.options = options;
+
+	if (this.newAggregate) {
+		this.aggregateChanged(this.newAggregate);
 	} else {
-		value = "";
+		if (this.options.indexOf(this.targetPlaylist) >= 0) {
+			this.target.value = this.targetPlaylist;
+		} else {
+			console.log("playlist does not exist (anymore):", this.targetPlaylist);
+			this.target.value = "";
+			this.update("");
+		}
 	}
-
-	this.target.value = value;
-	this.update(value);
-
-	layoutManager.layout();
 }
 
 PlaylistSelector.prototype.update = function(value) {
-	var tpl = this.targetPlaylist, aggregate = this.aggregate;
-	if (!value) {
-		tpl = "";
-		this.userPlaylist = false;
-		aggregate = "";
-	} else if (value.substring(0, 14) === "playlist:user:") {
-		tpl = value;
-		this.userPlaylist = true;
-	} else {
-		this.userPlaylist = false;
-		aggregate = value;
-		if (this.settings.ready) {
-			if (!this.settings.aggregates.hasOwnProperty(value)) {
-				console.log("weird, someone tried selecting an aggregate that doesn't exist (anymore)");
-				return;
-			}
-			var c = this.settings.aggregates[value].channel;
-			tpl = c ? "playlist:channel:" + c : "";
-		} else {
-			console.log("someone selected an aggregate while a settings-update is in progress …");
-		}
+	value = value || "";
+
+	if (this.options.indexOf(value) < 0) {
+		console.log(this.settings.ready, this.userStatus.ready, this.playlists, this.options);
+		console.trace();
+		console.log("playlist does not exist (anymore):", value);
+		value = "";
 	}
 
-	if (tpl !== this.targetPlaylist) {
-		console.log("change playlist", this.targetPlaylist, "->", tpl);
-		this.targetPlaylist = tpl;
-		this.onplaylistselect.fire(this, this, tpl);
-	}
+	this.userPlaylist = value.substring(0, 14) === "playlist:user:";
 
-	if (aggregate !== this.aggregate) {
-		console.log("change aggregate", this.aggregate, "->", aggregate);
-		this.aggregate = aggregate;
-		this.userStatus.setUserAggregate(aggregate);
+	if (this.targetPlaylist !== value) {
+		console.log("change playlist", this.targetPlaylist, "->", value);
+		this.targetPlaylist = value;
+		this.onplaylistselect.fire(this, this, value);
 	}
 }
 
@@ -141,6 +122,10 @@ PlaylistSelector.prototype.handleSelect = function() {
 
 PlaylistSelector.prototype.handleAdd = function(event) {
 	event.preventDefault();
+	if (!this.userStatus.userName) {
+		alert("Impossible: user name not known.");
+		return;
+	}
 	var name = prompt("Enter name of new playlist");
 	if (name) {
 		if (!/^[a-z][-a-z0-9]*$/.test(name)) {
@@ -155,5 +140,23 @@ PlaylistSelector.prototype.handleAdd = function(event) {
 		this.locallyCreatedPlaylists.push(qname);
 		this.update(qname);
 		this.updateMaybe();
+	}
+}
+
+PlaylistSelector.prototype.aggregateChanged = function(aggregate) {
+	if (!aggregate) {
+		return;
+	}
+	if (!this.options) {
+		this.newAggregate = aggregate;
+		return;
+	}
+	this.newAggregate = null;
+	if (this.settings.aggregates.hasOwnProperty(aggregate)) {
+		var pl = "playlist:channel:" + this.settings.aggregates[aggregate].channel;
+		this.target.value = pl;
+		this.update(pl);
+	} else {
+		console.log("user seems to be member of a non-existing aggregate:", aggregate);
 	}
 }
