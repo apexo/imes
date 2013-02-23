@@ -26,8 +26,8 @@
 		<div id="header-inner" data-weight="1">
 			<div id="top-nav">
 				<div id="nav">
-					<a id="nav-search" href="" class="active" data-targets="search-result,filter,playlist-select,playlist-add">Search</a>
-					<a id="nav-playlist" href="" data-targets="playlist,playlist-select,playlist-add,playlist-append">Playlist</a>
+					<a id="nav-search" href="" class="active" data-targets="search-result,filter,playlist-select-label,playlist-select,playlist-add">Search</a>
+					<a id="nav-playlist" href="" data-targets="playlist,playlist-select-label,playlist-select,playlist-add,playlist-append">Playlist</a>
 					<a href="" data-targets="settings">Settings</a>
 				</div>
 				<div data-weight="1"></div>
@@ -42,7 +42,7 @@
 					<label for="search-terms" accesskey="F">Filter</label>
 					<input class="search" id="search-terms" name="search-terms" data-weight="1" onInput="setSearchTerms(this.value, 'user')"></input>
 				</div>
-				<label for="playlist-select">Playlist/[Channel]</label>
+				<label id="playlist-select-label" for="playlist-select">Playlist/[Channel]</label>
 				<select id="playlist-select" name="playlist">
 					<option>&nbsp;</option>
 				</select>
