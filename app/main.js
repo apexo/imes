@@ -428,6 +428,10 @@ function deleteTrack(track, albumCache) {
 function deleteFromPlaylist(plid, idxs) {
 	var url = DB_URL + DB_NAME + "/" + encodeURIComponent(plid);
 	function doDelete(value) {
+		if (!value) {
+			console.log("playlist", plid, idxs, "has already been deleted");
+			return;
+		}
 		for (var i = 0; i < idxs.length; i++) {
 			value.items[idxs[i]] = null;
 		}

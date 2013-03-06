@@ -311,86 +311,152 @@ function plid_range_high(plid) {
 	return plid + "FF";
 }
 
-function PlaylistIterator(proxy, skip, reverse) {
-	this.todo = [];
+var pl_limit = 0xFF - 0x10 + 1;
+
+function PlaylistIterator(proxy, startkey, skip, reverse) {
+	this.queue = [];
 	this.done = false;
 	this.proxy = proxy;
-	if (reverse) {
-		if (skip === 0) {
-			proxy.skip = 1;
-			skip = null;
+	this.limit = null;
+	this.callback = null;
+	this.startkey = startkey;
+	this.skip = skip;
+	this.reverse = reverse;
+
+	this.pending = {};
+	this.expectedOrder = [];
+	this.unorderedResults = {};
+	this.orderedResults = [];
+
+	this.orderResults = function() {
+		while (this.expectedOrder.length && this.unorderedResults.hasOwnProperty(this.expectedOrder[0])) {
+			var key = this.expectedOrder.shift();
+			this.orderedResults.push({"key": key, "value": this.unorderedResults[key]});
+			delete this.unorderedResults[key];
+		}
+
+		if (!this.expectedOrder.length) {
+			this.callback(this.orderedResults.splice(0), false);
 		}
 	}
 
-	var order = [], me = this;
+	this.cb2 = function(key, value) {
+		if (!this.expectedOrder.length) {
+			console.log("illegal state");
+			console.trace();
+			return;
+		}
 
-	this.fetch = function(callback, limit) {
-		var pending = {}, result = [];
-		function cb2(plid, idx, value) {
-			if (!order.length) {
-				console.log("callback while not pending!", arguments);
-			}
-			pending[plkey(plid, idx)] = value;
-			while (order.length && pending.hasOwnProperty(order[0][0])) {
-				var key = order.shift()[0];
-				result.push({"key": key, "value": pending[key]});
-				delete pending[key];
-			}
-			if (!order.length) {
-				callback(result, false);
-			}
+		delete this.pending[key];
+		this.unorderedResults[key] = value;
+
+		this.orderResults();
+	}
+
+	this.getinfo = function() {
+		for (var i = 0; i < this.limit && this.queue.length; i++) {
+			var item = this.queue.shift();
+			var xhr = get_file_info(item.id, this.cb2.bind(this), item.key);
+			this.pending[item.key] = xhr;
+			this.expectedOrder.push(item.key);
 		}
-		function getinfo() {
-			for (var i = 0; i < limit && me.todo.length; i++) {
-				var item = me.todo.shift();
-				var xhr = get_file_info(item.id, cb2, item.plid, item.idx);
-				order.push([plkey(item.plid, item.idx), xhr]);
-			}
-			if (!order.length) {
-				callback([], true);
-			}
+		if (!this.expectedOrder.length) {
+			this.callback([], this.done);
 		}
-		function cb(rows, done) {
-			for (var i = 0; i < rows.length; i++) {
-				var items = rows[i].doc.items;
-				if (reverse) {
-					for (var j = skip === null ? items.length - 1: skip - 1; j >= 0; j--) {
-						if (items[j]) {
-							me.todo.push({id: items[j], plid: rows[i].doc._id, idx: j});
-						}
+	}
+
+	this.cb = function(rows, done) {
+		for (var i = 0; i < rows.length; i++) {
+			var items = rows[i].doc.items;
+			if (this.reverse) {
+				for (var j = rows[i].doc._id === this.startkey ? this.skip - 1 : items.length - 1; j >= 0; j--) {
+					if (items[j]) {
+						this.queue.push({id: items[j], key: plkey(rows[i].doc._id, j)});
 					}
-					skip = null;
-				} else {
-					for (var j = skip || 0; j < items.length; j++) {
-						if (items[j]) {
-							me.todo.push({id: items[j], plid: rows[i].doc._id, idx: j});
-						}
+				}
+			} else {
+				for (var j = rows[i].doc._id === this.startkey ? this.skip : 0; j < items.length; j++) {
+					if (items[j]) {
+						this.queue.push({id: items[j], key: plkey(rows[i].doc._id, j)});
 					}
-					skip = 0;
 				}
 			}
-			if (done) {
-				me.done = true;
-			}
-			getinfo();
 		}
-		if (this.done) {
-			if (!this.todo.length) {
-				return callback([], true);
-			}
-			getinfo();
-		} else if (this.todo.length < limit) {
-			this.proxy.fetch(cb, limit);
+		if (done) {
+			this.done = true;
+		}
+		this.getinfo();
+	}
+
+	this.fetch = function(callback, limit) {
+		if (this.expectedOrder.length) {
+			console.log("fetch called while already in progress!", arguments);
+			console.trace();
+			return;
+		}
+		this.limit = limit;
+		this.callback = callback;
+		if (this.done || this.queue.length >= limit) {
+			this.getinfo();
 		} else {
-			getinfo();
+			this.proxy.fetch(this.cb.bind(this), limit);
 		}
 	}
 	this.abort = function() {
 		this.proxy.abort();
-		for (var i = 0; i < order.length; i++) {
-			ajax_abort(order[i][1]);
+		for (var k in this.pending) {
+			if (this.pending.hasOwnProperty(k)) {
+				ajax_abort(this.pending[k]);
+			}
 		}
-		order.length = 0;
+		this.pending = {};
+		this.expectedOrder.length = 0;
+		this.unorderedResults = {};
+		this.orderedResults.length = 0;
+	}
+	this.remove = function(key, prefix) {
+		var lo = prefix ? plid_range_low(key) : key;
+		var hi = prefix ? plid_range_high(key) : key;
+		var wasActive = !!this.expectedOrder.length;
+		var n1 = 0, n2 = 0, n3 = 0, n4 = 0, n5 = 0;
+		for (var j = this.expectedOrder.length - 1; j >= 0; j--) {
+			if (lo <= this.expectedOrder[j] && this.expectedOrder[j] <= hi) {
+				this.expectedOrder.splice(j, 1);
+				n1 += 1;
+			}
+		}
+		for (var k in this.pending) {
+			if (this.pending.hasOwnProperty(k) && lo <= k && k <= hi) {
+				ajax_abort(this.pending[k]);
+				delete this.pending[k];
+				n2 += 1;
+			}
+		}
+		for (var j = this.orderedResults.length - 1; j >= 0; j--) {
+			if (lo <= this.orderedResults[j].key && this.orderedResults[j].key <= hi) {
+				this.orderedResults.splice(j, 1);
+				n3 += 1;
+			}
+		}
+		for (var k in this.unorderedResults) {
+			if (this.unorderedResults.hasOwnProperty(k) && lo <= k && k <= hi) {
+				delete this.unorderedResults[k];
+				n4 += 1;
+			}
+		}
+		for (var j = this.queue.length - 1; j >= 0; j--) {
+			if (lo <= this.queue[j].key && this.queue[j].key <= hi) {
+				this.queue.splice(j, 1);
+				n5 += 1;
+			}
+		}
+		var isActive = !!this.expectedOrder.length;
+		if (n1 + n2 + n3 + n4 + n5) {
+			console.log("deleted from playlist iterator:", n1, n2, n3, n4, n5, "; active:", wasActive, "->", isActive);
+		}
+		if (wasActive) {
+			this.orderResults();
+		}
 	}
 }
 
@@ -403,12 +469,12 @@ function PlaylistView(playlist, plid, idx) {
 
 	this.getForwardIterator = function() {
 		var proxy = new ViewProxy(viewPrefix, startkey, endkey, false, true);
-		return new PlaylistIterator(proxy, idx, false);
+		return new PlaylistIterator(proxy, startkey, idx, false);
 	}
 
 	this.getReverseIterator = function() {
 		var proxy = new ViewProxy(viewPrefix, startkey, reverseEndkey, true, true);
-		return new PlaylistIterator(proxy, idx, true);
+		return new PlaylistIterator(proxy, startkey, idx, true);
 	}
 }
 

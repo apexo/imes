@@ -281,31 +281,54 @@ Playlist.prototype.update = function(pls, targetPlaylist) {
 	this.fetchSome();
 }
 
-Playlist.prototype.remove = function(plid) {
+Playlist.prototype.remove = function(plid, defer) {
 	var items = [];
 	this.playlist.getRange(plid_range_low(plid), plid_range_high(plid), items);
 	for (var i = 0; i < items.length; i++) {
 		this.playlist = this.playlist.remove(items[i].dataset.key);
 		deleteTrack(items[i]);
-		this.fetchSome();
+		defer.fetchSome = true;
 	}
+	this.backward.remove(plid, true);
+	this.forward.remove(plid, true);
 }
 
-Playlist.prototype.onupdate = function(doc) {
+Playlist.prototype.onupdate = function(doc, defer) {
 	var plid = doc._id;
 	for (var i = 0; i < doc.items.length; i++) {
 		var id = doc.items[i], key = plkey(plid, i);
 		if (!id) {
 			var entry = this.playlist.lookupGte(key);
-			if (entry.key === key) {
+			if (entry && entry.key === key) {
 				this.playlist = this.playlist.remove(entry.key);
 				deleteTrack(entry.value);
-				this.fetchSome();
+				defer.fetchSome = true;
 			}
+			this.backward.remove(key, false);
+			this.forward.remove(key, false);
 		} else {
 			if (!this.playlist.count || key > this.playlist.max().key) {
-				this.resumeForward();
+				defer.resumeForward = true;
 			}
+		}
+	}
+}
+
+Playlist.prototype.updateLast = function() {
+	if (this.backwardLast) {
+		if (
+			this.backwardLast.track && !this.backwardLast.track.parentElement ||
+			this.backwardLast.container && !this.backwardLast.container.parentElement
+		) {
+			this.backwardLast = null;
+		}
+	}
+	if (this.forwardLast) {
+		if (
+			this.forwardLast.track && !this.forwardLast.track.parentElement ||
+			this.forwardLast.container && !this.forwardLast.container.parentElement
+		) {
+			this.forwardLast = null;
 		}
 	}
 }
@@ -425,12 +448,24 @@ Playlist.prototype.resumeForward = function() {
 }
 
 Playlist.prototype.changesCb = function(changes) {
+	var defer = {fetchSome: false, resumeForward: false};
+
 	for (var i = 0; i < changes.length; i++) {
 		var change = changes[i];
 		if (change.deleted) {
-			this.remove(change.id);
+			this.remove(change.id, defer);
 		} else if (change.doc.type === "playlist") {
-			this.onupdate(change.doc);
+			this.onupdate(change.doc, defer);
 		}
+	}
+
+	if (defer.fetchSome) {
+		// items have been removed, may need to invalidate first/last cached track/album info
+		this.updateLast();
+	}
+	if (defer.resumeForward) {
+		this.resumeForward();
+	} else if (defer.fetchSome) {
+		this.fetchSome();
 	}
 }
