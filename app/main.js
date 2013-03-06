@@ -465,8 +465,11 @@ function enqueueTracks(ids, tpl) {
 	var id = encodeURIComponent(tpl + ":" + date + ":" + rnd);
 	ajax_post(DB_URL + DB_NAME + "/" + id, {
 		"type": "playlist",
-		"items": ids
+		"items": ids.length <= pl_limit ? ids : ids.slice(0, pl_limit)
 	}, null, {"method": "PUT"});
+	if (ids.length > pl_limit) {
+		setTimeout(enqueueTracks.bind(this, ids.slice(pl_limit), tpl), 100);
+	}
 }
 
 function setSearchTerms(terms, source) {
