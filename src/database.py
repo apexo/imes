@@ -747,6 +747,13 @@ class Database(object):
 				print "unhandled type %s: %s" % (type(m), path)
 				ignore.add(type(m))
 			return
+		except IOError as e:
+			if e.errno == errno.EACCES:
+				print "access revoked while scanning %s" % (path,)
+				if info is not None:
+					self.remove(path, False)
+				return
+			raise
 
 		old = info
 		info = s(path, m, info)
