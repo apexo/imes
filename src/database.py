@@ -11,6 +11,7 @@ import mutagen.mp4
 import mutagen.oggvorbis
 import mutagen.apev2
 import mutagen.asf
+import mutagen.musepack
 import couchdb
 import os
 import errno
@@ -63,6 +64,7 @@ class Database(object):
 			mutagen.oggvorbis.OggVorbis: self.updateOggVorbis,
 			mutagen.mp4.MP4: self.updateMP4,
 			mutagen.asf.ASF: self.updateASF,
+			mutagen.musepack.Musepack: self.updateMPC,
 		}
 		self._session = couchdb.http.Session()
 		self._db = couchdb.Server(url, session=self._session)
@@ -412,11 +414,31 @@ class Database(object):
 		f.__name__ = 'set_id3v2_data_tolist_' + dstkey
 		return f
 
-	def ape_text(dstkey):
+	def ape_text(dstkey, listify=False):
 		def f(dst, value):
 			assert value.kind == 0
-			dst[dstkey] = value.value.decode("UTF-8")
+			v = value.value.decode("UTF-8")
+			if listify:
+				v = [v]
+			dst[dstkey] = v
 		f.__name__ = 'set_ape_text_' + dstkey
+		return f
+
+	ape_text_utf8 = ape_text
+
+	def ape_text_number_pair(dst1, dst2):
+		def f(dst, value):
+			a, slash, b = value.value.partition("/")
+			try:
+				dst[dst1] = int(a)
+			except ValueError:
+				print "invalid", dst1, "value:", value
+			if slash:
+				try:
+					dst[dst2] = int(b)
+				except ValueError:
+					print "invalid", dst2, "value:", value
+		f.__name__ = 'set_ape_text_number_pair_%s_and_%s' % (dst1, dst2)
 		return f
 
 	def asf_single_value(dstkey):
@@ -478,6 +500,7 @@ class Database(object):
 		'musicbrainz_discid': mbids('musicbrainz_discid'),
 		'musicbrainz_albumid': mbids('musicbrainz_albumid'),
 		'date': single_value('date'),
+		'originaldate': single_value('originaldate'),
 		'albumartistsort': generic('albumartistsort'),
 		'artistsort': generic('artistsort'),
 		'albumartist': generic('albumartist'),
@@ -501,9 +524,11 @@ class Database(object):
 		"TXXX:MusicBrainz Artist Id": id3v2_txxx_mbids('musicbrainz_artistid'),
 		"TXXX:MusicBrainz Album Id": id3v2_txxx_mbids('musicbrainz_albumid'),
 		"UFID:http://musicbrainz.org": id3v2_ufid_mbid('musicbrainz_trackid'),
-		"TDOR": id3v2_single_value_text('date'),
+		"TDOR": id3v2_single_value_text('originaldate'),
+		"TDRC": id3v2_single_value_text('date'),
 		"TPE1": id3v2_values('artist'),
 		"TSOP": id3v2_values('artistsort'),
+		"TPE2": id3v2_values('albumartist'),
 		"TALB": id3v2_values('album'),
 		"TSOA": id3v2_values('albumsort'),
 		"TIT2": id3v2_values('title'),
@@ -522,25 +547,63 @@ class Database(object):
 		'REPLAYGAIN_ALBUM_PEAK': ape_text('replaygain_album_peak'),
 		'REPLAYGAIN_TRACK_GAIN': ape_text('replaygain_track_gain'),
 		'REPLAYGAIN_TRACK_PEAK': ape_text('replaygain_track_peak'),
+		'Album': ape_text_utf8('album', True),
+		'Album Artist': ape_text_utf8('albumartist', True),
+		'Albumartistsort': ape_text_utf8('albumartistsort', True),
+		'Artist': ape_text_utf8('artist', True),
+		'Artistsort': ape_text_utf8('artistsort', True),
+		#'Asin':
+		#'Barcode':
+		#'CatalogNumber':
+		'Composer': ape_text_utf8('composer', True),
+		#'Cover Art (Front)': ape_cover(#TODO),
+		'Disc': ape_text_number_pair('discnumber', 'totaldiscs'),
+		#'Label':
+		#'Language':
+		#'MUSICBRAINZ_ALBUMSTATUS':
+		#'MUSICBRAINZ_ALBUMTYPE':
+		#'Media',
+		'Musicbrainz_Albumartistid': ape_text('musicbrainz_albumartistid', True),
+		'Musicbrainz_Albumid': ape_text('musicbrainz_albumid', True),
+		'Musicbrainz_Artistid': ape_text('musicbrainz_artistid', True),
+		'Musicbrainz_Trackid': ape_text('musicbrainz_trackid', True),
+		#'Originaldate':
+		#'Releasecountry':
+		#'Script':
+		'Title': ape_text_utf8('title', True),
+		'Track': ape_text_number_pair('tracknumber', 'totaltracks'),
+		'Originaldate': ape_text('date'),
+		'Year': ape_text('date'),
+		#'comment':
+		'genre': ape_text_utf8('genre', True),
 	}
 
 	ASF_MAP = {
 		u'WM/TrackNumber': asf_single_value('tracknumber'), #u'WM/TrackNumber': [ASFUnicodeAttribute(u'9')]
+		u'WM/PartOfSet': asf_single_value('discnumber'),
 		u'WM/AlbumTitle': asf_values('album'), #u'WM/AlbumTitle': [ASFUnicodeAttribute(u'Unbekanntes Album (16.05.2006 20:46:16)')]
 		u'WM/AlbumArtist': asf_values('albumartist'), #u'WM/AlbumArtist': [ASFUnicodeAttribute(u'Trentemoeller')]
 		u'WM/Genre': asf_values('genre'), #u'WM/Genre': [ASFUnicodeAttribute(u'Elektro')]
+		u'WM/Composer': asf_values('composer'),
+		u'WM/Year': asf_single_value('date'),
+		u'WM/OriginalReleaseYear': asf_single_value('originaldate'),
 		'Author': generic('artist'), #'Author': [u'Trentemoeller']
 		'Title': generic('title'), #'Title': [u'Titel 9']
+		u'MusicBrainz/Track Id': asf_values('musicbrainz_trackid'),
+		u'MusicBrainz/Artist Id': asf_values('musicbrainz_artistid'),
+		u'MusicBrainz/Album Artist Id': asf_values('musicbrainz_albumartistid'),
+		u'MusicBrainz/Album Id': asf_values('musicbrainz_albumid'),
 	}
 
 	def _mayignore(self, kind):
-		if kind in ("TSSE", "USLT", "TDRC", "TPE2", "TENC",
+		if kind in ("TSSE", "USLT", "TDRC", "TENC",
 			"TPUB", "TCMP", "TSRC", "TLAN", "TCOP", "TSO2", "TRSO", "TRSN", "TPE4", "TOPE", "WORS", "TPE3",
-			"TCOM", "TIT1", "TOWN", "MCDI", "TIT3", "TIPL",
+			"TIT1", "TOWN", "MCDI", "TIT3", "TIPL",
 			"releasecountry", "asin", "metadata_block_picture", "releasestatus", "script", "releasetype", "label", "language", "author", "barcode", "tmpo", "\xa9too", "cpil", "pgap",
 			"covr", "comment", "producer", "catalognumber", "format", "WCOP", "TBPM", "license", "TOAL", "PCNT", "isrc", "itunes_cddb_1",
 			"performer", "conductor", "mixer", "arranger", "copyright", "discid", "tool version", "tool name", "bpm", "intensity", "discsubtitle", "\xa9cmt", "WM/Lyrics", "WM/MCDI",
-			"coverart", "coverarttype", "coverartmime", "coverartdescription"):
+			"coverart", "coverarttype", "coverartmime", "coverartdescription", "MP3GAIN_ALBUM_MINMAX", "MP3GAIN_MINMAX",
+			"Cover Art (Front)", "WM/Picture"):
 			return True
 		prefix, sep, key = kind.partition(":")
 		if sep and prefix in ["PRIV", "WXXX", "POPM", "COMM", "APIC", "UFID", "GEOB", "----", "USLT", "WCOM", "TXXX"]:
@@ -591,6 +654,47 @@ class Database(object):
 		except IOError as e:
 			if e.errno != errno.ENOENT:
 				raise
+
+	def updateMPC(self, path, m, info):
+		type_map = {"Cover Art (Front)": 4}
+		doc = {}
+		self._process(doc, m, self.APEV2_MAP, "APEv2", path)
+		doc["info"] = dict(m.info.__dict__)
+		doc["container"] = "mpc"
+		doc["codec"] = "mpc"
+		doc["tags"] = ["apev2"]
+
+		pictures = []
+
+		for k in m:
+			if not k.startswith("Cover Art ("):
+				continue
+			if k not in type_map:
+				print "unhandled cover art kind/apev2: ", k
+				continue
+			v = m[k].value
+			p = v.find("\x00")
+			if not 0 <= p <= 100:
+				print "invalid cover art in", path
+				continue
+			v = v[p+1:]
+			key, formats = self.updatePicture(v)
+			if key is None:
+				print "broken picture in", path
+				continue
+			pictures.append({"type": type_map[k], "desc": "", "key": key, "formats": formats})
+
+		doc["pictures"] = pictures
+
+		if m.info.title_peak:
+			doc["replaygain_track_peak"] = str(m.info.title_peak)
+			doc["replaygain_track_gain"] = str(m.info.title_gain) + " dB"
+
+		if m.info.album_peak:
+			doc["replaygain_album_peak"] = str(m.info.album_peak)
+			doc["replaygain_album_gain"] = str(m.info.album_gain) + " dB"
+
+		return doc
 
 	def updateMP3(self, path, m, info):
 		doc = {}
@@ -684,6 +788,33 @@ class Database(object):
 		doc["container"] = "asf"
 		doc["codec"] = "asf"
 		doc["tags"] = ["asf"]
+
+		pictures = []
+
+		for p in m.get("WM/Picture", []):
+			value = p.value
+			type = ord(value[0])
+			length, = struct.unpack("<I", value[1:5])
+			i = 5
+			mime = ""
+			while value[i:i+2] != "\x00\x00":
+				mime += value[i:i+2]
+				i += 2
+			i += 2
+			desc = ""
+			while value[i:i+2] != "\x00\x00":
+				desc += value[i:i+2]
+				i += 2
+			i += 2
+			if length != len(value[i:]):
+				print "broken picture in", path
+				continue
+			key, formats = self.updatePicture(value[i:])
+			if key is None:
+				print "broken picture in", path
+				continue
+			pictures.append({"type": type, "desc": desc, "key": key, "formats": formats})
+		doc["pictures"] = pictures
 		# TODO: covr
 		# TODO: APEv2 (???)
 		return doc
