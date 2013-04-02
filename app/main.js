@@ -184,13 +184,32 @@ function makeLink(data, target, cls, sep, instead) {
 			}
 		}
 	}
-	if (!n) {
+	if (!n && instead) {
 		target.appendChild(document.createTextNode(instead));
+	}
+	return n;
+}
+
+function albumArtistLink(i, target) {
+	if (i.musicbrainz_albumartistid &&
+		i.musicbrainz_albumartistid.length == 1 &&
+		i.musicbrainz_albumartistid[0] === "89ad4ac3-39f7-470e-963a-56509c546377" ||
+		i.albumartist &&
+		i.albumartist.length == 1 &&
+		(i.albumartist[0] === "Various Artists" || i.albumartist[0] === "VA")
+	) {
+		target.appendChild(document.createTextNode("Various Artists: "));
+	} else if (makeLink(i.albumartist, target, "artist-link", ", ")) {
+		target.appendChild(document.createTextNode(": "));
 	}
 }
 
-function artistLink(i, target) {
+function artistLink(i, target, album) {
+	if (album && i.albumartist && JSON.stringify(i.artist) === JSON.stringify(i.albumartist)) {
+		return false;
+	}
 	makeLink(i.artist, target, "artist-link", ", ", "Unknown Artist");
+	return true;
 }
 
 function albumLink(i, target) {
@@ -235,8 +254,9 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 	track.dataset.tracknumber = tracknumber;
 	track.dataset.length = i.info.length;
 	track.appendChild(document.createTextNode(t));
-	artistLink(i, track);
-	track.appendChild(document.createTextNode(" - "));
+	if (artistLink(i, track, true)) {
+		track.appendChild(document.createTextNode(" - "));
+	}
 	titleLink(i, track);
 
 	var insertAfter;
@@ -301,6 +321,7 @@ function createButton(target, type, title) {
 }
 
 function formatAlbumName(i, target) {
+	albumArtistLink(i, target);
 	albumLink(i, target);
 	if (i.date) {
 		var p = i.date.indexOf("-");
