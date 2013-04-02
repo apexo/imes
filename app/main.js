@@ -302,6 +302,11 @@ function createButton(target, type, title) {
 
 function formatAlbumName(i, target) {
 	albumLink(i, target);
+	if (i.date) {
+		var p = i.date.indexOf("-");
+		var date = p > 0 ? i.date.substring(0, p) : i.date;
+		target.appendChild(document.createTextNode(" (" + date + ")"));
+	}
 	if (i.discnumber && (i.discnumber > 1 || i.totaldiscs && i.totaldiscs > 1)) {
 		target.appendChild(document.createTextNode(" [Disc " + i.discnumber + "]"));
 	}
