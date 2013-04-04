@@ -229,7 +229,7 @@ function ViewProxy(url, startkey, endkey, descending, docid) {
 			var currentkey = me.currentstartkey;
 			for (var i = 0; i < rows.length; i++) {
 				var row = rows[i];
-				if (docid) {
+				if (docid && !descending) {
 					currentkey = row.id + "X";
 					skip = 0;
 				} else if (row.key == currentkey) {
