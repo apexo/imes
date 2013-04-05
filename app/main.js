@@ -127,18 +127,8 @@ function displayTrackInfo(fid, event) {
 			if (info.replaygain_album_peak) {
 				target.appendChild(labeledValue("album peak", info.replaygain_album_peak));
 			}
+			// TODO: date, originaldate, info, pictures, composer, albumartist, ...
 		}
-
-/* {
-"media":"CD",
-"codec":"mp3",
-"type":"file",
-"tags":["id3","apev2"],
-"date":"1993",
-"container":"mpeg",
-"info":{"layer":3,"padding":false,"length":137.08533333333332394,"version":1,"sample_rate":44100,"mode":1,"protected":false,"bitrate":192000},
-"pictures":[]
-} */
 
 		var root = document.body.parentElement, width = root.clientWidth, height = root.clientHeight;
 

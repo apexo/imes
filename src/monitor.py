@@ -327,9 +327,3 @@ class TestMonitor(Monitor):
 
 	def cleanup(self):
 		print "cleanup"
-
-if __name__ == '__main__':
-	m = TestMonitor()
-	m.addRoot("/home/apexo/t")
-	#m.addRoot("/home/apexo/ext/media")
-	m.run()

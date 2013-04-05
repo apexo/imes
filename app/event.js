@@ -2,11 +2,11 @@ function Event() {
 	this.listeners = {};
 }
 
-Event.prototype.addListener = function(fn, scope, filter) {
+Event.prototype.addListener = function(fn, scope) {
 	if (!fn.id) {
 		fn.id = idGenerator.next();
 	}
-	this.listeners[fn.id] = {fn: fn, scope: scope, filter: filter || function() {return true;}};
+	this.listeners[fn.id] = {fn: fn, scope: scope};
 }
 
 Event.prototype.removeListener = function(fn) {
@@ -20,21 +20,4 @@ Event.prototype.fire = function(scope) {
 			c.fn.apply(c.scope || scope, Array.prototype.slice.call(arguments, 1));
 		}
 	}
-}
-
-function EventManager() {
-	this.listeners = [];
-}
-
-EventManager.prototype.addListener = function(event, fn, scope, filter) {
-	this.listeners.push({event: event, fn: fn});
-	event.addListener(fn, scope, filter);
-}
-
-EventManager.prototype.destroy = function() {
-	for (var i = 0; i < this.listeners.length; i++) {
-		var l = this.listeners[i];
-		l.event.removeListener(l.fn);
-	}
-	this.listeners.length = 0;
 }

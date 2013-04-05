@@ -2,16 +2,6 @@ from cffi import FFI
 import numpy
 
 from fade import EOF, BUFFER_SIZE, SAMPLE_RATE, SAMPLE_TYPE
-# depends:
-# - debian:
-#     libmp3lame0 (>=1:3.99.5) (3.98.4 does not seem to work)
-#     python-pycparser (>=2.07)
-#     libmp3lame-dev
-
-# python-cffi
-# - python-setuptools
-# - libffi-dev
-# - python-dev
 
 CDEF = """
 typedef enum vbr_mode_e {

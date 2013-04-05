@@ -100,12 +100,6 @@ demote(name): remove imes_user role from user named `name`
 		"promote": promote,
 		"demote": demote,
 	}).interact()
-	#while True:
-	#	terms = raw_input(">").decode("UTF-8")
-	#	for id in db.search(terms):
-	#		row = db.files[id]
-	#		print u"%-40s %-40s %-40s" % (row.get("album", [""])[0], row.get("artist", [""])[0], row.get("title", [""])[0])
-	#		print row
 
 def runScanner(db, config):
 	adapter = Adapter(db)

@@ -4,15 +4,8 @@ import subprocess
 import os
 import errno
 
-# f(x) = -2x³ + 3x²
-
-# f(0) = 0
-# f(1) = 1
-# f'(0) = 0
-# f'(1) = 0
-
 SAMPLE_RATE = 44100
-BUFFER_SIZE = 1152 #SAMPLE_RATE // 100
+BUFFER_SIZE = 1152
 SAMPLE_TYPE = numpy.int16
 SAMPLE_SIZE = len(numpy.zeros(1, SAMPLE_TYPE).view(numpy.uint8))
 NUM_CHANNELS = 2
@@ -250,11 +243,9 @@ class LookAhead(object):
 		n = self.remaining - self.limit
 		if self.write <= self.read:
 			n = min(self.size - self.read, n)
-		#print "XXX", self.write, self.read, self.remaining, self.limit, self.size
 		n = min(n, limit)
 		if n == 0:
 			return 0, EOF
-		#print len(buf), ofs, n, len(self.temp), self.read, n
 		buf[ofs : ofs + n] = self.temp[self.read : self.read + n]
 		self.remaining -= n
 		self.read += n
@@ -354,29 +345,9 @@ class Limiter(object):
 		assert self.samples >= 0
 		if not self.samples:
 			return 0, EOF
-		#print "limited %d / %r" % (self.samples, self.src)
 		n, self.src = self.src.read_into(buf, ofs, min(limit, self.samples))
 		assert 0 <= n <= self.samples
 		if not n:
-			#print "limiter EOF @ %d samples remaining (src=%r)" % (self.samples, self.src)
 			return 0, EOF
 		self.samples -= n
 		return n, self
-
-if __name__ == '__main__':
-	def test(src, channels=2, sampleType=SAMPLE_TYPE):
-		buf = numpy.zeros((BUFFER_SIZE, channels), sampleType)
-		src_old = src
-		total = 0
-		n, src = src.read_into(buf, 0, len(buf))
-		total = n
-		while n:
-			print "got", n, "samples for a total of", total
-			if src is not src_old:
-				print "new src:", src
-			src_old = src
-			n, src = src.read_into(buf, 0, len(buf))
-			total += n
-		print "done, %d samples" % total
-
-	test(SoxDecoder("/home/apexo/ext/media/Mariah Carey - Without You.mp3", 2))

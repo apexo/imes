@@ -626,23 +626,3 @@ class RTSPHandler(object):
 				return
 			raise
 		Connection(addr, sock, self.reactor, self)
-
-
-def test():
-	import couchdb
-	from reactor import Reactor
-
-	_db = couchdb.Server("http://admin:secret@localhost:5984/")
-	db = _db["imes"]
-	userDb = _db["_users"]
-
-	reactor = Reactor()
-	RTSPHandler(("0.0.0.0", 9997), "http://localhost:5984", db, userDb, reactor)
-	try:
-		reactor.run()
-	except KeyboardInterrupt:
-		pass
-
-
-if __name__ == '__main__':
-	test()

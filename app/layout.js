@@ -624,25 +624,3 @@ function HeaderLayout(element) {
 		}
 	}
 }
-
-/*
-function prepareLayout() {
-	var p = {};
-	var filter = document.querySelector("#top .filter");
-	p.filter_width = filter.clientWidth;
-	p.filter_label_width = filter.querySelector("label").getBoundingClientRect().width;
-	p.controls_width = filter.querySelector("#controls").getBoundingClientRect().width;
-	return p;
-}
-
-function doLayout(p){
-	var filter = document.querySelector("#top .filter");
-	console.log(p);
-	filter.querySelector(".search").style.width = p.filter_width - p.filter_label_width - p.controls_width;
-	console.log("ok");
-}
-
-function layout() {
-	doLayout(prepareLayout());
-}
-*/
