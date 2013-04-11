@@ -878,6 +878,11 @@ class Database(object):
 				print "unhandled type %s: %s" % (type(m), path)
 				ignore.add(type(m))
 			return
+
+		old = info
+
+		try:
+			info = s(path, m, info)
 		except IOError as e:
 			if e.errno == errno.EACCES:
 				print "access revoked while scanning %s" % (path,)
@@ -886,8 +891,6 @@ class Database(object):
 				return
 			raise
 
-		old = info
-		info = s(path, m, info)
 		info["path"] = dpath
 		info["type"] = "file"
 		info["mtime"] = st.st_mtime
