@@ -180,15 +180,52 @@ function makeLink(data, target, cls, sep, instead) {
 	return n;
 }
 
+function isSpecialArtist(ids, names, isAlbumArtist) {
+	// http://wiki.musicbrainz.org/Special_Purpose_Artist; 2013-04-11
+
+	if (ids && ids.length === 1) {
+		if (false
+			|| isAlbumArtist && ids[0] === "89ad4ac3-39f7-470e-963a-56509c546377" // "Various Artists"
+			|| ids[0] === "f731ccc4-e22a-43af-a747-64213329e088" // "[anonymous]"
+			|| ids[0] === "33cf029c-63b0-41a0-9855-be2a3665fb3b" // "[data]"
+			|| ids[0] === "314e1c25-dde7-4e4d-b2f4-0a7b9f7c56dc" // "[dialogue]"
+			|| ids[0] === "eec63d3c-3b81-4ad4-b1e4-7c147d4d2b61" // "[no artist]"
+			|| ids[0] === "9be7f096-97ec-4615-8957-8d40b5dcbc41" // "[traditional]"
+			|| ids[0] === "125ec42a-7229-4250-afc5-e057484327fe" // "[unknown]"
+		) {
+			return true;
+		}
+	} else if (names && names.length === 1) {
+		if (false
+			|| isAlbumArtist && names[0] === "Various Artists"
+			|| names[0] === "[anonymous]"
+			|| names[0] === "[data]"
+			|| names[0] === "[dialogue]"
+			|| names[0] === "[no artist]"
+			|| names[0] === "[traditional]"
+			|| names[0] === "[unknown]"
+		) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function isSpecialTrackTitle(names) {
+	// http://wiki.musicbrainz.org/Style/Unknown_and_untitled/Special_purpose_track_title; 2013-04-11
+	if (names && names.length === 1) {
+		return (false
+			|| names[0] === "[untitled]"
+			|| names[0] === "[unknown]"
+			|| names[0] === "[data track]"
+		);
+	}
+	return false;
+}
+
 function albumArtistLink(i, target) {
-	if (i.musicbrainz_albumartistid &&
-		i.musicbrainz_albumartistid.length == 1 &&
-		i.musicbrainz_albumartistid[0] === "89ad4ac3-39f7-470e-963a-56509c546377" ||
-		i.albumartist &&
-		i.albumartist.length == 1 &&
-		(i.albumartist[0] === "Various Artists" || i.albumartist[0] === "VA")
-	) {
-		target.appendChild(document.createTextNode("Various Artists: "));
+	if (isSpecialArtist(i.musicbrainz_albumartistid, i.albumartist, true)) {
+		target.appendChild(document.createTextNode(i.albumartist[0] + ": "));
 	} else if (makeLink(i.albumartist, target, "artist-link", ", ")) {
 		target.appendChild(document.createTextNode(": "));
 	}
@@ -198,7 +235,11 @@ function artistLink(i, target, album) {
 	if (album && i.albumartist && JSON.stringify(i.artist) === JSON.stringify(i.albumartist)) {
 		return false;
 	}
-	makeLink(i.artist, target, "artist-link", ", ", "Unknown Artist");
+	if (isSpecialArtist(i.musicbrainz_artistid, i.artist, false)) {
+		target.appendChild(document.createTextNode(i.artist[0]));
+	} else {
+		makeLink(i.artist, target, "artist-link", ", ", "Unknown Artist");
+	}
 	return true;
 }
 
@@ -207,8 +248,12 @@ function albumLink(i, target) {
 }
 
 function titleLink(i, target) {
-	var instead = i.path.substring(i.path.lastIndexOf("/") + 1);
-	makeLink(i.title, target, "title-link", ", ", "Unknown Title [" + instead + "]");
+	if (isSpecialTrackTitle(i.title)) {
+		target.appendChild(document.createTextNode(i.title[0]));
+	} else {
+		var instead = i.path.substring(i.path.lastIndexOf("/") + 1);
+		makeLink(i.title, target, "title-link", ", ", "[unknown title: " + instead + "]");
+	}
 }
 
 function createButtonContainer(target) {
