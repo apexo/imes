@@ -574,7 +574,7 @@ class State(object):
 			aggregate.channel.aggregates.discard(aggregate)
 		for user in aggregate.users:
 			self.setUserAggregate(user, None)
-		for device in aggregate.devices:
+		for device in list(aggregate.devices):
 			self.setDeviceAggregate(device, None, False)
 		self._saveState()
 
