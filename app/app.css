@@ -189,3 +189,6 @@ h1 {
 #help p {
 	margin-bottom: 1em;
 }
+.button {
+	cursor: pointer;
+}

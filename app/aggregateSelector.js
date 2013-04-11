@@ -21,7 +21,7 @@ AggregateSelector.prototype.updateMaybe = function() {
 	if (!this.settings.ready || !this.userStatus.status) {
 		return;
 	}
-	var aggregates = this.settings.lists.aggregate;
+	var aggregates = this.settings.arrayify(this.settings.aggregates).sort();
 	var newAggregate = this.userStatus.status.aggregate || "";
 	var aggregatesChanged;
 

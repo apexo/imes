@@ -56,7 +56,7 @@ PlaylistSelector.prototype.updateMaybe = function() {
 
 	this.target.innerHTML = "";
 	var options = [];
-	var channels = this.settings.lists.channel;
+	var channels = this.settings.arrayify(this.settings.channels).sort();
 
 	for (var i = 0; i < channels.length; i++) {
 		var v = "playlist:channel:" + channels[i];
