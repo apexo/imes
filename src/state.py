@@ -550,7 +550,7 @@ class State(object):
 
 	def deleteChannel(self, name):
 		channel = self._channels.pop(name)
-		for aggregate in channel.aggregates:
+		for aggregate in list(channel.aggregates):
 			self.setAggregateChannel(aggregate, None, False)
 		channel.stop()
 		self._saveState()
