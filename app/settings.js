@@ -1,7 +1,8 @@
-function Settings(userStatus) {
+function Settings(userStatus, subscription) {
 	this.userStatus = userStatus;
 	this.onupdate = new Event();
 	this.ready = false;
+	this.subscription = subscription;
 
 	if (this.userStatus.ready) {
 		this.userReady();
@@ -471,7 +472,7 @@ Settings.prototype.categories = {
 
 Settings.prototype.userReady = function() {
 	this.userStatus.onready.removeListener(this.userReady);
-	subscription.onchange.addListener(this.onChange, this);
+	this.subscription.onchange.addListener(this.onChange, this);
 	this.doUpdateAll();
 }
 

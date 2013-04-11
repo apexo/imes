@@ -722,7 +722,7 @@ function onLoad() {
 	userStatus.onupdate.addListener(function(s) {
 		document.getElementById("lockout").style.display = s.lockout ? "" : "none";
 	});
-	settings = new Settings(userStatus);
+	settings = new Settings(userStatus, subscription);
 
 	aggregateSelector = new AggregateSelector(document.getElementById("aggregate-select"), settings, userStatus, layoutManager);
 	playlistSelector = new PlaylistSelector(
