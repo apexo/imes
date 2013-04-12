@@ -90,9 +90,81 @@ The configuration file (config.yaml) is a YAML document, example:
 - database url: URL of you couchdb instance with admin credentials
 - database name: name of the couchdb database to create & use
 - database origin: value for the Access-Control-Allow-Origin CORS header to allow backend access from the frontend (which is served from couchdb and may thus have a different URL), multiple values can be separated with a comma (,)
-- backend bind_host, bind_port: IP & port on which to bind the backend, the backend serves both HTTP & RTSP request
-- backend bind_host, rtp_port: IP & port from which to send RTP data, RTCP port is rtp_port + 1
+- backend bind\_host, bind\_port: IP & port on which to bind the backend, the backend serves both HTTP & RTSP request
+- backend bind\_host, rtp\_port: IP & port from which to send RTP data, RTCP port is rtp\_port + 1
 - backend public: URL that the frontend shall use for requests to the backend
-- backend public_rtsp: URL that the frontend shall use for displaying RTSP URLs
-- backend public_delegate: URL that the frontend shall use for displaying HTTP delegate URLs (and HTTP streaming URLs)
+- backend public\_rtsp: URL that the frontend shall use for displaying RTSP URLs
+- backend public\_delegate: URL that the frontend shall use for displaying HTTP delegate URLs (and HTTP streaming URLs)
 - scrobbler: API key & secret for last.fm
+
+
+### CouchDB ###
+
+In order for CouchDB to handle user authentication you need to uncomment the WWW-Authenticate line in the [httpd] section and set require\_valid\_user in [couch\_httpd\_auth] to true (/etc/couchdb/local.ini).
+
+    [httpd]
+    WWW-Authenticate = Basic realm="my imes installation"
+
+    [couch_httpd_auth]
+    require_valid_user = true
+
+/etc/couchdb/local.ini is also the place to create an admin user for the IMES backend.
+
+    [admins]
+    admin_name = admin_password
+
+upon restart, CouchDB should automatically encrypt the password.
+
+For convenience, you may want to automatically redirect the user to the IMES frontend and serve a favicon (in the redirect handler, "imes" should be replaced by the name of the database that IMES uses, if you changed it):
+
+    [httpd_global_handlers]
+    / = {couch_httpd, send_redirect, "/imes/app/index.html"}
+    favicon.ico = {couch_httpd_misc_handlers, handle_favicon_req, "PATH_TO_ÍMES/res"}
+
+### SSL ###
+
+Since CouchDB only does Basic HTTP Authentication, you really should put a reverse proxy in front of CouchDB for SSL. The reverse proxy might also be useful to unify the CouchDB and the IMES HTTP backend (change public and public\_delegate URLs accordingly, RTSP will probably be not that simple). A common URL for database and backend alleviates the need for proper CORS configuration (database origin configuration value).
+
+An example nginx configuration might look like this:
+
+    server {
+            listen          443;
+            listen          [::]:443 default ipv6only=on; ## listen for ipv6
+    
+            ssl             on;
+            ssl_certificate /etc/ssl/imes.domain.crt;
+            ssl_certificate_key /etc/ssl/private/imes.domain.key;
+    
+            server_name     imes.domain;
+            proxy_read_timeout 120s;
+    
+            location /imes {
+                    proxy_pass http://127.0.0.1:5984/imes;
+            }
+            location /_users {
+                    proxy_pass http://127.0.0.1:5984/_users;
+            }
+            location /_session {
+                    proxy_pass http://127.0.0.1:5984/_session;
+            }
+            location /b {
+                    rewrite /b/(.*) /$1 break;
+                    proxy_pass http://127.0.0.1:9997;
+            }
+            location /favicon.ico {
+                    alias /var/www/imes-favicon.ico;
+            }
+            location / {
+                    rewrite ^(.*) https://imes.domain/imes/app/index.html permanent;
+            }
+    }
+
+This configuration proxies the /imes, /\_users and /\_session URLs to CouchDB and /b to the backend, a matching backend configuration could look like:
+
+    backend:
+      bind_host: 127.0.0.1
+      bind_port: 9997
+      rtp_port: 9998
+      public: https://imes.domain/b
+      public_rtsp: rtsp://127.0.0.1:9997
+      public_delegate: https://imes.domain/b
