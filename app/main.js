@@ -18,11 +18,14 @@ function displayTrackInfo(fid, event) {
 		target.onclick = null;
 	}
 
-	function labeledValue(label, value) {
+	function labeledValue(label, value, valid) {
 		var result = document.createElement("div");
 		var b = result.appendChild(document.createElement("b"));
 		b.appendChild(document.createTextNode(label + " "));
 		result.appendChild(document.createTextNode(value));
+		if (valid === false) {
+			result.style.color = "red";
+		}
 		return result;
 	}
 	function labeledLink(label, value, href) {
@@ -115,17 +118,21 @@ function displayTrackInfo(fid, event) {
 			for (var i = 0; info.genre && i < info.genre.length; i++) {
 				target.appendChild(labeledValue("genre", info.genre[i]));
 			}
+			var rg_valid = validateReplayGainInfo(info);
 			if (info.replaygain_track_gain) {
-				target.appendChild(labeledValue("track gain", info.replaygain_track_gain));
+				target.appendChild(labeledValue("track gain", info.replaygain_track_gain, rg_value));
 			}
 			if (info.replaygain_track_peak) {
-				target.appendChild(labeledValue("track peak", info.replaygain_track_peak));
+				target.appendChild(labeledValue("track peak", info.replaygain_track_peak, rg_value));
 			}
 			if (info.replaygain_album_gain) {
-				target.appendChild(labeledValue("album gain", info.replaygain_album_gain));
+				target.appendChild(labeledValue("album gain", info.replaygain_album_gain, rg_value));
 			}
 			if (info.replaygain_album_peak) {
-				target.appendChild(labeledValue("album peak", info.replaygain_album_peak));
+				target.appendChild(labeledValue("album peak", info.replaygain_album_peak, rg_value));
+			}
+			if (!info.replaygain_track_gain || !info.replaygain_track_peak) {
+				target.appendChild(labeledValue("replaygain info missing/invalid", "", false));
 			}
 			// TODO: date, originaldate, info, pictures, composer, albumartist, ...
 		}
@@ -277,6 +284,44 @@ function createButtonContainer(target) {
 	return ra;
 }
 
+function validateReplayGainInfo(i) {
+	if (i.replaygain_track_peak
+		&& i.replaygain_track_gain
+		&& i.replaygain_track_gain.substring(i.replaygain_track_gain.length - 3) === " dB") {
+		var peak = parseFloat(i.replaygain_track_peak);
+		var gain = parseFloat(i.replaygain_track_gain);
+		if (isNaN(peak) || isNaN(gain) || peak <= 0.0 || gain == 0.0) {
+			return false;
+		}
+	} else {
+		return false;
+	}
+
+	if (!i.replaygain_album_peak && !i.replaygain_album_gain) {
+		return true;
+	}
+
+	if (i.replaygain_album_peak
+		&& i.replaygain_album_gain
+		&& i.replaygain_album_gain.substring(i.replaygain_album_gain.length - 3) === " dB") {
+		var peak = parseFloat(i.replaygain_album_peak);
+		var gain = parseFloat(i.replaygain_album_gain);
+		if (isNaN(peak) || isNaN(gain) || peak <= 0.0 || gain == 0.0) {
+			return false;
+		}
+	} else {
+		return false;
+	}
+
+	return true;
+}
+
+function trackMarkup(track, i) {
+	if (!validateReplayGainInfo(i)) {
+		track.classList.add("error");
+	}
+}
+
 function formatAlbumTrack(i, tracklist, position, btns) {
 	var t, tracknumber;
 	if (i.tracknumber !== undefined) {
@@ -318,6 +363,7 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 	}
 	tracklist.insertBefore(track, insertAfter ? insertAfter.nextElementSibling : tracklist.firstElementChild);
 
+	trackMarkup(track, i);
 	var bc = createButtonContainer(track);
 	bc.appendChild(createLengthIndicator(formatLength(i.info.length)));
 	btns.createAlbumTrackButtons(bc);
@@ -351,6 +397,7 @@ function formatSingleTrack(i, btns) {
 	track.dataset.id = i._id;
 	track.dataset.length = i.info.length;
 
+	trackMarkup(track, i);
 	var bc = createButtonContainer(track);
 	bc.appendChild(createLengthIndicator(formatLength(i.info.length)));
 	btns.createSingleTrackButtons(bc);
