@@ -619,8 +619,9 @@ function addOption(select, name, value) {
 function formatLength(length, pos) {
 	pos = (pos !== undefined && pos !== null) ? formatLength(pos) : null;
 
+	length += 0.5;
 	var minutes = Math.floor(length / 60);
-	var seconds = Math.floor(length - minutes * 60 + 0.5);
+	var seconds = Math.floor(length - minutes * 60);
 	seconds = seconds.toString();
 	if (seconds.length < 2) {
 		seconds = "0" + seconds;
