@@ -377,6 +377,11 @@ function formatAlbumName(i, target) {
 	if (i.discnumber && (i.discnumber > 1 || i.totaldiscs && i.totaldiscs > 1)) {
 		target.appendChild(document.createTextNode(" [Disc " + i.discnumber + "]"));
 	}
+	if (i.discsubtitle) {
+		for (var j = 0; j < i.discsubtitle.length; j++) {
+			target.appendChild(document.createTextNode(' "' + i.discsubtitle[j] + '"'));
+		}
+	}
 }
 
 function scaledSize(img, max_width, max_height) {

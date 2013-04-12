@@ -470,6 +470,7 @@ class Database(object):
 		'----:com.apple.iTunes:MusicBrainz Album Id': mbids('musicbrainz_albumid'),
 		'----:com.apple.iTunes:MusicBrainz Album Artist Id': mbids('musicbrainz_albumartistid'),
 		'----:com.apple.iTunes:MusicBrainz Disc Id': mbids('musicbrainz_discid'),
+		'----:com.apple.iTunes:DISCSUBTITLE': generic('discsubtitle'),
 		'soaa': generic('albumartistsort'),
 		'soar': generic('artistsort'),
 		'soal': generic('albumsort'),
@@ -477,7 +478,6 @@ class Database(object):
 		'soco': generic('composersort'),
 		'aART': generic('albumartist'),
 		'\xa9wrt': generic('composer'),
-		# covr
 	}
 
 	# {'tmpo': [0], '\xa9too': [u'iTunes v7.4.3.1, QuickTime 7.2'], 'cpil': False, '----:com.apple.iTunes:iTunSMPB': [' 00000000 00000840 00000048 00000000002A4B78 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000'], '----:com.apple.iTunes:iTunes_CDDB_IDs': ['11+78B21AEA2DF89AFC94288091A11803DE+1262221'], 'pgap': False, '----:com.apple.iTunes:iTunNORM': [' 000000FC 00000130 00002D95 00001B27 0000B7A4 0000B7A4 00005240 000062C4 0000F010 0000F010']}
@@ -510,6 +510,7 @@ class Database(object):
 		'disctotal': single_int('totaldiscs'),
 		'media': single_value('media'),
 		'composer': generic('composer'),
+		'discsubtitle': generic('discsubtitle'),
 	}
 
 	OGG_MAP = FLAC_MAP
@@ -540,6 +541,7 @@ class Database(object):
 		'TXXX:replaygain_track_peak': id3v2_single_value('replaygain_track_peak'),
 		'TXXX:replaygain_track_gain': id3v2_single_value('replaygain_track_gain'),
 		'TXXX:replaygain_album_gain': id3v2_single_value('replaygain_album_gain'),
+		'TSST': id3v2_values('discsubtitle'),
 	}
 
 	APEV2_MAP = {
@@ -576,6 +578,7 @@ class Database(object):
 		'Year': ape_text('date'),
 		#'comment':
 		'genre': ape_text_utf8('genre', True),
+		'DiscSubtitle': ape_text_utf8('discsubtitle', True),
 	}
 
 	ASF_MAP = {
@@ -593,6 +596,7 @@ class Database(object):
 		u'MusicBrainz/Artist Id': asf_values('musicbrainz_artistid'),
 		u'MusicBrainz/Album Artist Id': asf_values('musicbrainz_albumartistid'),
 		u'MusicBrainz/Album Id': asf_values('musicbrainz_albumid'),
+		u'WM/SetSubTitle': asf_values('discsubtitle'),
 	}
 
 	def _mayignore(self, kind):
