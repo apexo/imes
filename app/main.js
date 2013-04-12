@@ -120,16 +120,16 @@ function displayTrackInfo(fid, event) {
 			}
 			var rg_valid = validateReplayGainInfo(info);
 			if (info.replaygain_track_gain) {
-				target.appendChild(labeledValue("track gain", info.replaygain_track_gain, rg_value));
+				target.appendChild(labeledValue("track gain", info.replaygain_track_gain, rg_valid));
 			}
 			if (info.replaygain_track_peak) {
-				target.appendChild(labeledValue("track peak", info.replaygain_track_peak, rg_value));
+				target.appendChild(labeledValue("track peak", info.replaygain_track_peak, rg_valid));
 			}
 			if (info.replaygain_album_gain) {
-				target.appendChild(labeledValue("album gain", info.replaygain_album_gain, rg_value));
+				target.appendChild(labeledValue("album gain", info.replaygain_album_gain, rg_valid));
 			}
 			if (info.replaygain_album_peak) {
-				target.appendChild(labeledValue("album peak", info.replaygain_album_peak, rg_value));
+				target.appendChild(labeledValue("album peak", info.replaygain_album_peak, rg_valid));
 			}
 			if (!info.replaygain_track_gain || !info.replaygain_track_peak) {
 				target.appendChild(labeledValue("replaygain info missing/invalid", "", false));
@@ -285,7 +285,7 @@ function createButtonContainer(target) {
 }
 
 function validateReplayGainInfo(i) {
-	if (i.replaygain_track_peak
+	if (i.replaygain_track_peak 
 		&& i.replaygain_track_gain
 		&& i.replaygain_track_gain.substring(i.replaygain_track_gain.length - 3) === " dB") {
 		var peak = parseFloat(i.replaygain_track_peak);
