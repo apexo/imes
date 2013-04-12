@@ -151,7 +151,7 @@ Playlist.prototype.updateProgressBar = function(pb) {
 
 	var
 		el = pb.parentElement,
-		length = el.dataset.length,
+		length = parseFloat(el.dataset.length),
 		total = length ? Math.floor(length * 44100 + 0.5) : 0,
 		samplePos = pos.pos + Math.floor((now - t0) * 44.1 + 0.5);
 
@@ -168,7 +168,7 @@ Playlist.prototype.updateProgressBar = function(pb) {
 
 Playlist.prototype.removeProgressBar = function(element) {
 	element.removeChild(element.getElementsByClassName("progress-bar")[0]);
-	element.getElementsByClassName("length-indicator")[0].firstChild.textContent = formatLength(element.dataset.length);
+	element.getElementsByClassName("length-indicator")[0].firstChild.textContent = formatLength(parseFloat(element.dataset.length));
 	element.classList.remove("currently-playing");
 	RAF.unregister("playlist");
 }
