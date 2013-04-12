@@ -1,0 +1,20 @@
+media:
+  - /home/user/music
+
+database:
+  url: http://admin:secret@localhost:5984/
+  name: imes
+  origin: http://localhost:5984
+
+backend:
+  bind_host: 127.0.0.1
+  bind_port: 9997
+  rtp_port: 9998
+  public: http://127.0.0.1:9997
+  public_rtsp: rtsp://127.0.0.1:9997
+  public_delegate: http://127.0.0.1:9997
+
+scrobbler:
+  lastfm:
+    key: API_KEY
+    secret: API_SECRET
