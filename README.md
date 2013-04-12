@@ -18,6 +18,9 @@ Features
 - cover art
 - last.fm
 
+![IMES Search Screen](https://apexo.de/data/imes_search.png "Search Screen")
+![IMES Playlist Screen](https://apexo.de/data/imes_playlist.png "Playlist Screen")
+
 
 Limitations / Known Issues
 --------------------------
@@ -58,6 +61,9 @@ A channel has a playlist and a paused state. A channel is playing, if the playli
 A device is something that can play a music stream, i.e.: has one or more speakers attached and a network connection to the IMES backend. A device may be muted by a delegate. The device's streaming URLs are displayed in the Settings screen.
 
 A delegate is an entity that may cause the music (on certain devices) to be muted, e.g. some VoIP telephones can be configured to fetch configurable URLs on incoming calls (and other events), which can be used to automatically (un)pause the music while a phone call is active.
+
+![IMES Settings Screen](https://apexo.de/data/imes_settings.png "Settings Screen")
+![IMES Settings Screen - Expanded](https://apexo.de/data/imes_settings2.png "Settings Screen - Expanded")
 
 
 Configuration
