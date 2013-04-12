@@ -6,10 +6,10 @@ import socket
 import collections
 import traceback
 
-from fade import Blender, LookAhead, Stable, SoxDecoder, EOF, SampleCounter, Skipper, Joiner, zeroer, Pauser
-from lame import Encoder
-from ipc import Async
-from reactor import Reactor, clock
+from src.fade import Blender, LookAhead, Stable, SoxDecoder, EOF, SampleCounter, Skipper, Joiner, zeroer, Pauser
+from src.lame import Encoder
+from src.ipc import Async
+from src.reactor import Reactor, clock
 
 LOOK_AHEAD = 5 * 44100
 PREROLL_LIMIT = 11520

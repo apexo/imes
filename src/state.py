@@ -5,9 +5,9 @@ import socket
 import errno
 from collections import OrderedDict
 
-import channel
-from reactor import clock
-from ipc import Async
+from src import channel
+from src.reactor import clock
+from src.ipc import Async
 
 USER_SESSION_TIMEOUT = 120
 RTSP_SESSION_TIMEOUT = 60

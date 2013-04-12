@@ -4,13 +4,13 @@ import pprint
 import argparse
 import signal
 import errno
-
-import database
-import monitor
-import reactor
 import select
-import rtp
-import scrobbler
+
+from src import database
+from src import monitor
+from src import reactor
+from src import rtp
+from src import scrobbler
 
 class Adapter(monitor.Monitor):
 	def __init__(self, db):

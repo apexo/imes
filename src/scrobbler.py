@@ -3,7 +3,7 @@ import random
 
 import pylast
 
-from reactor import clock
+from src.reactor import clock
 
 SCROBBLING_DELAY = 10
 SCROBBLING_LIMIT = 20

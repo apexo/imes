@@ -6,7 +6,7 @@ import urlparse
 import json
 import traceback
 
-from state import State
+from src.state import State
 
 class FixedLengthBodyDecoder(object):
 	def __init__(self, length):

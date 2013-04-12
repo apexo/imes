@@ -1,7 +1,7 @@
 from cffi import FFI
 import numpy
 
-from fade import EOF, BUFFER_SIZE, SAMPLE_RATE, SAMPLE_TYPE
+from src.fade import EOF, BUFFER_SIZE, SAMPLE_RATE, SAMPLE_TYPE
 
 CDEF = """
 typedef enum vbr_mode_e {
