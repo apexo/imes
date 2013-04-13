@@ -22,6 +22,12 @@ Features
 ![IMES Playlist Screen](https://apexo.de/data/imes_playlist.png "Playlist Screen")
 
 
+Demo Installation
+-----------------
+
+A demo installation is running at (http://imes-demo.apexo.de/)[http://imes-demo.apexo.de/]. Four demo accounts user1, user2, user3, and user4 are available; password is the same as the user name. RTSP streaming is currently not available in the demo installation.
+
+
 Limitations / Known Issues
 --------------------------
 
