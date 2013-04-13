@@ -37,12 +37,12 @@ Requirements
 A Linux host with:
 
 - sox
-- python (2.7)
+- python2.7
 - python-mutagen
 - python-inotifyx
 - python-couchdb
 - python-numpy
-- python-yaml
+- python-yaml (pyyaml)
 - python-imaging (PIL)
 - python-pylast
 - python-cffi
