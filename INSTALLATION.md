@@ -49,7 +49,7 @@ As of 2013-04-12, python-cffi is actually included in Debian Unstable/Sid (http:
 
 install dependencies:
 
-    aptitude install --without-recommends build-essential libmp3lame-dev
+    aptitude install --without-recommends build-essential libmp3lame-dev python2.7
     aptitude install --without-recommends python-pylast python-imaging python-yaml python-numpy python-couchdb python-inotifyx python-cffi
     aptitude install git sox libsox-fmt-ffmpeg libsox-fmt-mp3
 
