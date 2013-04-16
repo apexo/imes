@@ -191,10 +191,12 @@ class Connection(object):
 		if is_options:
 			r.setHeader(CORS_MAXAGE, MAXAGE)
 			r.setHeader(CTYPE, "text/plain")
+			r.setHeader("Cache-Control", "max-age=864000")
 			r.setBody("")
 		else:
 			r.setHeader(CTYPE, "application/json")
 			r.setBody(json.dumps(value))
+			r.setHeader("Cache-Control", "no-cache")
 		return r
 
 	def _httpModel(self, request, uri, data, body, user, cmd, args, callback, create, delete, list_, get, transform):
