@@ -23,7 +23,6 @@ AggregateSelector.prototype.updateMaybe = function() {
 	}
 	var aggregates = this.settings.arrayify(this.settings.aggregates).sort();
 	var newAggregate = this.userStatus.status.aggregate || "";
-	var aggregatesChanged;
 
 	if (JSON.stringify(aggregates) !== JSON.stringify(this.oldAggregates)) {
 		this.target.innerHTML = "";
