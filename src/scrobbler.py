@@ -172,6 +172,8 @@ class Scrobbler(object):
 					userSessions.pop(networkName, None)
 					continue
 				raise
+			except pylast.MalformedResponseError:
+				result = False
 		return result
 
 	def _doCatchup(self, t):
