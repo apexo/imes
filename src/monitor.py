@@ -57,7 +57,14 @@ class ScanDir(Task):
 		p = self.watch.path
 
 		for item in os.listdir(p):
-			s = os.lstat(os.path.join(p, item))
+			try:
+				s = os.lstat(os.path.join(p, item))
+			except OSError as e:
+				if e.errno == errno.EACCES:
+					print "[monitor] EACCES: ", repr(os.path.join(p, item))
+					continue
+				else:
+					raise
 			if stat.S_ISDIR(s.st_mode):
 				monitor._watchPath(self.watch, item)
 			elif stat.S_ISREG(s.st_mode):
