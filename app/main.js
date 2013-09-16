@@ -118,6 +118,12 @@ function displayTrackInfo(fid, event) {
 			for (var i = 0; info.genre && i < info.genre.length; i++) {
 				target.appendChild(labeledValue("genre", info.genre[i]));
 			}
+			if (info.originaldate) {
+				target.appendChild(labeledValue("original date", info.originaldate));
+			}
+			if (info.date) {
+				target.appendChild(labeledValue("release date", info.date));
+			}
 			var rg_valid = validateReplayGainInfo(info);
 			if (info.replaygain_track_gain) {
 				target.appendChild(labeledValue("track gain", info.replaygain_track_gain, rg_valid));
