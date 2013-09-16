@@ -186,7 +186,7 @@ class Database(object):
 		self._temp = temp - self._well_known
 
 	def cleanup(self):
-		print "cleaning up %d objects" % (len(self._temp),)
+		print("cleaning up %d objects" % (len(self._temp),))
 		for id in self._temp:
 			del self.db[id]
 
@@ -298,7 +298,7 @@ class Database(object):
 		def f(dst, value):
 			values = sum((v.split("/") for v in value), [])
 			if not all(CRE_MBID.match(v) for v in values):
-				print "invalid %s: %r" % (dstkey, value)
+				print("invalid %s: %r" % (dstkey, value))
 			else:
 				dst[dstkey] = values
 		f.__name__ = 'set_mbid_' + dstkey
@@ -308,7 +308,7 @@ class Database(object):
 		def f(dst, value):
 			values = sum((v.split("/") for v in value.text), [])
 			if not all(CRE_MBID.match(v) for v in values):
-				print "invalid %s: %r" % (dstkey, value)
+				print("invalid %s: %r" % (dstkey, value))
 			else:
 				dst[dstkey] = values
 		f.__name__ = 'set_id3v2_txxx_mbid_' + dstkey
@@ -318,7 +318,7 @@ class Database(object):
 		def f(dst, value):
 			values = [value.data]
 			if not all(CRE_MBID.match(v) for v in values):
-				print "invalid %s: %r" % (dstkey, value)
+				print("invalid %s: %r" % (dstkey, value))
 			else:
 				dst[dstkey] = values
 		f.__name__ = 'set_id3v2_ufid_mbid_' + dstkey
@@ -348,12 +348,12 @@ class Database(object):
 			try:
 				dst[dst1] = int(a)
 			except ValueError:
-				print "invalid", dst1, "value:", value
+				print("invalid %s value: %r" % (dst1, value))
 			if slash:
 				try:
 					dst[dst2] = int(b)
 				except ValueError:
-					print "invalid", dst2, "value:", value
+					print("invalid %s value: %r" % (dst2, value))
 		f.__name__ = 'set_int_pair_%s_and_%s' % (dst1, dst2)
 		return f
 
@@ -369,7 +369,7 @@ class Database(object):
 			try:
 				float(v)
 			except ValueError:
-				print "invalid %s: %r" % (dstkey, value)
+				print("invalid %s: %r" % (dstkey, value))
 			dst[dstkey] = v + suffix
 		f.__name__ = 'set_m4a_rg_' + dstkey
 		return f
@@ -380,12 +380,12 @@ class Database(object):
 			try:
 				dst[dst1] = int(a)
 			except ValueError:
-				print "invalid", dst1, "value:", value
+				print("invalid %s value: %r" % (dst1, value))
 			if slash:
 				try:
 					dst[dst2] = int(b)
 				except ValueError:
-					print "invalid", dst2, "value:", value
+					print("invalid %s value: %r" % (dst2, value))
 		f.__name__ = 'set_id3v2_numpair_%s_and_%s' % (dst1, dst2)
 		return f
 
@@ -432,12 +432,12 @@ class Database(object):
 			try:
 				dst[dst1] = int(a)
 			except ValueError:
-				print "invalid", dst1, "value:", value
+				print("invalid %s value: %r" % (dst1, value))
 			if slash:
 				try:
 					dst[dst2] = int(b)
 				except ValueError:
-					print "invalid", dst2, "value:", value
+					print("invalid %s value: %r" % (dst2, value))
 		f.__name__ = 'set_ape_text_number_pair_%s_and_%s' % (dst1, dst2)
 		return f
 
@@ -620,7 +620,7 @@ class Database(object):
 			if k not in map:
 				k2 = kind, k
 				if k2 not in ignore and not self._mayignore(k):
-					print "unhandled tag %r in %s:" % (k, path), repr(v)[:1000]
+					print("unhandled tag %r in %s: %s" % (k, path, repr(v)[:1000]))
 					ignore.add(k2)
 				continue
 			map[k](dst, v)
@@ -638,7 +638,7 @@ class Database(object):
 		for p in m.pictures:
 			key, formats = self.updatePicture(p.data)
 			if key is None:
-				print "broken picture in", path
+				print("broken picture in %s" % (path,))
 				continue
 			pictures.append({"type": p.type, "desc": p.desc, "key": key, "formats": formats})
 
@@ -674,17 +674,17 @@ class Database(object):
 			if not k.startswith("Cover Art ("):
 				continue
 			if k not in type_map:
-				print "unhandled cover art kind/apev2: ", k
+				print("unhandled cover art kind/apev2: %s" % (k,))
 				continue
 			v = m[k].value
 			p = v.find("\x00")
 			if not 0 <= p <= 100:
-				print "invalid cover art in", path
+				print("invalid cover art in %s" % (path,))
 				continue
 			v = v[p+1:]
 			key, formats = self.updatePicture(v)
 			if key is None:
-				print "broken picture in", path
+				print("broken picture in %s" % (path,))
 				continue
 			pictures.append({"type": type_map[k], "desc": "", "key": key, "formats": formats})
 
@@ -713,7 +713,7 @@ class Database(object):
 			if k.startswith("APIC:"):
 				key, formats = self.updatePicture(p.data)
 				if key is None:
-					print "broken picture in", path
+					print("broken picture in %s" % (path,))
 					continue
 				pictures.append({"type": p.type, "desc": p.desc, "key": key, "formats": formats})
 
@@ -745,7 +745,7 @@ class Database(object):
 
 			key, formats = self.updatePicture(data)
 			if key is None:
-				print "broken picture in", path
+				print("broken picture in %s" % (path,))
 				continue
 			pictures.append({"type": type, "desc": desc, "key": key, "formats": formats})
 
@@ -755,7 +755,7 @@ class Database(object):
 
 			key, formats = self.updatePicture(data)
 			if key is None:
-				print "broken picture in", path
+				print("broken picture in %s" % (path,))
 				continue
 			pictures.append({"type": type, "desc": desc, "key": key, "formats": formats})
 
@@ -776,7 +776,7 @@ class Database(object):
 		for p in m.get("covr", []):
 			key, formats = self.updatePicture(str(p))
 			if key is None:
-				print "broken picture in", path
+				print("broken picture in %s" % (path,))
 				continue
 			pictures.append({"type": 3, "desc": u"", "key": key, "formats": formats})
 		doc["pictures"] = pictures
@@ -811,11 +811,11 @@ class Database(object):
 				i += 2
 			i += 2
 			if length != len(value[i:]):
-				print "broken picture in", path
+				print("broken picture in %s" % (path,))
 				continue
 			key, formats = self.updatePicture(value[i:])
 			if key is None:
-				print "broken picture in", path
+				print("broken picture in %s" % (path,))
 				continue
 			pictures.append({"type": type, "desc": desc, "key": key, "formats": formats})
 		doc["pictures"] = pictures
@@ -827,7 +827,7 @@ class Database(object):
 		try:
 			dpath = path.decode("UTF-8")
 		except UnicodeDecodeError:
-			print "invalid file name:", repr(path)
+			print("invalid file name: %r" % (path,))
 			return
 		ext = os.path.splitext(path)[1].lower()
 		if ext in (".sid", ".mod", ".stm", ".s3m", ".jpg", ".jpeg"):
@@ -848,7 +848,7 @@ class Database(object):
 		if info is not None and st.st_mtime == info["mtime"] and st.st_size == info["size"] and version <= info.get("version", 0):
 			for p in info.get("pictures", []):
 				if not p["key"] in self.db:
-					print "missing picture for", path
+					print("missing picture for %s" % (path,))
 					break
 				self._temp.discard(p["key"])
 			else:
@@ -860,18 +860,18 @@ class Database(object):
 		try:
 			m = mutagen.File(path)
 		except mutagen.mp3.HeaderNotFoundError:
-			print "invalid mp3 file:", path
+			print("invalid mp3 file: %s" % (path,))
 		except mutagen.mp4.MP4StreamInfoError:
-			print "invalid mp4 file:", path
+			print("invalid mp4 file: %s" % (path,))
 		except IOError as e:
 			if e.errno == errno.ENOENT:
 				pass
 			else:
-				print "unknown error %s while parsing %s" % (e, path)
+				print("unknown error %s while parsing %s" % (e, path))
 		except UnboundLocalError:
-			print "mutagen error", path
+			print("mutagen error: %s" % (path,))
 		except Exception as e:
-			print "weird error %s while parsing %s" % (e, path)
+			print("weird error %s while parsing %s" % (e, path))
 		if m is None:
 			return
 
@@ -879,7 +879,7 @@ class Database(object):
 			s = self.scanner[type(m)]
 		except KeyError:
 			if type(m) not in ignore:
-				print "unhandled type %s: %s" % (type(m), path)
+				print("unhandled type %s: %s" % (type(m), path))
 				ignore.add(type(m))
 			return
 
@@ -889,7 +889,7 @@ class Database(object):
 			info = s(path, m, info)
 		except IOError as e:
 			if e.errno == errno.EACCES:
-				print "access revoked while scanning %s" % (path,)
+				print("access revoked while scanning %s" % (path,))
 				if info is not None:
 					self.remove(path, False)
 				return

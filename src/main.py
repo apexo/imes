@@ -46,7 +46,7 @@ demote(name): remove imes_user role from user named `name`
 """
 	class Helper(object):
 		def __call__(self):
-			print helpText
+			print(helpText)
 
 		def __str__(self):
 			return helpText
@@ -65,12 +65,12 @@ demote(name): remove imes_user role from user named `name`
 		if name in (u"", u"loco", u"admin", u"root") or u" " in name:
 			raise ValueError(name)
 		if prefix+name in users:
-			print "user already exists"
+			print("user already exists")
 			return
 		pw = raw_input("password: ").decode("UTF-8")
 		pw2 = raw_input("password (repeat): ").decode("UTF-8")
 		if pw != pw2:
-			print "passwords don't match"
+			print("passwords don't match")
 		users[prefix+name] = {
 			u"name": name,
 			u"password": pw,
@@ -151,7 +151,7 @@ def runAll(db, config, args):
 	signal.signal(signal.SIGCHLD, childExited)
 
 	if not processes:
-		print "nothing to do"
+		print("nothing to do")
 		return
 
 	p = select.epoll()
@@ -165,9 +165,9 @@ def runAll(db, config, args):
 				raise
 
 	if unwell[0]:
-		print "child exited, stopping"
+		print("child exited, stopping")
 	else:
-		print "exiting"
+		print("exiting")
 
 	for pid in processes:
 		os.kill(pid, signal.SIGTERM)
@@ -182,7 +182,7 @@ def runAll(db, config, args):
 				raise
 
 	if processes:
-		print "killing remaining processes"
+		print("killing remaining processes")
 
 	for pid in processes:
 		os.kill(pid, signal.SIGKILL)
