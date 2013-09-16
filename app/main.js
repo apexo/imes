@@ -413,13 +413,24 @@ function createButton(target, type, title) {
 	target.appendChild(button);
 }
 
+function extractYear(date) {
+	var p = date.indexOf("-");
+	return p > 0 ? date.substring(0, p) : date;
+}
+
 function formatAlbumName(i, target) {
 	albumArtistLink(i, target);
 	albumLink(i, target);
-	if (i.date) {
-		var p = i.date.indexOf("-");
-		var date = p > 0 ? i.date.substring(0, p) : i.date;
-		target.appendChild(document.createTextNode(" (" + date + ")"));
+	if (i.originaldate || i.date) {
+		var d;
+		if (i.originaldate && i.date && (extractYear(i.originaldate) !== extractYear(i.date))) {
+			d = extractYear(i.originaldate) + "/" + extractYear(i.date);
+		} else if (i.originaldate) {
+			d = extractYear(i.originaldate);
+		} else {
+			d = extractYear(i.date);
+		}
+		target.appendChild(document.createTextNode(" (" + d + ")"));
 	}
 	if (i.discnumber && (i.discnumber > 1 || i.totaldiscs && i.totaldiscs > 1)) {
 		target.appendChild(document.createTextNode(" [Disc " + i.discnumber + "]"));
