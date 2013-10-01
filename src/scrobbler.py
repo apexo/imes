@@ -172,7 +172,7 @@ class Scrobbler(object):
 					userSessions.pop(networkName, None)
 					continue
 				raise
-			except pylast.MalformedResponseError:
+			except (pylast.MalformedResponseError, pylast.NetworkError):
 				result = False
 		return result
 
