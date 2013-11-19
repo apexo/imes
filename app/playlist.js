@@ -419,10 +419,7 @@ Playlist.prototype.addBackward = function(items, done) {
 		this.backwardState = "paused";
 	}
 	var newHeight = this.target.clientHeight;
-	var scrollTop = Math.max(this.scrollParent.scrollTop, this.scrollParent.parentElement.scrollTop);
-	scrollTop += newHeight - oldHeight;
-	this.scrollParent.scrollTop = scrollTop;
-	this.scrollParent.parentElement.scrollTop = scrollTop;
+	this.scrollParent.parentElement.scrollTop += newHeight - oldHeight;
 	this.fetchSome();
 }
 
