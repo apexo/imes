@@ -684,9 +684,7 @@ function isVisible2(element) {
 		top += el.offsetTop;
 	}
 	for (var el = element.parentElement; el; el = el.parentElement) {
-		if (el != document.body) {
-			top -= el.scrollTop;
-		}
+		top -= el.scrollTop;
 	}
 	if ((top + element.clientHeight <= 0) || (top >= document.body.parentElement.clientHeight)) {
 		return false;
