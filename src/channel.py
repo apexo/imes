@@ -280,7 +280,7 @@ class Channel(object):
 			self._fetch()
 
 REPLAY_GAIN = {
-	"album": lambda info: info.get("replaygain_album_gain", "0.0 dB"),
+	"album": lambda info: info.get("replaygain_album_gain", info.get("replaygain_track_gain", "0.0 dB")),
 	"track": lambda info: info.get("replaygain_track_gain", "0.0 dB"),
 	"none": lambda info: "0.0 dB",
 }
