@@ -277,7 +277,7 @@ Settings.prototype.categories = {
 			var lastStatic = target.appendChild(document.createTextNode(": "));
 
 			this.bind("scrobblers",
-				function() { return this.scrobblers[item]; },
+				function() { return this.scrobblers[item] || {}; },
 				function(data) { return data && (data.auth_token + "\0" + data.session_token); },
 				function(data) {
 					var node = lastStatic;
