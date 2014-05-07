@@ -4,7 +4,7 @@ Installation
 inotify
 -------
 
-IMES uses inotify to track changes of the media library. inotify required one "watch" per watched directory. For large media collections, the default limit is probably too low. The following command should yield a lower bound on the number of required watches:
+IMES uses inotify to track changes to the media library. inotify required one "watch" per watched directory. For large media collections, the default limit is probably too low. The following command should yield a lower bound on the number of required watches:
 
     find /path_to_your_music_collection -type d | wc -l
 
