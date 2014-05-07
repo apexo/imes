@@ -1,6 +1,24 @@
 Installation
 ============
 
+inotify
+-------
+
+IMES uses inotify to track changes of the media library. inotify required one "watch" per watched directory. For large media collections, the default limit is probably too low. The following command should yield a lower bound on the number of required watches:
+
+    find /path_to_your_music_collection -type d | wc -l
+
+
+The real watch limit should be higher than that. Maybe twice as high, and add some leeway for other processes – a good indication for that is the system default (which is 8192 on my system). The resulting number is then fed to sysctl:
+
+    sysctl fs.inotify.max_user_watches=16384
+
+
+To persist this setting across reboots, you may want to put the following (adjust based on your requirements) into a new file in /etc/sysctl.d, e.g. /etc/sysctl.d/imes:
+
+    fs.inotify.max_user_watches = 16384
+
+
 Debian Wheezy/Testing
 ---------------------
 
