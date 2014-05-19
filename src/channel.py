@@ -36,7 +36,7 @@ class RTPClock(object):
 	def next(self):
 		self.value += 2351
 		self.clock49 += 1
-		if self.clock49 == 1:
+		if self.clock49 == 49:
 			self.value += 1
 			self.clock49 = 0
 		if self.value >= 2**32:
@@ -90,7 +90,7 @@ class MPEGClock(object):
 			self.clock1225 = int((c - self.clock) * 1225.0 + 0.5)
 			if self.clock1225 >= 1225:
 				self.clock += 1
-				self.clock1225 -= 1
+				self.clock1225 -= 1225
 		else:
 			self.clock = initial.clock
 			self.clock1225 = initial.clock1225
