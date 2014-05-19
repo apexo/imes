@@ -50,6 +50,12 @@ createFilter = (function() {
 			return false;
 		};
 	}
+	function path(term) {
+		return function(doc) {
+			var a = doc.path;
+			return a.substring(0, term.length) === term;
+		};
+	}
 	function search(term) {
 		var a = artist(term), b = title(term), c = album(term);
 		return function(doc) {
@@ -96,6 +102,11 @@ createFilter = (function() {
 			return false;
 		};
 	}
+	function path2(term) {
+		return function(doc) {
+			return doc.path === term;
+		};
+	}
 	function all(term) {
 		return function(doc) {
 			return true;
@@ -106,9 +117,11 @@ createFilter = (function() {
 		"album": album,
 		"title": title,
 		"search": search,
+		"path": path,
 		"artist2": artist2,
 		"album2": album2,
 		"title2": title2,
+		"path2": path2,
 		"all": all,
 	}
 

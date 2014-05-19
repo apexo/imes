@@ -492,6 +492,8 @@ function Remote() {
 		"artist": {view: "artist", transform: lc, range: COUCH_SUFFIX, mod: 3},
 		"album": {view: "album", transform: lc, range: COUCH_SUFFIX, mod: 2},
 		"title": {view: "title", transform: lc, range: COUCH_SUFFIX, mod: 1},
+		"path": {view: "path", transform: eq, range: "", mod: 0},
+		"path2": {view: "path2", transform: eq, range: "", mod: 14},
 		"artist2": {view: "artist2", transform: eq, range: "", mod: 13},
 		"album2": {view: "album2", transform: eq, range: "", mod: 12},
 		"title2": {view: "title2", transform: eq, range: "", mod: 11},
