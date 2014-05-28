@@ -30,7 +30,7 @@ var DOMNotification = (function() {
 	DOMNotification.prototype.nowPlaying = function(info) {
 		if (!info) {
 			if (this._nowPlaying) {
-				this._nowPlaying.cancel();
+				this._nowPlaying.close();
 				this._nowPlaying = null;
 			}
 			return;
@@ -59,7 +59,7 @@ var DOMNotification = (function() {
 
 		setTimeout(function() {
 			if (this._nowPlaying === notification) {
-				this._nowPlaying.cancel();
+				this._nowPlaying.close();
 				this._nowPlaying = null;
 			}
 		}.bind(this), this.timeout);
