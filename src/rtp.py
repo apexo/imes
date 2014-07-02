@@ -493,7 +493,11 @@ a=rtpmap:14 mpa/90000/2
 						return
 			p = self.buf.find("\r\n", self.read)
 			while self.body is None and self.read <= p < self.write:
-				self._processLine(self.view[self.read : p].tobytes())
+				try:
+					self._processLine(self.view[self.read : p].tobytes())
+				except ValueError:
+					self.close()
+					return
 				self.read = p + 2
 				p = self.buf.find("\r\n", self.read)
 			if self.body is not None:
