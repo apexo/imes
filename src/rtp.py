@@ -453,7 +453,7 @@ a=rtpmap:14 mpa/90000/2
 		if self.firstLine is None:
 			self.firstLine = line
 			return
-		hdr, sep, value = line.partition(": ")
+		hdr, sep, value = line.partition(":")
 		if not sep:
 			raise ValueError(line)
 		self.data[hdr.lower().strip()] = value.strip()
