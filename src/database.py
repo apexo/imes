@@ -917,7 +917,7 @@ class Database(object):
 			assert old_path.startswith(srcPath)
 			new_path = dstPath + old_path[len(srcPath):]
 			new_id = sha1_id(new_path)
-			doc["path"] = new_path
+			doc["path"] = new_path.decode("UTF-8")
 			temp = self.db.get(new_id)
 			if temp is not None:
 				doc["_rev"] = temp["_rev"]
