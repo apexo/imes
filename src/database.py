@@ -9,6 +9,7 @@ import mutagen.flac
 import mutagen.mp3
 import mutagen.mp4
 import mutagen.oggvorbis
+import mutagen.oggopus
 import mutagen.apev2
 import mutagen.asf
 import mutagen.musepack
@@ -62,6 +63,7 @@ class Database(object):
 			mutagen.flac.FLAC: self.updateFLAC,
 			mutagen.mp3.MP3: self.updateMP3,
 			mutagen.oggvorbis.OggVorbis: self.updateOggVorbis,
+			mutagen.oggopus.OggOpus: self.updateOggOpus,
 			mutagen.mp4.MP4: self.updateMP4,
 			mutagen.asf.ASF: self.updateASF,
 			mutagen.musepack.Musepack: self.updateMPC,
@@ -721,12 +723,15 @@ class Database(object):
 		self._apev2(doc, path)
 		return doc
 
-	def updateOggVorbis(self, path, m, info):
+	def updateOggOpus(self, path, m, info):
+		return self.updateOggVorbis(path, m, info, "opus")
+
+	def updateOggVorbis(self, path, m, info, codec="vorbis"):
 		doc = {}
 		self._process(doc, m, self.OGG_MAP, "OGG", path)
 		doc["info"] = dict(m.info.__dict__)
 		doc["container"] = "ogg"
-		doc["codec"] = "vorbis"
+		doc["codec"] = codec
 		doc["tags"] = ["ogg"]
 
 		pictures = []
