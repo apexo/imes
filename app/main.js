@@ -328,6 +328,17 @@ function trackMarkup(track, i) {
 	}
 }
 
+function trackOrder(a, b) {
+	var	tn_a = parseInt(a.dataset.tracknumber),
+		tn_b = parseInt(b.dataset.tracknumber);
+
+	if (tn_a != tn_b) {
+		return tn_a - tn_b;
+	}
+
+	return a.dataset.filename.localeCompare(b.dataset.filename);
+}
+
 function formatAlbumTrack(i, tracklist, position, btns) {
 	var t, tracknumber;
 	if (i.tracknumber !== undefined) {
@@ -345,11 +356,12 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 		tracknumber = 0;
 	}
 
-	var track = document.createElement("div");
+	var track = document.createElement("div"), pathElements = i.path.split("/");
 	track.classList.add("album-track");
 	track.dataset.id = i._id;
 	track.dataset.tracknumber = tracknumber;
 	track.dataset.length = i.info.length;
+	track.dataset.filename = pathElements[pathElements.length-1];
 	track.appendChild(document.createTextNode(t));
 	if (artistLink(i, track, true)) {
 		track.appendChild(document.createTextNode(" - "));
@@ -359,7 +371,7 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 	var insertAfter;
 	if (!position) {
 		insertAfter = tracklist.lastElementChild;
-		while (insertAfter && parseInt(insertAfter.dataset.tracknumber) > tracknumber) {
+		while (insertAfter && trackOrder(insertAfter, track) > 0) {
 			insertAfter = insertAfter.previousElementSibling;
 		}
 	} else if (position < 0) {
