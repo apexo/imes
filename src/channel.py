@@ -52,7 +52,7 @@ class MediaStream(object):
 			| (14) # PT = 14
 		)
 
-	HDR = struct.Struct("!HHIII")
+	HDR = struct.Struct("!HHII")
 
 	def __init__(self, socket, ssrc, rtpAddr, paused=False, clock=(0, 0), seqNo=None):
 		self.isPaused = self.shouldBePaused = paused
@@ -66,7 +66,7 @@ class MediaStream(object):
 		return self.clock.export(), self.seqNo
 
 	def send(self, payload):
-		hdr = self.HDR.pack(self.MAGIC, self.seqNo, self.clock.value, self.ssrc, 0)
+		hdr = self.HDR.pack(self.MAGIC, self.seqNo, self.clock.value, self.ssrc)
 		try:
 			self.socket.sendto(hdr + payload, self.rtpAddr)
 		except socket.error as e:
