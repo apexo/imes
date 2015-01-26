@@ -191,33 +191,40 @@ function ViewportLayout(element, childLayout) {
 	}
 }
 
+function _getPixelValue(value) {
+	if (!value) {
+		return 0;
+	} else if (value.substring(value.length - 2) === "px") {
+		return parseFloat(value.substring(0, value.length - 2));
+	} else {
+		return 0;
+	}
+}
+
 function computedPadding(element) {
-	var px = CSSPrimitiveValue.CSS_PX;
-	var s = window.getComputedStyle(element);
-	var top = s.getPropertyCSSValue("padding-top").getFloatValue(px);
-	var right = s.getPropertyCSSValue("padding-right").getFloatValue(px);
-	var bottom = s.getPropertyCSSValue("padding-bottom").getFloatValue(px);
-	var left = s.getPropertyCSSValue("padding-left").getFloatValue(px);
+	var	s = window.getComputedStyle(element),
+		top = _getPixelValue(s.paddingTop),
+		right = _getPixelValue(s.paddingRight),
+		bottom = _getPixelValue(s.paddingBottom),
+		left = _getPixelValue(s.paddingLeft);
 	return {top: top, right: right, bottom: bottom, left: left, topBottom: top+bottom, leftRight: left+right};
 }
 
 function computedMargin(element) {
-	var px = CSSPrimitiveValue.CSS_PX;
-	var s = window.getComputedStyle(element);
-	var top = s.getPropertyCSSValue("margin-top").getFloatValue(px);
-	var right = s.getPropertyCSSValue("margin-right").getFloatValue(px);
-	var bottom = s.getPropertyCSSValue("margin-bottom").getFloatValue(px);
-	var left = s.getPropertyCSSValue("margin-left").getFloatValue(px);
+	var	s = window.getComputedStyle(element),
+		top = _getPixelValue(s.marginTop),
+		right = _getPixelValue(s.marginRight),
+		bottom = _getPixelValue(s.marginBottom),
+		left = _getPixelValue(s.marginLeft);
 	return {top: top, right: right, bottom: bottom, left: left, topBottom: top+bottom, leftRight: left+right};
 }
 
 function computedBorder(element) {
-	var px = CSSPrimitiveValue.CSS_PX;
-	var s = window.getComputedStyle(element);
-	var top = s.getPropertyCSSValue("border-top-width").getFloatValue(px);
-	var right = s.getPropertyCSSValue("border-right-width").getFloatValue(px);
-	var bottom = s.getPropertyCSSValue("border-bottom-width").getFloatValue(px);
-	var left = s.getPropertyCSSValue("border-left-width").getFloatValue(px);
+	var	s = window.getComputedStyle(element),
+		top = _getPixelValue(s.borderTopWidth),
+		right = _getPixelValue(s.borderRightWidth),
+		bottom = _getPixelValue(s.borderBottomWidth),
+		left = _getPixelValue(s.borderLeftWidth);
 	return {top: top, right: right, bottom: bottom, left: left, topBottom: top+bottom, leftRight: left+right};
 }
 
