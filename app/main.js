@@ -339,7 +339,7 @@ function trackOrder(a, b) {
 	return a.dataset.filename.localeCompare(b.dataset.filename);
 }
 
-function formatAlbumTrack(i, tracklist, position, btns) {
+function formatAlbumTrack(i, tracklist, position, btns, key) {
 	var t, tracknumber;
 	if (i.tracknumber !== undefined) {
 		tracknumber = parseInt(i.tracknumber);
@@ -362,6 +362,9 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 	track.dataset.tracknumber = tracknumber;
 	track.dataset.length = i.info.length;
 	track.dataset.filename = pathElements[pathElements.length-1];
+	if (key) {
+		track.dataset.key = key;
+	}
 	track.appendChild(document.createTextNode(t));
 	if (artistLink(i, track, true)) {
 		track.appendChild(document.createTextNode(" - "));
@@ -388,12 +391,15 @@ function formatAlbumTrack(i, tracklist, position, btns) {
 	return track;
 }
 
-function formatErrorTrack(id, btns) {
+function formatErrorTrack(id, btns, key) {
 	var track = document.createElement("div");
 	track.classList.add("single-track");
 	track.appendChild(document.createTextNode("deleted track: " + id));
 	track.dataset.id = id;
 	track.dataset.length = 0;
+	if (key) {
+		track.dataset.key = key;
+	}
 
 	var bc = createButtonContainer(track);
 	bc.appendChild(createLengthIndicator(formatLength(0)));
@@ -401,7 +407,7 @@ function formatErrorTrack(id, btns) {
 	return track;
 }
 
-function formatSingleTrack(i, btns) {
+function formatSingleTrack(i, btns, key) {
 	var track = document.createElement("div");
 	track.classList.add("single-track");
 	if (i.album && i.album.length) {
@@ -414,6 +420,9 @@ function formatSingleTrack(i, btns) {
 	titleLink(i, track);
 	track.dataset.id = i._id;
 	track.dataset.length = i.info.length;
+	if (key) {
+		track.dataset.key = key;
+	}
 
 	trackMarkup(track, i);
 	var bc = createButtonContainer(track);

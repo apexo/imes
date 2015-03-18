@@ -1,7 +1,10 @@
 var PlaylistDisplay = {};
 PlaylistDisplay.createSingleTrackButtons = PlaylistDisplay.createAlbumTrackButtons = function(target) {
 	createButton(target, "info", "Query track information.");
-	createButton(target, "play", "Play this track now.");
+	var key = target.parentElement.dataset.key;
+	if (key && key.substring(0, 14) !== "playlist:user:") {
+		createButton(target, "play", "Play this track now.");
+	}
 	createButton(target, "remove", "Remove this track from the playlist.");
 }
 
@@ -338,8 +341,7 @@ Playlist.prototype.add = function(item, last, insertBefore, p) {
 
 	if (item.value._deleted) {
 		// file associated with playlist entry does not exist (anymore)
-		var t = formatErrorTrack(item.value._id, PlaylistDisplay);
-		t.dataset.key = item.key;
+		var t = formatErrorTrack(item.value._id, PlaylistDisplay, item.key);
 		this.playlist = this.playlist.insert(item.key, t);
 		if (item.key === plid) {
 			this.initProgressBar(t);
@@ -354,16 +356,14 @@ Playlist.prototype.add = function(item, last, insertBefore, p) {
 			last.container = makeAlbum(last.info, key, PlaylistDisplay);
 			this.target.insertBefore(last.container, last.track);
 			this.target.removeChild(last.track);
-			el = formatAlbumTrack(last.info, last.container.getElementsByClassName("album-tracklist")[0], 0, PlaylistDisplay);
-			el.dataset.key = last.track.dataset.key;
+			el = formatAlbumTrack(last.info, last.container.getElementsByClassName("album-tracklist")[0], 0, PlaylistDisplay, last.track.dataset.key);
 			this.playlist = this.playlist.insert(last.track.dataset.key, el);
 			if (last.track.dataset.key === plid) {
 				this.initProgressBar(el);
 			}
 			last.track = last.info = null;
 		}
-		el = formatAlbumTrack(item.value, last.container.getElementsByClassName("album-tracklist")[0], p, PlaylistDisplay);
-		el.dataset.key = item.key;
+		el = formatAlbumTrack(item.value, last.container.getElementsByClassName("album-tracklist")[0], p, PlaylistDisplay, item.key);
 		this.playlist = this.playlist.insert(item.key, el);
 		if (item.key === plid) {
 			this.initProgressBar(el);
@@ -371,12 +371,11 @@ Playlist.prototype.add = function(item, last, insertBefore, p) {
 		return last;
 	}
 	last = {
-		track: formatSingleTrack(item.value, PlaylistDisplay),
+		track: formatSingleTrack(item.value, PlaylistDisplay, item.key),
 		info: item.value,
 		container: null,
 		key: key
 	};
-	last.track.dataset.key = item.key;
 	this.playlist = this.playlist.insert(item.key, last.track);
 	if (item.key === plid) {
 		this.initProgressBar(last.track);
