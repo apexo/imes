@@ -724,6 +724,10 @@ function playNow(track) {
 		key = track.dataset.key,
 		fid = track.dataset.id;
 
+	if (key.substring(0, 14) === "playlist:user:") {
+		return;
+	}
+
 	ajax_post(userStatus.backendUrl() + "play", {
 		"plid": plkey_plid(key),
 		"idx": plkey_idx(key),
