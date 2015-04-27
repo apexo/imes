@@ -157,7 +157,10 @@ class Channel(object):
 			worker_pid = Worker.fork(db, name, m2w_r, w2m_w, c2w_r, w2c_w, *close_fds)
 			return channel_pid, worker_pid
 
-		db.resource.session.conns.clear()
+		if hasattr(db.resource.session, "connection_pool"):
+			db.resource.session.connection_pool.conns.clear()
+		else:
+			db.resource.session.conns.clear()
 
 		print "enter: channel processor", name
 		os.close(m2w_r)
@@ -333,7 +336,10 @@ class Worker(object):
 		for fd in close_fds:
 			os.close(fd)
 
-		db.resource.session.conns.clear()
+		if hasattr(db.resource.session, "connection_pool"):
+			db.resource.session.connection_pool.conns.clear()
+		else:
+			db.resource.session.conns.clear()
 
 		print "enter: channel worker", name
 		reactor = Reactor()

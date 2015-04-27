@@ -91,7 +91,10 @@ class Database(object):
 			pass
 
 	def cleanConnCache(self):
-		self._session.conns.clear()
+		if hasattr(self._session, "connection_pool"):
+			self._session.connection_pool.conns.clear()
+		else:
+			self._session.conns.clear()
 
 	def _update_designs(self, basepath="res/design"):
 		for name in os.listdir(basepath):
