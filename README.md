@@ -42,7 +42,7 @@ Requirements
 
 A Linux host with:
 
-- sox
+- ffmpeg
 - python2.7
 - python-mutagen
 - python-inotifyx

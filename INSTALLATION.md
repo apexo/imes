@@ -29,7 +29,7 @@ install prerequisites:
 
     apt-get install --no-install-recommends python-virtualenv python-pip build-essential python2.7-dev libffi-dev libmp3lame-dev
     apt-get install --no-install-recommends python-pylast python-imaging python-yaml python-numpy python-couchdb python-inotifyx
-    apt-get install git sox libsox-fmt-ffmpeg libsox-fmt-mp3
+    apt-get install git ffmpeg
 
 
 optional: create separate user
@@ -69,7 +69,7 @@ install dependencies:
 
     apt-get install --no-install-recommends build-essential libmp3lame-dev python2.7
     apt-get install --no-install-recommends python-pylast python-imaging python-yaml python-numpy python-couchdb python-inotifyx python-cffi
-    apt-get install git sox libsox-fmt-ffmpeg libsox-fmt-mp3
+    apt-get install git ffmpeg
 
 
 checkout
