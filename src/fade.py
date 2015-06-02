@@ -84,7 +84,7 @@ class FfmpegDecoder(Decoder):
 			gain = None
 		gain = "" if gain is None else ",volume=volume=%sdB" % (gain,)
 		self.p = None
-		self.p = subprocess.Popen(["ffmpeg", "-i", fileName, "-af", "aformat=channel_layouts=stereo:sample_rates=%s%s" % (SAMPLE_SIZE, gain), "-f", "s16le" if sys.byteorder == "little" else "s16be", "-"], stdout=subprocess.PIPE)
+		self.p = subprocess.Popen(["ffmpeg", "-i", fileName, "-af", "aformat=channel_layouts=stereo:sample_rates=%s%s" % (SAMPLE_RATE, gain), "-f", "s16le" if sys.byteorder == "little" else "s16be", "-"], stdout=subprocess.PIPE)
 		reactor.registerPid(self.p.pid, lambda pid, status: None)
 		super(FfmpegDecoder, self).__init__(self.p.stdout.fileno(), channels)
 
