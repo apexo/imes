@@ -3,6 +3,7 @@ import numpy
 import subprocess
 import os
 import errno
+import sys
 
 SAMPLE_RATE = 44100
 BUFFER_SIZE = 1152
@@ -72,7 +73,7 @@ class SampleCounter(object):
 			return n, self
 		return 0, EOF
 
-class SoxDecoder(Decoder):
+class FfmpegDecoder(Decoder):
 	def __init__(self, fileName, reactor, gain=None, channels=NUM_CHANNELS):
 		if gain and gain.endswith("dB"):
 			gain = gain[:-2].strip()
@@ -81,11 +82,11 @@ class SoxDecoder(Decoder):
 				gain = None
 		except ValueError:
 			gain = None
-		gain = [] if gain is None else ["gain", gain]
+		gain = "" if gain is None else ",volume=volume=%sdB" % (gain,)
 		self.p = None
-		self.p = subprocess.Popen(["sox", fileName, "-r", str(SAMPLE_RATE), "-b", str(SAMPLE_SIZE * 8), "-c", str(channels), "-t", "raw", "-"] + gain, stdout=subprocess.PIPE)
+		self.p = subprocess.Popen(["ffmpeg", "-i", fileName, "-af", "aformat=channel_layouts=stereo:sample_rates=%s%s" % (SAMPLE_SIZE, gain), "-f", "s16le" if sys.byteorder == "little" else "s16be", "-"], stdout=subprocess.PIPE)
 		reactor.registerPid(self.p.pid, lambda pid, status: None)
-		super(SoxDecoder, self).__init__(self.p.stdout.fileno(), channels)
+		super(FfmpegDecoder, self).__init__(self.p.stdout.fileno(), channels)
 
 	def __del__(self):
 		if self.p is not None:

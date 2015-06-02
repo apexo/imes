@@ -6,7 +6,7 @@ import socket
 import collections
 import traceback
 
-from src.fade import Blender, LookAhead, Stable, SoxDecoder, EOF, SampleCounter, Skipper, Joiner, zeroer, Pauser
+from src.fade import Blender, LookAhead, Stable, FfmpegDecoder, EOF, SampleCounter, Skipper, Joiner, zeroer, Pauser
 from src.lame import Encoder
 from src.ipc import Async
 from src.reactor import Reactor, clock
@@ -484,7 +484,7 @@ class Worker(object):
 
 	def _preroll(self, la, info):
 		info2 = {"tooLate": False, "prerolled": None, "info": info}
-		decoder = SoxDecoder(info["path"], self.reactor, self.replayGain(info))
+		decoder = FfmpegDecoder(info["path"], self.reactor, self.replayGain(info))
 		if info["pos"] > 0:
 			skipped = Skipper(decoder, info["pos"])
 		else:
