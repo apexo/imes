@@ -488,6 +488,32 @@ function Remote() {
 	function exact(v) {
 		return [v, v];
 	}
+	function dateRange(range) {
+		function formatDate(y, m, d) {
+			while (y.length < 4) {
+				y = "0" + y;
+			}
+			while (m.length < 2) {
+				m = "0" + m;
+			}
+			while (d.length < 2) {
+				d = "0" + d;
+			}
+			return y + "-" + m + "-" + d;
+		}
+
+		var	sep = range.indexOf("~"),
+			start = sep === -1 ? range : range.substring(0, sep),
+			end = sep === -1 ? "" : range.substring(sep + 1),
+			re = /(\d{4})(?:-(\d{1,2})(?:-(\d{1,2}))?)?/,
+			startDate = re.exec(start) || ["", "0000", undefined, undefined],
+			endDate = re.exec(sep === -1 ? start : end) || ["", "9999", undefined, undefined];
+
+		return [
+			formatDate(startDate[1], startDate[2] || "00", startDate[3] || "00"),
+			formatDate(endDate[1], endDate[2] || "12", endDate[3] || "31"),
+		]
+	}
 
 	var prefixes = {
 		"artist": {view: "artist", transform: approx, mod: 3},
@@ -498,6 +524,11 @@ function Remote() {
 		"artist2": {view: "artist2", transform: exact, mod: 13},
 		"album2": {view: "album2", transform: exact, mod: 12},
 		"title2": {view: "title2", transform: exact, mod: 11},
+		"date": {view: "date", transform: dateRange, mod: 4},
+		"odate": {view: "odate", transform: dateRange, mod: 4},
+		"genre": {view: "genre", transform: approx, mod: 0},
+		"genre2": {view: "genre2", transform: exact, mod: 1},
+		"mbid": {view: "mbid", transform: exact, mod: 0},
 		"all": {view: "search", transform: approx, mod: 0},
 		"*": {view: "search", transform: approx, mod: 0}
 	}
