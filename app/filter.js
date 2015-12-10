@@ -1,6 +1,6 @@
 createFilter = (function() {
 	function artist(term) {
-		var start = term.toLocaleLowerCase(), end = start + COUCH_SUFFIX;
+		var start = term[0], end = term[1];
 		return function(doc) {
 			var a = doc.artist;
 			if (a && a.length) {
@@ -17,7 +17,7 @@ createFilter = (function() {
 		};
 	}
 	function album(term) {
-		var start = term.toLocaleLowerCase(), end = start + COUCH_SUFFIX;
+		var start = term[0], end = term[1];
 		return function(doc) {
 			var a = doc.album;
 			if (a && a.length) {
@@ -34,7 +34,7 @@ createFilter = (function() {
 		};
 	}
 	function title(term) {
-		var start = term.toLocaleLowerCase(), end = start + COUCH_SUFFIX;
+		var start = term[0], end = term[1];
 		return function(doc) {
 			var a = doc.title;
 			if (a && a.length) {
@@ -51,6 +51,8 @@ createFilter = (function() {
 		};
 	}
 	function path(term) {
+		term = term[0];
+
 		return function(doc) {
 			var a = doc.path;
 			return a.substring(0, term.length) === term;
@@ -64,6 +66,8 @@ createFilter = (function() {
 		};
 	}
 	function artist2(term) {
+		term = term[0];
+
 		return function(doc) {
 			var a = doc.artist;
 			if (a && a.length) {
@@ -77,6 +81,8 @@ createFilter = (function() {
 		};
 	}
 	function album2(term) {
+		term = term[0];
+
 		return function(doc) {
 			var a = doc.album;
 			if (a && a.length) {
@@ -90,6 +96,8 @@ createFilter = (function() {
 		};
 	}
 	function title2(term) {
+		term = term[0];
+
 		return function(doc) {
 			var a = doc.title;
 			if (a && a.length) {

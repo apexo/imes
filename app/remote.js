@@ -482,23 +482,24 @@ function Remote() {
 	var viewPrefix = DB_URL + DB_NAME + "/_design/file/_view/";
 	var viewAll = DB_URL + DB_NAME + "/_all_docs/";
 
-	function lc(v) {
-		return v.toLowerCase();
+	function approx(v) {
+		return [v.toLowerCase(), v.toLowerCase() + COUCH_SUFFIX];
 	}
-	function eq(v) {
-		return v;
+	function exact(v) {
+		return [v, v];
 	}
+
 	var prefixes = {
-		"artist": {view: "artist", transform: lc, range: COUCH_SUFFIX, mod: 3},
-		"album": {view: "album", transform: lc, range: COUCH_SUFFIX, mod: 2},
-		"title": {view: "title", transform: lc, range: COUCH_SUFFIX, mod: 1},
-		"path": {view: "path", transform: eq, range: "", mod: 0},
-		"path2": {view: "path2", transform: eq, range: "", mod: 14},
-		"artist2": {view: "artist2", transform: eq, range: "", mod: 13},
-		"album2": {view: "album2", transform: eq, range: "", mod: 12},
-		"title2": {view: "title2", transform: eq, range: "", mod: 11},
-		"all": {view: "search", transform: lc, range: COUCH_SUFFIX, mod: 0},
-		"*": {view: "search", transform: lc, range: COUCH_SUFFIX, mod: 0}
+		"artist": {view: "artist", transform: approx, mod: 3},
+		"album": {view: "album", transform: approx, mod: 2},
+		"title": {view: "title", transform: approx, mod: 1},
+		"path": {view: "path", transform: exact, mod: 0},
+		"path2": {view: "path2", transform: exact, mod: 14},
+		"artist2": {view: "artist2", transform: exact, mod: 13},
+		"album2": {view: "album2", transform: exact, mod: 12},
+		"title2": {view: "title2", transform: exact, mod: 11},
+		"all": {view: "search", transform: approx, mod: 0},
+		"*": {view: "search", transform: approx, mod: 0}
 	}
 
 	function normalizeTerm(term) {
@@ -521,7 +522,7 @@ function Remote() {
 			return null;
 		}
 		var p = prefixes[k];
-		return [v.length + p.mod, p.view, p.transform(v), p.range];
+		return [v.length + p.mod, p.view, p.transform(v)];
 	}
 
 	function _createFilter(spec, i0, i1) {
@@ -545,7 +546,7 @@ function Remote() {
 		if (temp.length) {
 			temp.sort();
 			var ps = temp[temp.length - 1];
-			proxy = new ViewProxy(viewPrefix + ps[1], ps[2], ps[2] + ps[3]);
+			proxy = new ViewProxy(viewPrefix + ps[1], ps[2][0], ps[2][1]);
 		}
 		if (!temp.length) {
 			proxy = new ViewProxy(viewAll, null, null, false, true);
