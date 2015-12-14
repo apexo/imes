@@ -484,7 +484,7 @@ class Worker(object):
 
 	def _preroll(self, la, info):
 		info2 = {"tooLate": False, "prerolled": None, "info": info}
-		decoder = FfmpegDecoder(info["path"], self.reactor, self.replayGain(info))
+		decoder = FfmpegDecoder(info["path"].encode("UTF-8"), self.reactor, self.replayGain(info))
 		if info["pos"] > 0:
 			skipped = Skipper(decoder, info["pos"])
 		else:
