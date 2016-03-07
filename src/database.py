@@ -910,6 +910,8 @@ class Database(object):
 		info["version"] = version
 		if old is not None:
 			info["_rev"] = old["_rev"]
+		if "bitrate_mode" in info["info"]:
+			info["info"]["bitrate_mode"] = int(info["info"]["bitrate_mode"])
 
 		#print path
 		#print info
