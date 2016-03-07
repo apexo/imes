@@ -595,8 +595,8 @@ class Database(object):
 		u'WM/Composer': asf_values('composer'),
 		u'WM/Year': asf_single_value('date'),
 		u'WM/OriginalReleaseYear': asf_single_value('originaldate'),
-		'Author': generic('artist'), #'Author': [u'Trentemoeller']
-		'Title': generic('title'), #'Title': [u'Titel 9']
+		u'Author': asf_values('artist'),
+		u'Title': asf_values('title'),
 		u'MusicBrainz/Track Id': asf_values('musicbrainz_trackid'),
 		u'MusicBrainz/Artist Id': asf_values('musicbrainz_artistid'),
 		u'MusicBrainz/Album Artist Id': asf_values('musicbrainz_albumartistid'),
