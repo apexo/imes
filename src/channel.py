@@ -6,7 +6,7 @@ import socket
 import collections
 import traceback
 
-from couchdb import ResourceNotFoundError
+from couchdb import ResourceNotFound
 
 from src.fade import Blender, LookAhead, Stable, FfmpegDecoder, EOF, SampleCounter, Skipper, Joiner, zeroer, Pauser
 from src.lame import Encoder
@@ -522,7 +522,7 @@ class Worker(object):
 	def getFileInfo(self, info):
 		try:
 			e = self.db[info["fid"]]
-		except ResourceNotFoundError:
+		except ResourceNotFound:
 			return False
 		except KeyError:
 			return False
