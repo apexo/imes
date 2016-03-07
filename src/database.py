@@ -658,7 +658,7 @@ class Database(object):
 			assert m is not None
 			self._process(doc, m, self.APEV2_MAP, "APEv2", path)
 			doc["tags"].append("apev2")
-		except mutagen.apev2.APENoHeaderError:
+		except (mutagen.apev2.APEBadItemError, mutagen.apev2.APENoHeaderError):
 			return
 		except IOError as e:
 			if e.errno != errno.ENOENT:
