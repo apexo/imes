@@ -11,8 +11,9 @@ typedef enum vbr_mode_e {
   vbr_abr,
   vbr_mtrh,
   vbr_max_indicator,    /* Don't use this! It's used for sanity checks.       */
-  vbr_default=4    /* change this to change the default VBR mode of LAME */
+  vbr_default=vbr_mtrh    /* change this to change the default VBR mode of LAME */
 } vbr_mode;
+
 
 /* MPEG modes */
 typedef enum MPEG_mode_e {
@@ -31,6 +32,8 @@ typedef enum Padding_type_e {
   PAD_ADJUST,
   PAD_MAX_INDICATOR   /* Don't use this! It's used for sanity checks. */
 } Padding_type;
+
+
 
 /*presets*/
 typedef enum preset_mode_e {
@@ -73,6 +76,7 @@ typedef enum preset_mode_e {
     MEDIUM_FAST = 1007
 } preset_mode;
 
+
 /*asm optimizations*/
 typedef enum asm_optimizations_e {
     MMX = 1,
@@ -80,11 +84,13 @@ typedef enum asm_optimizations_e {
     SSE = 3
 } asm_optimizations;
 
+
 /* psychoacoustic model */
 typedef enum Psy_model_e {
     PSY_GPSYCHO = 1,
     PSY_NSPSYTUNE = 2
 } Psy_model;
+
 
 /* buffer considerations */
 typedef enum buffer_constraint_e {
@@ -92,6 +98,7 @@ typedef enum buffer_constraint_e {
     MDB_STRICT_ISO=1,
     MDB_MAXIMUM=2
 } buffer_constraint;
+
 
 struct lame_global_struct;
 typedef struct lame_global_struct lame_global_flags;
